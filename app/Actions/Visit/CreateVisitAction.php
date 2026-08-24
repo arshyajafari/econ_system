@@ -1,0 +1,35 @@
+<?php
+
+    namespace App\Actions\Visit;
+
+    use App\Enums\VisitStatus;
+    use App\Models\Doctor;
+    use App\Models\User;
+    use App\Models\Visit;
+    use Illuminate\Support\Facades\DB;
+    use RuntimeException;
+
+    class CreateVisitAction {
+        public function execute(array $data, User $user): Visit {
+            return DB::transaction(function () use ($data, $user) {
+                $employee = $user->employee;
+
+                if (!$employee) {
+                    throw new RuntimeException('کاربر فعلی به کارمند متصل نیست.');
+                }
+
+                $doctor = Doctor::query()->where('public_id', $data['doctor_id'])->firstOrFail();
+
+                $visit = Visit::create([
+                    'doctor_id' => $doctor->id,
+                    'employee_id' => $employee->id,
+                    'status' => VisitStatus::DRAFT,
+                    'visit_date' => $data['visit_date'],
+                    'purpose' => $data['purpose'] ?? null,
+                    'description' => $data['description'] ?? null,
+                ]);
+
+                return $visit->fresh(Visit::DEFAULT_RELATIONS);
+            });
+        }
+    }

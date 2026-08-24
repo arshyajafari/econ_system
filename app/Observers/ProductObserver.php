@@ -1,0 +1,11 @@
+<?php
+
+    namespace App\Observers;
+
+    use App\Models\Product;
+
+    class ProductObserver {
+        public function creating(Product $product): void { }
+
+        public function updating(Product $product): void { }
+    }
