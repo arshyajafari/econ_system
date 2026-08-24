@@ -32,7 +32,6 @@
                 ->orderBy('id')->get();
 
             $balance = $openingBalance;
-
             $totalDebit = 0;
             $totalCredit = 0;
 
@@ -57,6 +56,7 @@
                 $transaction->debit = $debit;
                 $transaction->credit = $credit;
                 $transaction->balance = $balance;
+                $transaction->source = $this->sourceData($transaction);
 
                 return $transaction;
             });
@@ -84,5 +84,33 @@
             }
 
             return $balance;
+        }
+
+        protected function sourceData(CustomerTransaction $transaction): ?array {
+            if ($transaction->relationLoaded('invoice') && $transaction->invoice) {
+                return [
+                    'type' => 'invoice',
+                    'id' => $transaction->invoice->public_id,
+                    'code' => $transaction->invoice->code,
+                ];
+            }
+
+            if ($transaction->relationLoaded('payment') && $transaction->payment) {
+                return [
+                    'type' => 'payment',
+                    'id' => $transaction->payment->public_id,
+                    'reference_number' => $transaction->payment->reference_number,
+                ];
+            }
+
+            if ($transaction->relationLoaded('orderReturn') && $transaction->orderReturn) {
+                return [
+                    'type' => 'order_return',
+                    'id' => $transaction->orderReturn->public_id,
+                    'code' => $transaction->orderReturn->code,
+                ];
+            }
+
+            return null;
         }
     }

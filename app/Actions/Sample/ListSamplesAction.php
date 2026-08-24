@@ -2,7 +2,7 @@
 
     namespace App\Actions\Sample;
 
-    use App\Queries\Sample\SampleQuery;
+    use App\Queries\Doctor\SampleQuery;
     use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
     class ListSamplesAction {

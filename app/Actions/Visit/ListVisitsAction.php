@@ -2,7 +2,7 @@
 
     namespace App\Actions\Visit;
 
-    use App\Queries\Visit\VisitQuery;
+    use App\Queries\Doctor\VisitQuery;
     use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
     class ListVisitsAction {
