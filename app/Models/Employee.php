@@ -81,6 +81,10 @@
             return $this->hasMany(EmployeeAddress::class);
         }
 
+        public function locations(): HasMany {
+            return $this->hasMany(EmployeeLocation::class);
+        }
+
         public function deliveries(): HasMany {
             return $this->hasMany(Delivery::class);
         }
