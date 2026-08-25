@@ -83,9 +83,9 @@
 
         protected function deliveryStats(): array {
             return [
-                'pending' => Delivery::query()->where('status', 'pending')->count(),
+                'pending' => Delivery::query()->where('status', DeliveryStatus::PENDING)->count(),
 
-                'shipped' => Delivery::query()->where('status', 'shipped')->count(),
+                'shipped' => Delivery::query()->where('status', DeliveryStatus::SHIPPED)->count(),
             ];
         }
 

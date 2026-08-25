@@ -33,9 +33,9 @@
                 ]);
                 $table->index('type');
 
-                $table->unique('invoice_id');
-                $table->unique('payment_id');
-                $table->unique('order_return_id');
+                $table->unique('invoice_id', 'customer_transactions_invoice_id_unique');
+                $table->unique('payment_id', 'customer_transactions_payment_id_unique');
+                $table->unique('order_return_id', 'customer_transactions_order_return_id_unique');
             });
 
         }

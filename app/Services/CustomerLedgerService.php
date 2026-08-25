@@ -4,51 +4,50 @@
 
     use App\Enums\CustomerTransactionType;
     use App\Models\CustomerTransaction;
-    use Illuminate\Support\Collection;
+    use Carbon\CarbonImmutable;
 
     class CustomerLedgerService {
         public function build(int $customerId, ?string $from = null, ?string $to = null): array {
             $baseQuery = CustomerTransaction::query()->where('customer_id', $customerId);
 
-            $openingTransactions = clone $baseQuery;
-
-            if ($from) {
-                $openingTransactions->whereDate('transaction_at', '<', $from);
-            }
-
-            $openingBalance = $this->calculateBalance($openingTransactions->get());
+            $openingBalance = $this->calculateOpeningBalance($baseQuery, $from);
 
             $query = clone $baseQuery;
 
             if ($from) {
-                $query->whereDate('transaction_at', '>=', $from);
+                $fromDate = CarbonImmutable::parse($from)->startOfDay();
+
+                $query->where('transaction_at', '>=', $fromDate);
             }
 
             if ($to) {
-                $query->whereDate('transaction_at', '<=', $to);
+                $toDate = CarbonImmutable::parse($to)->endOfDay();
+
+                $query->where('transaction_at', '<=', $toDate);
             }
 
             $transactions = $query->with(CustomerTransaction::DEFAULT_RELATIONS)->orderBy('transaction_at')
                 ->orderBy('id')->get();
 
             $balance = $openingBalance;
-            $totalDebit = 0;
-            $totalCredit = 0;
+            $totalDebit = 0.0;
+            $totalCredit = 0.0;
 
             $transactions = $transactions->map(function (CustomerTransaction $transaction) use (
                 &$balance, &$totalDebit, &$totalCredit
-            ) {
+            ): CustomerTransaction {
                 $amount = (float)$transaction->amount;
-
-                $debit = 0;
-                $credit = 0;
 
                 if ($transaction->type === CustomerTransactionType::DEBIT) {
                     $debit = $amount;
+                    $credit = 0.0;
+
                     $balance += $amount;
                     $totalDebit += $amount;
                 } else {
+                    $debit = 0.0;
                     $credit = $amount;
+
                     $balance -= $amount;
                     $totalCredit += $amount;
                 }
@@ -70,20 +69,20 @@
             ];
         }
 
-        protected function calculateBalance(Collection $transactions): float {
-            $balance = 0;
-
-            foreach ($transactions as $transaction) {
-                $amount = (float)$transaction->amount;
-
-                if ($transaction->type === CustomerTransactionType::DEBIT) {
-                    $balance += $amount;
-                } else {
-                    $balance -= $amount;
-                }
+        protected function calculateOpeningBalance($baseQuery, ?string $from): float {
+            if (!$from) {
+                return 0.0;
             }
 
-            return $balance;
+            $fromDate = CarbonImmutable::parse($from)->startOfDay();
+
+            $debit = (clone $baseQuery)->where('type', CustomerTransactionType::DEBIT)
+                ->where('transaction_at', '<', $fromDate)->sum('amount');
+
+            $credit = (clone $baseQuery)->where('type', CustomerTransactionType::CREDIT)
+                ->where('transaction_at', '<', $fromDate)->sum('amount');
+
+            return (float)$debit - (float)$credit;
         }
 
         protected function sourceData(CustomerTransaction $transaction): ?array {

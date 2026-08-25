@@ -62,7 +62,7 @@
         }
 
         protected function attachInvoiceSource(array &$data, int $customerId, Invoice $invoice): void {
-            if ($invoice->customer_id !== $customerId) {
+            if ((int)$invoice->customer_id !== $customerId) {
                 throw new InvalidArgumentException('فاکتور متعلق به این مشتری نیست.');
             }
 
@@ -70,7 +70,7 @@
         }
 
         protected function attachPaymentSource(array &$data, int $customerId, Payment $payment): void {
-            if ($payment->customer_id !== $customerId) {
+            if ((int)$payment->customer_id !== $customerId) {
                 throw new InvalidArgumentException('پرداخت متعلق به این مشتری نیست.');
             }
 
@@ -78,7 +78,7 @@
         }
 
         protected function attachOrderReturnSource(array &$data, int $customerId, OrderReturn $orderReturn): void {
-            if ($orderReturn->customer_id !== $customerId) {
+            if ((int)$orderReturn->customer_id !== $customerId) {
                 throw new InvalidArgumentException('مرجوعی متعلق به این مشتری نیست.');
             }
 
