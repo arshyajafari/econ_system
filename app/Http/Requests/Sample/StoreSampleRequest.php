@@ -8,6 +8,11 @@
     class StoreSampleRequest extends CrudRequest {
         public function rules(): array {
             return [
+                'client_operation_id' => [
+                    'nullable',
+                    'string',
+                    'max:64',
+                ],
                 'visit_id' => [
                     'required',
                     'string',

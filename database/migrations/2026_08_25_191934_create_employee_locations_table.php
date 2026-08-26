@@ -12,6 +12,7 @@
             Schema::create('employee_locations', function (Blueprint $table) {
                 $table->id();
                 $table->publicId();
+                $table->string('client_operation_id', 64)->nullable()->unique();
                 $table->foreignId('employee_id')->constrained('employees')->cascadeOnDelete()->cascadeOnUpdate();
                 $table->decimal('latitude', 10, 7);
                 $table->decimal('longitude', 10, 7);

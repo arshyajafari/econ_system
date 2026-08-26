@@ -17,12 +17,37 @@
                     'required',
                     'date',
                 ],
+                'latitude' => [
+                    'nullable',
+                    'numeric',
+                    'between:-90,90',
+                ],
+                'longitude' => [
+                    'nullable',
+                    'numeric',
+                    'between:-180,180',
+                ],
+                'location_accuracy' => [
+                    'nullable',
+                    'numeric',
+                    'min:0',
+                    'max:100000',
+                ],
+                'location_captured_at' => [
+                    'nullable',
+                    'date',
+                ],
+                'client_operation_id' => [
+                    'nullable',
+                    'string',
+                    'max:64',
+                ],
                 'purpose' => [
                     'nullable',
                     'string',
                     'max:150',
                 ],
-                ValidationRules::description(),
+                ...ValidationRules::description(),
             ];
         }
     }

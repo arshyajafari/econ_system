@@ -1,4 +1,0 @@
-employee
-$table->string('avatar')->nullable();
-$table->string('bail_picture', 500)->nullable();
-$table->string('national_card_picture', 500)->nullable();

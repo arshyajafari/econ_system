@@ -26,6 +26,7 @@
         ];
 
         protected $fillable = [
+            'client_operation_id',
             'visit_id',
             'product_id',
             'quantity',

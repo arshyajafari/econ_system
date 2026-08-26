@@ -19,6 +19,15 @@
                     throw new RuntimeException('کاربر فعلی به کارمند متصل نیست.');
                 }
 
+                if (!empty($data['client_operation_id'])) {
+                    $existingSample = Sample::query()->where('client_operation_id', $data['client_operation_id'])
+                        ->first();
+
+                    if ($existingSample) {
+                        return $existingSample->fresh(Sample::DEFAULT_RELATIONS);
+                    }
+                }
+
                 $visit = Visit::query()->lockForUpdate()->where('public_id', $data['visit_id'])->firstOrFail();
 
                 if ((int)$visit->employee_id !== (int)$employee->id) {
@@ -36,6 +45,7 @@
                 $product = Product::query()->where('public_id', $data['product_id'])->firstOrFail();
 
                 $sample = Sample::create([
+                    'client_operation_id' => $data['client_operation_id'] ?? null,
                     'visit_id' => $visit->id,
                     'product_id' => $product->id,
                     'quantity' => (int)$data['quantity'],

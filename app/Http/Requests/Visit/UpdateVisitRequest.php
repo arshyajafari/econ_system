@@ -5,10 +5,8 @@
     use App\Http\Requests\CrudRequest;
     use App\Validation\ValidationRules;
 
-    class UpdateVisitRequest extends CrudRequest
-    {
-        public function rules(): array
-        {
+    class UpdateVisitRequest extends CrudRequest {
+        public function rules(): array {
             return [
                 'visit_date' => [
                     'required',

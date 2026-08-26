@@ -12,6 +12,7 @@
             Schema::create('samples', function (Blueprint $table) {
                 $table->id();
                 $table->publicId();
+                $table->string('client_operation_id', 64)->nullable()->unique();
                 $table->foreignId('visit_id')->constrained('visits')->cascadeOnDelete()->cascadeOnUpdate();
                 $table->foreignId('product_id')->constrained('products')->restrictOnDelete()->cascadeOnUpdate();
                 $table->unsignedInteger('quantity');

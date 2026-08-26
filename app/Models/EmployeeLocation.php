@@ -13,6 +13,7 @@
         ];
 
         protected $fillable = [
+            'client_operation_id',
             'employee_id',
             'latitude',
             'longitude',
