@@ -4,20 +4,20 @@
 
     use App\Enums\InventoryMovementType;
     use App\Enums\OrderStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\InventoryMovement;
     use App\Models\Order;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CompleteOrderAction {
         public function execute(Order $order): Order {
             return DB::transaction(function () use ($order) {
                 $order = Order::query()->lockForUpdate()->with([
-                        'items.allocations.inventoryBatch',
-                    ])->findOrFail($order->id);
+                    'items.allocations.inventoryBatch',
+                ])->findOrFail($order->id);
 
                 if ($order->status !== OrderStatus::CONFIRMED) {
-                    throw new RuntimeException('فقط سفارش تأییدشده قابل تکمیل است.');
+                    throw new BusinessRuleException('فقط سفارش تأییدشده قابل تکمیل است.');
                 }
 
                 $movedAt = now();
@@ -26,7 +26,7 @@
                     $allocatedQuantity = $item->allocations->sum('quantity');
 
                     if ($allocatedQuantity !== (int)$item->quantity) {
-                        throw new RuntimeException('مجموع تخصیص انبار با مقدار سفارش برابر نیست.');
+                        throw new BusinessRuleException('مجموع تخصیص انبار با مقدار سفارش برابر نیست.');
                     }
 
                     foreach ($item->allocations as $allocation) {
@@ -35,11 +35,11 @@
                         $quantity = (int)$allocation->quantity;
 
                         if ($batch->reserved_quantity < $quantity) {
-                            throw new RuntimeException('موجودی رزروشده برای تکمیل سفارش کافی نیست.');
+                            throw new BusinessRuleException('موجودی رزروشده برای تکمیل سفارش کافی نیست.');
                         }
 
                         if ($batch->quantity < $quantity) {
-                            throw new RuntimeException('موجودی واقعی برای تکمیل سفارش کافی نیست.');
+                            throw new BusinessRuleException('موجودی واقعی برای تکمیل سفارش کافی نیست.');
                         }
 
                         $batch->quantity -= $quantity;

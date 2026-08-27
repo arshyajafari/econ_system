@@ -3,9 +3,9 @@
     namespace App\Actions\Order;
 
     use App\Enums\OrderStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Order;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class SubmitOrderAction {
         public function execute(Order $order): Order {
@@ -13,11 +13,11 @@
                 $order = Order::query()->lockForUpdate()->with('items')->findOrFail($order->id);
 
                 if ($order->status !== OrderStatus::DRAFT) {
-                    throw new RuntimeException('فقط سفارش در وضعیت draft قابل ارسال است.');
+                    throw new BusinessRuleException('فقط سفارش در وضعیت draft قابل ارسال است.');
                 }
 
                 if ($order->items->isEmpty()) {
-                    throw new RuntimeException('سفارش باید حداقل یک آیتم داشته باشد.');
+                    throw new BusinessRuleException('سفارش باید حداقل یک آیتم داشته باشد.');
                 }
 
                 $order->status = OrderStatus::PENDING;

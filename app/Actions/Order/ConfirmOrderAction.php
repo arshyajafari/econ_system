@@ -4,10 +4,10 @@
 
     use App\Actions\Inventory\ReserveInventoryAction;
     use App\Enums\OrderStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Order;
     use App\Models\OrderItemAllocation;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class ConfirmOrderAction {
         public function __construct(protected ReserveInventoryAction $reserveInventory) {
@@ -18,11 +18,11 @@
                 $order = Order::query()->lockForUpdate()->with('items')->findOrFail($order->id);
 
                 if ($order->status !== OrderStatus::PENDING) {
-                    throw new RuntimeException('فقط سفارش در وضعیت pending قابل تأیید است.');
+                    throw new BusinessRuleException('فقط سفارش در وضعیت pending قابل تأیید است.');
                 }
 
                 if ($order->items->isEmpty()) {
-                    throw new RuntimeException('سفارش باید حداقل یک آیتم داشته باشد.');
+                    throw new BusinessRuleException('سفارش باید حداقل یک آیتم داشته باشد.');
                 }
 
                 foreach ($order->items as $item) {

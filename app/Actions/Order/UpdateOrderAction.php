@@ -3,12 +3,12 @@
     namespace App\Actions\Order;
 
     use App\Enums\OrderStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Customer;
     use App\Models\Employee;
     use App\Models\Order;
     use App\Models\Product;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class UpdateOrderAction {
         public function execute(Order $order, array $data): Order {
@@ -16,7 +16,7 @@
                 $order = Order::query()->lockForUpdate()->with('items')->findOrFail($order->id);
 
                 if ($order->status !== OrderStatus::DRAFT) {
-                    throw new RuntimeException('فقط سفارش در وضعیت draft قابل ویرایش است.');
+                    throw new BusinessRuleException('فقط سفارش در وضعیت draft قابل ویرایش است.');
                 }
 
                 if (isset($data['customer_id'])) {
