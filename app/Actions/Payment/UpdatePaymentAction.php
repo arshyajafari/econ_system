@@ -4,10 +4,10 @@
 
     use App\Enums\InvoiceStatus;
     use App\Enums\PaymentStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Invoice;
     use App\Models\Payment;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class UpdatePaymentAction {
         public function execute(Payment $payment, array $data): Payment {
@@ -15,13 +15,13 @@
                 $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
                 if ($payment->status !== PaymentStatus::PENDING) {
-                    throw new RuntimeException('فقط پرداخت در وضعیت pending قابل ویرایش است.');
+                    throw new BusinessRuleException('فقط پرداخت در وضعیت pending قابل ویرایش است.');
                 }
 
                 $invoice = Invoice::query()->lockForUpdate()->with('payments')->findOrFail($payment->invoice_id);
 
                 if ($invoice->status !== InvoiceStatus::ISSUED) {
-                    throw new RuntimeException('فقط فاکتور صادرشده قابل ویرایش پرداخت است.');
+                    throw new BusinessRuleException('فقط فاکتور صادرشده قابل ویرایش پرداخت است.');
                 }
 
                 $amount = array_key_exists('amount', $data) ? (float)$data['amount'] : (float)$payment->amount;
@@ -34,7 +34,7 @@
                 $remainingAmount = (float)$invoice->total_amount - (float)$confirmedPaidAmount - (float)$otherPendingAmount;
 
                 if ($amount > $remainingAmount) {
-                    throw new RuntimeException('مبلغ پرداختی بیشتر از مبلغ باقی‌مانده فاکتور است.');
+                    throw new BusinessRuleException('مبلغ پرداختی بیشتر از مبلغ باقی‌مانده فاکتور است.');
                 }
 
                 if (array_key_exists('method', $data)) {

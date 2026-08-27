@@ -3,6 +3,7 @@
     namespace App\Services;
 
     use App\Enums\CustomerTransactionType;
+    use App\Enums\DeliveryStatus;
     use App\Enums\InvoiceStatus;
     use App\Enums\OrderReturnStatus;
     use App\Enums\PaymentStatus;

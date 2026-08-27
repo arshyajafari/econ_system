@@ -3,12 +3,12 @@
     namespace App\Services;
 
     use App\Enums\CustomerTransactionType;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\CustomerTransaction;
     use App\Models\Invoice;
     use App\Models\OrderReturn;
     use App\Models\Payment;
     use Illuminate\Database\Eloquent\Model;
-    use InvalidArgumentException;
 
     class CustomerTransactionService {
         public function debit(int $customerId, float|int|string $amount, ?Model $source = null,
@@ -28,7 +28,7 @@
             $amount = (float)$amount;
 
             if ($amount <= 0) {
-                throw new InvalidArgumentException('مبلغ تراکنش باید بیشتر از صفر باشد.');
+                throw new BusinessRuleException('مبلغ تراکنش باید بیشتر از صفر باشد.');
             }
 
             $data = [
@@ -57,13 +57,13 @@
 
                 $source instanceof OrderReturn => $this->attachOrderReturnSource($data, $customerId, $source),
 
-                default => throw new InvalidArgumentException('منبع تراکنش مالی پشتیبانی نمی‌شود.'),
+                default => throw new BusinessRuleException('منبع تراکنش مالی پشتیبانی نمی‌شود.'),
             };
         }
 
         protected function attachInvoiceSource(array &$data, int $customerId, Invoice $invoice): void {
             if ((int)$invoice->customer_id !== $customerId) {
-                throw new InvalidArgumentException('فاکتور متعلق به این مشتری نیست.');
+                throw new BusinessRuleException('فاکتور متعلق به این مشتری نیست.');
             }
 
             $data['invoice_id'] = $invoice->id;
@@ -71,7 +71,7 @@
 
         protected function attachPaymentSource(array &$data, int $customerId, Payment $payment): void {
             if ((int)$payment->customer_id !== $customerId) {
-                throw new InvalidArgumentException('پرداخت متعلق به این مشتری نیست.');
+                throw new BusinessRuleException('پرداخت متعلق به این مشتری نیست.');
             }
 
             $data['payment_id'] = $payment->id;
@@ -79,7 +79,7 @@
 
         protected function attachOrderReturnSource(array &$data, int $customerId, OrderReturn $orderReturn): void {
             if ((int)$orderReturn->customer_id !== $customerId) {
-                throw new InvalidArgumentException('مرجوعی متعلق به این مشتری نیست.');
+                throw new BusinessRuleException('مرجوعی متعلق به این مشتری نیست.');
             }
 
             $data['order_return_id'] = $orderReturn->id;

@@ -4,11 +4,11 @@
 
     use App\Enums\InvoiceStatus;
     use App\Enums\PaymentStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Invoice;
     use App\Models\Payment;
     use App\Models\User;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CreatePaymentAction {
         public function execute(array $data, User $user): Payment {
@@ -16,14 +16,14 @@
                 $employee = $user->employee;
 
                 if (!$employee) {
-                    throw new RuntimeException('کاربر فعلی به کارمند متصل نیست.');
+                    throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
                 }
 
                 $invoice = Invoice::query()->lockForUpdate()->with('payments')->where('public_id', $data['invoice_id'])
                     ->firstOrFail();
 
                 if ($invoice->status !== InvoiceStatus::ISSUED) {
-                    throw new RuntimeException('فقط فاکتور صادرشده قابل پرداخت است.');
+                    throw new BusinessRuleException('فقط فاکتور صادرشده قابل پرداخت است.');
                 }
 
                 $confirmedPaidAmount = $invoice->payments->where('status', PaymentStatus::CONFIRMED)->sum('amount');
@@ -35,11 +35,11 @@
                 $amount = (float)$data['amount'];
 
                 if ($remainingAmount <= 0) {
-                    throw new RuntimeException('این فاکتور تسویه شده است.');
+                    throw new BusinessRuleException('این فاکتور تسویه شده است.');
                 }
 
                 if ($amount > $remainingAmount) {
-                    throw new RuntimeException('مبلغ پرداختی بیشتر از مبلغ باقی‌مانده فاکتور است.');
+                    throw new BusinessRuleException('مبلغ پرداختی بیشتر از مبلغ باقی‌مانده فاکتور است.');
                 }
 
                 $payment = Payment::create([

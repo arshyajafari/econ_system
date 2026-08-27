@@ -3,9 +3,9 @@
     namespace App\Actions\Payment;
 
     use App\Enums\PaymentStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Payment;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CancelPaymentAction {
         public function execute(Payment $payment): Payment {
@@ -13,15 +13,15 @@
                 $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
                 if ($payment->status === PaymentStatus::CANCELLED) {
-                    throw new RuntimeException('این پرداخت قبلاً لغو شده است.');
+                    throw new BusinessRuleException('این پرداخت قبلاً لغو شده است.');
                 }
 
                 if ($payment->status === PaymentStatus::CONFIRMED) {
-                    throw new RuntimeException('پرداخت تأییدشده قابل لغو نیست.');
+                    throw new BusinessRuleException('پرداخت تأییدشده قابل لغو نیست.');
                 }
 
                 if ($payment->status !== PaymentStatus::PENDING) {
-                    throw new RuntimeException('فقط پرداخت در وضعیت pending قابل لغو است.');
+                    throw new BusinessRuleException('فقط پرداخت در وضعیت pending قابل لغو است.');
                 }
 
                 $payment->status = PaymentStatus::CANCELLED;
