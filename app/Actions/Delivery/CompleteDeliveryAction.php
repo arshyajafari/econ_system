@@ -3,9 +3,9 @@
     namespace App\Actions\Delivery;
 
     use App\Enums\DeliveryStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Delivery;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CompleteDeliveryAction {
         public function execute(Delivery $delivery): Delivery {
@@ -13,7 +13,7 @@
                 $delivery = Delivery::query()->lockForUpdate()->findOrFail($delivery->id);
 
                 if ($delivery->status !== DeliveryStatus::SHIPPED) {
-                    throw new RuntimeException('فقط ارسال در وضعیت shipped قابل تکمیل است.');
+                    throw new BusinessRuleException('فقط ارسال در وضعیت shipped قابل تکمیل است.');
                 }
 
                 $delivery->status = DeliveryStatus::DELIVERED;

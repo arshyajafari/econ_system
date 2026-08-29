@@ -4,11 +4,11 @@
 
     use App\Enums\DeliveryStatus;
     use App\Enums\OrderStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Delivery;
     use App\Models\Order;
     use App\Models\User;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CreateDeliveryAction {
         public function execute(array $data, User $user): Delivery {
@@ -16,18 +16,18 @@
                 $employee = $user->employee;
 
                 if (!$employee) {
-                    throw new RuntimeException('کاربر فعلی به کارمند متصل نیست.');
+                    throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
                 }
 
                 $order = Order::query()->lockForUpdate()->with('delivery')->where('public_id', $data['order_id'])
                     ->firstOrFail();
 
                 if ($order->status !== OrderStatus::COMPLETED) {
-                    throw new RuntimeException('فقط سفارش تکمیل‌شده قابل ثبت برای ارسال است.');
+                    throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل ثبت برای ارسال است.');
                 }
 
                 if ($order->delivery) {
-                    throw new RuntimeException('برای این سفارش قبلاً ارسال ثبت شده است.');
+                    throw new BusinessRuleException('برای این سفارش قبلاً ارسال ثبت شده است.');
                 }
 
                 $delivery = Delivery::create([

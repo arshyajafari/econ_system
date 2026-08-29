@@ -3,9 +3,9 @@
     namespace App\Actions\Delivery;
 
     use App\Enums\DeliveryStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Delivery;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CancelDeliveryAction {
         public function execute(Delivery $delivery): Delivery {
@@ -18,7 +18,7 @@
                 ];
 
                 if (!in_array($delivery->status, $cancellableStatuses, true)) {
-                    throw new RuntimeException('این ارسال قابل لغو نیست.');
+                    throw new BusinessRuleException('این ارسال قابل لغو نیست.');
                 }
 
                 $delivery->status = DeliveryStatus::CANCELLED;
