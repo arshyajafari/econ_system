@@ -4,11 +4,11 @@
 
     use App\Enums\InvoiceStatus;
     use App\Enums\OrderStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Invoice;
     use App\Models\Order;
     use App\Services\CodeGeneratorService;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CreateInvoiceAction {
         public function __construct(protected CodeGeneratorService $codeGenerator) {
@@ -17,20 +17,20 @@
         public function execute(Order $order): Invoice {
             return DB::transaction(function () use ($order) {
                 $order = Order::query()->lockForUpdate()->with([
-                        'customer',
-                        'items',
-                    ])->findOrFail($order->id);
+                    'customer',
+                    'items',
+                ])->findOrFail($order->id);
 
                 if ($order->status !== OrderStatus::COMPLETED) {
-                    throw new RuntimeException('فقط سفارش تکمیل‌شده قابل ایجاد فاکتور است.');
+                    throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل ایجاد فاکتور است.');
                 }
 
                 if ($order->invoice()->exists()) {
-                    throw new RuntimeException('برای این سفارش قبلاً فاکتور ایجاد شده است.');
+                    throw new BusinessRuleException('برای این سفارش قبلاً فاکتور ایجاد شده است.');
                 }
 
                 if ($order->items->isEmpty()) {
-                    throw new RuntimeException('سفارش بدون آیتم قابل ایجاد فاکتور نیست.');
+                    throw new BusinessRuleException('سفارش بدون آیتم قابل ایجاد فاکتور نیست.');
                 }
 
                 $subtotal = $order->items->sum(fn($item) => (float)$item->total_price);

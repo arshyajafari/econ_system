@@ -3,9 +3,9 @@
     namespace App\Actions\Invoice;
 
     use App\Enums\InvoiceStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Invoice;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class UpdateInvoiceAction {
         public function execute(Invoice $invoice, array $data): Invoice {
@@ -13,7 +13,7 @@
                 $invoice = Invoice::query()->lockForUpdate()->with('items')->findOrFail($invoice->id);
 
                 if ($invoice->status !== InvoiceStatus::DRAFT) {
-                    throw new RuntimeException('فقط فاکتور در وضعیت draft قابل ویرایش است.');
+                    throw new BusinessRuleException('فقط فاکتور در وضعیت draft قابل ویرایش است.');
                 }
 
                 if (array_key_exists('due_date', $data)) {
@@ -34,8 +34,8 @@
 
                 $invoice->total_amount = (float)$invoice->subtotal - (float)$invoice->discount_amount + (float)$invoice->tax_amount;
 
-                if ($invoice->total_amount < 0) {
-                    throw new RuntimeException('مبلغ نهایی فاکتور نمی‌تواند منفی باشد.');
+                if ($invoice->total_amount <= 0) {
+                    throw new BusinessRuleException('مبلغ نهایی فاکتور باید بیشتر از صفر باشد.');
                 }
 
                 $invoice->save();
