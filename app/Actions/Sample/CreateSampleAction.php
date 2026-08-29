@@ -3,12 +3,12 @@
     namespace App\Actions\Sample;
 
     use App\Enums\VisitStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Product;
     use App\Models\Sample;
     use App\Models\User;
     use App\Models\Visit;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CreateSampleAction {
         public function execute(array $data, User $user): Sample {
@@ -16,7 +16,7 @@
                 $employee = $user->employee;
 
                 if (!$employee) {
-                    throw new RuntimeException('کاربر فعلی به کارمند متصل نیست.');
+                    throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
                 }
 
                 if (!empty($data['client_operation_id'])) {
@@ -31,15 +31,15 @@
                 $visit = Visit::query()->lockForUpdate()->where('public_id', $data['visit_id'])->firstOrFail();
 
                 if ((int)$visit->employee_id !== (int)$employee->id) {
-                    throw new RuntimeException('این بازدید متعلق به کارمند فعلی نیست.');
+                    throw new BusinessRuleException('این بازدید متعلق به کارمند فعلی نیست.');
                 }
 
                 if ($visit->status === VisitStatus::CANCELLED) {
-                    throw new RuntimeException('برای بازدید لغوشده نمی‌توان نمونه ثبت کرد.');
+                    throw new BusinessRuleException('برای بازدید لغوشده نمی‌توان نمونه ثبت کرد.');
                 }
 
                 if ($visit->status !== VisitStatus::COMPLETED) {
-                    throw new RuntimeException('فقط برای بازدید تکمیل‌شده می‌توان نمونه ثبت کرد.');
+                    throw new BusinessRuleException('فقط برای بازدید تکمیل‌شده می‌توان نمونه ثبت کرد.');
                 }
 
                 $product = Product::query()->where('public_id', $data['product_id'])->firstOrFail();

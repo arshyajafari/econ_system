@@ -3,9 +3,9 @@
     namespace App\Actions\Visit;
 
     use App\Enums\VisitStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Visit;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CompleteVisitAction {
         public function execute(Visit $visit): Visit {
@@ -13,7 +13,7 @@
                 $visit = Visit::query()->lockForUpdate()->findOrFail($visit->id);
 
                 if ($visit->status !== VisitStatus::DRAFT) {
-                    throw new RuntimeException('فقط بازدید در وضعیت draft قابل تکمیل است.');
+                    throw new BusinessRuleException('فقط بازدید در وضعیت draft قابل تکمیل است.');
                 }
 
                 $visit->status = VisitStatus::COMPLETED;

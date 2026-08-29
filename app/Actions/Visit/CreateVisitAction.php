@@ -3,11 +3,11 @@
     namespace App\Actions\Visit;
 
     use App\Enums\VisitStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Doctor;
     use App\Models\User;
     use App\Models\Visit;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CreateVisitAction {
         public function execute(array $data, User $user): Visit {
@@ -15,7 +15,7 @@
                 $employee = $user->employee;
 
                 if (!$employee) {
-                    throw new RuntimeException('کاربر فعلی به کارمند متصل نیست.');
+                    throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
                 }
 
                 if (!empty($data['client_operation_id'])) {

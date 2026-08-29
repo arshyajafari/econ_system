@@ -3,9 +3,9 @@
     namespace App\Actions\Visit;
 
     use App\Enums\VisitStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Visit;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CancelVisitAction {
         public function execute(Visit $visit): Visit {
@@ -13,10 +13,10 @@
                 $visit = Visit::query()->lockForUpdate()->findOrFail($visit->id);
 
                 if (in_array($visit->status, [
-                        VisitStatus::COMPLETED,
-                        VisitStatus::CANCELLED,
-                    ], true)) {
-                    throw new RuntimeException('این بازدید قابل لغو نیست.');
+                    VisitStatus::COMPLETED,
+                    VisitStatus::CANCELLED,
+                ], true)) {
+                    throw new BusinessRuleException('این بازدید قابل لغو نیست.');
                 }
 
                 $visit->status = VisitStatus::CANCELLED;
