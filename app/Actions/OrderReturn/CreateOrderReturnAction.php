@@ -4,12 +4,12 @@
 
     use App\Enums\OrderReturnStatus;
     use App\Enums\OrderStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Order;
     use App\Models\OrderReturn;
     use App\Models\User;
     use App\Services\CodeGeneratorService;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CreateOrderReturnAction {
         public function __construct(protected CodeGeneratorService $codeGenerator) {
@@ -20,20 +20,20 @@
                 $employee = $user->employee;
 
                 if (!$employee) {
-                    throw new RuntimeException('کاربر فعلی به کارمند متصل نیست.');
+                    throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
                 }
 
                 $order = Order::query()->where('public_id', $data['order_id'])->lockForUpdate()->with([
-                        'items',
-                        'returns.items',
-                    ])->firstOrFail();
+                    'items',
+                    'returns.items',
+                ])->firstOrFail();
 
                 if ($order->status !== OrderStatus::COMPLETED) {
-                    throw new RuntimeException('فقط سفارش تکمیل‌شده قابل برگشت است.');
+                    throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل برگشت است.');
                 }
 
                 if (empty($data['items'])) {
-                    throw new RuntimeException('مرجوعی باید حداقل یک آیتم داشته باشد.');
+                    throw new BusinessRuleException('مرجوعی باید حداقل یک آیتم داشته باشد.');
                 }
 
                 $code = $this->codeGenerator->generate(OrderReturn::class);
@@ -51,7 +51,7 @@
                     $orderItem = $order->items->firstWhere('public_id', $itemData['order_item_id']);
 
                     if (!$orderItem) {
-                        throw new RuntimeException('آیتم انتخاب‌شده متعلق به این سفارش نیست.');
+                        throw new BusinessRuleException('آیتم انتخاب‌شده متعلق به این سفارش نیست.');
                     }
 
                     $alreadyReturned = $order->returns->reject(fn($return) => $return->status === OrderReturnStatus::DRAFT || $return->status === OrderReturnStatus::CANCELLED)
@@ -63,11 +63,11 @@
                     $quantity = (int)$itemData['quantity'];
 
                     if ($quantity <= 0) {
-                        throw new RuntimeException('مقدار برگشتی باید بیشتر از صفر باشد.');
+                        throw new BusinessRuleException('مقدار برگشتی باید بیشتر از صفر باشد.');
                     }
 
                     if ($quantity > $returnableQuantity) {
-                        throw new RuntimeException('مقدار برگشتی بیشتر از مقدار قابل برگشت است.');
+                        throw new BusinessRuleException('مقدار برگشتی بیشتر از مقدار قابل برگشت است.');
                     }
 
                     $unitPrice = (float)$orderItem->unit_price;

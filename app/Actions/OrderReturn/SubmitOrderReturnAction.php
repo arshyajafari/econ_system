@@ -3,38 +3,38 @@
     namespace App\Actions\OrderReturn;
 
     use App\Enums\OrderReturnStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\OrderReturn;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class SubmitOrderReturnAction {
         public function execute(OrderReturn $orderReturn): OrderReturn {
             return DB::transaction(function () use ($orderReturn) {
                 $orderReturn = OrderReturn::query()->lockForUpdate()->with([
-                        'items.orderItem',
-                        'order.items',
-                        'order.returns.items',
-                    ])->findOrFail($orderReturn->id);
+                    'items.orderItem',
+                    'order.items',
+                    'order.returns.items',
+                ])->findOrFail($orderReturn->id);
 
                 if ($orderReturn->status !== OrderReturnStatus::DRAFT) {
-                    throw new RuntimeException('فقط برگشت در وضعیت draft قابل ارسال است.');
+                    throw new BusinessRuleException('فقط برگشت در وضعیت draft قابل ارسال است.');
                 }
 
                 if ($orderReturn->items->isEmpty()) {
-                    throw new RuntimeException('برگشت سفارش حداقل باید یک آیتم داشته باشد.');
+                    throw new BusinessRuleException('برگشت سفارش حداقل باید یک آیتم داشته باشد.');
                 }
 
                 $order = $orderReturn->order;
 
                 if (!$order) {
-                    throw new RuntimeException('سفارش مربوط به برگشت پیدا نشد.');
+                    throw new BusinessRuleException('سفارش مربوط به برگشت پیدا نشد.');
                 }
 
                 foreach ($orderReturn->items as $item) {
                     $orderItem = $item->orderItem;
 
                     if (!$orderItem) {
-                        throw new RuntimeException('آیتم سفارش مربوط به برگشت پیدا نشد.');
+                        throw new BusinessRuleException('آیتم سفارش مربوط به برگشت پیدا نشد.');
                     }
 
                     $alreadyReturned = $order->returns->where('id', '!=', $orderReturn->id)
@@ -45,7 +45,7 @@
                     $returnableQuantity = (int)$orderItem->quantity - (int)$alreadyReturned;
 
                     if ((int)$item->quantity > $returnableQuantity) {
-                        throw new RuntimeException("مقدار برگشتی محصول {$item->product_id} بیشتر از مقدار قابل برگشت است.");
+                        throw new BusinessRuleException("مقدار برگشتی محصول {$item->product_id} بیشتر از مقدار قابل برگشت است.");
                     }
                 }
 

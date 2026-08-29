@@ -3,9 +3,9 @@
     namespace App\Actions\OrderReturn;
 
     use App\Enums\OrderReturnStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\OrderReturn;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CancelOrderReturnAction {
         public function execute(OrderReturn $orderReturn): OrderReturn {
@@ -19,7 +19,7 @@
                 ];
 
                 if (!in_array($orderReturn->status, $cancellableStatuses, true)) {
-                    throw new RuntimeException('این برگشت سفارش قابل لغو نیست.');
+                    throw new BusinessRuleException('این برگشت سفارش قابل لغو نیست.');
                 }
 
                 $orderReturn->update([

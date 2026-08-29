@@ -3,11 +3,11 @@
     namespace App\Actions\OrderReturn\OrderReturnItem;
 
     use App\Enums\OrderReturnStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\InventoryBatch;
     use App\Models\OrderReturnItem;
     use App\Models\OrderReturnItemAllocation;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class AllocateOrderReturnItemAction {
         public function execute(OrderReturnItem $orderReturnItem, array $allocations): OrderReturnItem {
@@ -18,22 +18,22 @@
                     ->findOrFail($orderReturnItem->id);
 
                 if (!$orderReturnItem->orderReturn) {
-                    throw new RuntimeException('مرجوعی مربوط به این آیتم پیدا نشد.');
+                    throw new BusinessRuleException('مرجوعی مربوط به این آیتم پیدا نشد.');
                 }
 
                 if ($orderReturnItem->orderReturn->status !== OrderReturnStatus::CONFIRMED) {
-                    throw new RuntimeException('فقط مرجوعی در وضعیت confirmed قابل تخصیص انبار است.');
+                    throw new BusinessRuleException('فقط مرجوعی در وضعیت confirmed قابل تخصیص انبار است.');
                 }
 
                 if (empty($allocations)) {
-                    throw new RuntimeException('حداقل یک تخصیص انبار باید ثبت شود.');
+                    throw new BusinessRuleException('حداقل یک تخصیص انبار باید ثبت شود.');
                 }
 
                 $existingAllocatedQuantity = OrderReturnItemAllocation::query()
                     ->where('order_return_item_id', $orderReturnItem->id)->sum('quantity');
 
                 if ($existingAllocatedQuantity > 0) {
-                    throw new RuntimeException('برای این قلم مرجوعی قبلاً تخصیص انبار ثبت شده است.');
+                    throw new BusinessRuleException('برای این قلم مرجوعی قبلاً تخصیص انبار ثبت شده است.');
                 }
 
                 $allocatedQuantity = 0;
@@ -44,14 +44,14 @@
                     $quantity = (int)$allocation['quantity'];
 
                     if ($quantity <= 0) {
-                        throw new RuntimeException('مقدار تخصیص باید بیشتر از صفر باشد.');
+                        throw new BusinessRuleException('مقدار تخصیص باید بیشتر از صفر باشد.');
                     }
 
                     $batch = InventoryBatch::query()->lockForUpdate()
                         ->where('public_id', $allocation['inventory_batch_id'])->firstOrFail();
 
                     if ((int)$batch->product_id !== (int)$orderReturnItem->product_id) {
-                        throw new RuntimeException('Batch انتخاب‌شده متعلق به محصول این قلم مرجوعی نیست.');
+                        throw new BusinessRuleException('Batch انتخاب‌شده متعلق به محصول این قلم مرجوعی نیست.');
                     }
 
                     $allocatedQuantity += $quantity;
@@ -63,7 +63,7 @@
                 }
 
                 if ($allocatedQuantity !== (int)$orderReturnItem->quantity) {
-                    throw new RuntimeException('مجموع تخصیص‌ها باید برابر با مقدار کالای مرجوعی باشد.');
+                    throw new BusinessRuleException('مجموع تخصیص‌ها باید برابر با مقدار کالای مرجوعی باشد.');
                 }
 
                 foreach ($batches as $allocationData) {

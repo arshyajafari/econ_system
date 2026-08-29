@@ -3,9 +3,9 @@
     namespace App\Actions\OrderReturn;
 
     use App\Enums\OrderReturnStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\OrderReturn;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class UpdateOrderReturnAction {
         public function execute(OrderReturn $orderReturn, array $data): OrderReturn {
@@ -19,7 +19,7 @@
                 ])->findOrFail($orderReturn->id);
 
                 if ($orderReturn->status !== OrderReturnStatus::DRAFT) {
-                    throw new RuntimeException('فقط برگشت در وضعیت draft قابل ویرایش است.');
+                    throw new BusinessRuleException('فقط برگشت در وضعیت draft قابل ویرایش است.');
                 }
 
                 $order = $orderReturn->order;
@@ -34,7 +34,7 @@
                     $orderItem = $order->items->firstWhere('public_id', $itemData['order_item_id']);
 
                     if (!$orderItem) {
-                        throw new RuntimeException('آیتم انتخاب‌شده متعلق به این سفارش نیست.');
+                        throw new BusinessRuleException('آیتم انتخاب‌شده متعلق به این سفارش نیست.');
                     }
 
                     $alreadyReturned = $order->returns->where('id', '!=', $orderReturn->id)
@@ -42,12 +42,16 @@
                         ->flatMap(fn($return) => $return->items)->where('order_item_id', $orderItem->id)
                         ->sum('quantity');
 
-                    $returnableQuantity = $orderItem->quantity - $alreadyReturned;
-
                     $quantity = (int)$itemData['quantity'];
 
+                    if ($quantity <= 0) {
+                        throw new BusinessRuleException('مقدار برگشتی باید بیشتر از صفر باشد.');
+                    }
+
+                    $returnableQuantity = (int)$orderItem->quantity - (int)$alreadyReturned;
+
                     if ($quantity > $returnableQuantity) {
-                        throw new RuntimeException('مقدار برگشتی بیشتر از مقدار قابل برگشت است.');
+                        throw new BusinessRuleException('مقدار برگشتی بیشتر از مقدار قابل برگشت است.');
                     }
 
                     $orderReturn->items()->create([

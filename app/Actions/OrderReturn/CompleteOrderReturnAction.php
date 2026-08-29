@@ -5,12 +5,12 @@
     use App\Enums\InventoryMovementType;
     use App\Enums\InvoiceStatus;
     use App\Enums\OrderReturnStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\InventoryBatch;
     use App\Models\InventoryMovement;
     use App\Models\OrderReturn;
     use App\Services\CustomerTransactionService;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CompleteOrderReturnAction {
         public function __construct(protected CustomerTransactionService $customerTransactionService) {
@@ -24,30 +24,30 @@
                 ])->findOrFail($orderReturn->id);
 
                 if ($orderReturn->status !== OrderReturnStatus::CONFIRMED) {
-                    throw new RuntimeException('فقط مرجوعی در وضعیت confirmed قابل تکمیل است.');
+                    throw new BusinessRuleException('فقط مرجوعی در وضعیت confirmed قابل تکمیل است.');
                 }
 
                 if ($orderReturn->items->isEmpty()) {
-                    throw new RuntimeException('مرجوعی باید حداقل یک آیتم داشته باشد.');
+                    throw new BusinessRuleException('مرجوعی باید حداقل یک آیتم داشته باشد.');
                 }
 
                 if (!$orderReturn->order?->invoice) {
-                    throw new RuntimeException('برای سفارش مربوط به مرجوعی فاکتور وجود ندارد.');
+                    throw new BusinessRuleException('برای سفارش مربوط به مرجوعی فاکتور وجود ندارد.');
                 }
 
                 if ($orderReturn->order->invoice->status !== InvoiceStatus::ISSUED) {
-                    throw new RuntimeException('فقط سفارش دارای فاکتور صادرشده قابل تکمیل مرجوعی است.');
+                    throw new BusinessRuleException('فقط سفارش دارای فاکتور صادرشده قابل تکمیل مرجوعی است.');
                 }
 
                 foreach ($orderReturn->items as $item) {
                     if ($item->allocations->isEmpty()) {
-                        throw new RuntimeException('برای تمام اقلام مرجوعی باید تخصیص انبار ثبت شود.');
+                        throw new BusinessRuleException('برای تمام اقلام مرجوعی باید تخصیص انبار ثبت شود.');
                     }
 
                     $allocatedQuantity = $item->allocations->sum('quantity');
 
                     if ((int)$allocatedQuantity !== (int)$item->quantity) {
-                        throw new RuntimeException('مجموع تخصیص‌های انبار با مقدار مرجوعی برابر نیست.');
+                        throw new BusinessRuleException('مجموع تخصیص‌های انبار با مقدار مرجوعی برابر نیست.');
                     }
 
                     foreach ($item->allocations as $allocation) {
@@ -56,7 +56,7 @@
                         $quantity = (int)$allocation->quantity;
 
                         if ($quantity <= 0) {
-                            throw new RuntimeException('مقدار تخصیص انبار باید بیشتر از صفر باشد.');
+                            throw new BusinessRuleException('مقدار تخصیص انبار باید بیشتر از صفر باشد.');
                         }
 
                         $batch->quantity += $quantity;
@@ -76,7 +76,7 @@
                 $returnAmount = $orderReturn->items->sum(fn($item) => (float)$item->total_price);
 
                 if ($returnAmount <= 0) {
-                    throw new RuntimeException('مبلغ مرجوعی باید بیشتر از صفر باشد.');
+                    throw new BusinessRuleException('مبلغ مرجوعی باید بیشتر از صفر باشد.');
                 }
 
                 $this->customerTransactionService->credit(customerId: $orderReturn->customer_id, amount: $returnAmount,
