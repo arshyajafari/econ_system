@@ -34,6 +34,10 @@
 
                 $amount = (float)$data['amount'];
 
+                if ($amount <= 0) {
+                    throw new BusinessRuleException('مبلغ پرداخت باید بیشتر از صفر باشد.');
+                }
+
                 if ($remainingAmount <= 0) {
                     throw new BusinessRuleException('این فاکتور تسویه شده است.');
                 }

@@ -26,6 +26,10 @@
 
                 $amount = array_key_exists('amount', $data) ? (float)$data['amount'] : (float)$payment->amount;
 
+                if ($amount <= 0) {
+                    throw new BusinessRuleException('مبلغ پرداخت باید بیشتر از صفر باشد.');
+                }
+
                 $confirmedPaidAmount = $invoice->payments->where('status', PaymentStatus::CONFIRMED)->sum('amount');
 
                 $otherPendingAmount = $invoice->payments->where('status', PaymentStatus::PENDING)
