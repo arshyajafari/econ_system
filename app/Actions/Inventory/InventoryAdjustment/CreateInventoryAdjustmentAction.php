@@ -4,11 +4,11 @@
 
     use App\Enums\InventoryAdjustmentType;
     use App\Enums\InventoryMovementType;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\InventoryAdjustment;
     use App\Models\InventoryBatch;
     use App\Models\InventoryMovement;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CreateInventoryAdjustmentAction {
         public function execute(array $data): InventoryAdjustment {
@@ -19,14 +19,14 @@
                 $quantity = (int)$data['quantity'];
 
                 if ($quantity <= 0) {
-                    throw new RuntimeException('مقدار اصلاح موجودی باید بیشتر از صفر باشد.');
+                    throw new BusinessRuleException('مقدار اصلاح موجودی باید بیشتر از صفر باشد.');
                 }
 
                 if ($type === InventoryAdjustmentType::DECREASE) {
                     $availableQuantity = $batch->available_quantity;
 
                     if ($quantity > $availableQuantity) {
-                        throw new RuntimeException('موجودی قابل دسترس برای این اصلاح کافی نیست.');
+                        throw new BusinessRuleException('موجودی قابل دسترس برای این اصلاح کافی نیست.');
                     }
 
                     $batch->quantity -= $quantity;

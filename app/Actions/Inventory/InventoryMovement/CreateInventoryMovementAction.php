@@ -3,10 +3,10 @@
     namespace App\Actions\Inventory\InventoryMovement;
 
     use App\Enums\InventoryMovementType;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\InventoryBatch;
     use App\Models\InventoryMovement;
     use Illuminate\Support\Facades\DB;
-    use RuntimeException;
 
     class CreateInventoryMovementAction {
         public function execute(array $data): InventoryMovement {
@@ -21,7 +21,7 @@
                     $availableQuantity = $batch->quantity - $batch->reserved_quantity;
 
                     if ($quantity > $availableQuantity) {
-                        throw new RuntimeException('موجودی قابل دسترس برای این حرکت کافی نیست.');
+                        throw new BusinessRuleException('موجودی قابل دسترس برای این حرکت کافی نیست.');
                     }
 
                     $batch->quantity -= $quantity;

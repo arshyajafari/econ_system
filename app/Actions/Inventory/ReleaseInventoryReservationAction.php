@@ -2,8 +2,8 @@
 
     namespace App\Actions\Inventory;
 
+    use App\Exceptions\BusinessRuleException;
     use App\Models\OrderItemAllocation;
-    use RuntimeException;
 
     class ReleaseInventoryReservationAction {
         public function execute(OrderItemAllocation $allocation): void {
@@ -12,11 +12,11 @@
             $quantity = (int)$allocation->quantity;
 
             if ($quantity <= 0) {
-                throw new RuntimeException('مقدار تخصیص رزرو باید بیشتر از صفر باشد.');
+                throw new BusinessRuleException('مقدار تخصیص رزرو باید بیشتر از صفر باشد.');
             }
 
             if ($batch->reserved_quantity < $quantity) {
-                throw new RuntimeException('موجودی رزروشده برای آزادسازی کافی نیست.');
+                throw new BusinessRuleException('موجودی رزروشده برای آزادسازی کافی نیست.');
             }
 
             $batch->reserved_quantity -= $quantity;
