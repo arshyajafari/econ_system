@@ -11,11 +11,15 @@
     class CreateInventoryMovementAction {
         public function execute(array $data): InventoryMovement {
             return DB::transaction(function () use ($data) {
+                $quantity = (int)$data['quantity'];
+
+                if ($quantity <= 0) {
+                    throw new BusinessRuleException('مقدار حرکت موجودی باید بیشتر از صفر باشد.');
+                }
 
                 $batch = InventoryBatch::query()->lockForUpdate()->findOrFail($data['inventory_batch_id']);
 
                 $type = $data['type'];
-                $quantity = (int)$data['quantity'];
 
                 if ($type === InventoryMovementType::OUT) {
                     $availableQuantity = $batch->quantity - $batch->reserved_quantity;
@@ -34,7 +38,10 @@
                 $batch->save();
 
                 $movement = new InventoryMovement();
-                $movement->fill($data);
+                $movement->fill([
+                    ...$data,
+                    'quantity' => $quantity,
+                ]);
                 $movement->moved_at ??= now();
                 $movement->save();
 
