@@ -3,6 +3,7 @@
     namespace App\Actions\Inventory;
 
     use App\Enums\InventoryMovementType;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\InventoryBatch;
     use App\Models\InventoryMovement;
     use App\Models\Product;
@@ -11,6 +12,12 @@
     class ReceiveInventoryAction {
         public function execute(array $data): InventoryBatch {
             return DB::transaction(function () use ($data) {
+                $quantity = (int)$data['quantity'];
+
+                if ($quantity <= 0) {
+                    throw new BusinessRuleException('مقدار موجودی دریافتی باید بیشتر از صفر باشد.');
+                }
+
                 $product = Product::query()->where('public_id', $data['product_id'])->lockForUpdate()->firstOrFail();
 
                 $batchNumber = $data['batch_number'] ?? null;
@@ -30,13 +37,13 @@
                 }
 
                 if ($batch) {
-                    $batch->increment('quantity', $data['quantity']);
+                    $batch->increment('quantity', $quantity);
                 } else {
                     $batch = InventoryBatch::create([
                         'product_id' => $product->id,
                         'batch_number' => $batchNumber,
                         'expire_date' => $expireDate,
-                        'quantity' => $data['quantity'],
+                        'quantity' => $quantity,
                         'reserved_quantity' => 0,
                         'received_at' => $data['received_at'] ?? now(),
                         'description' => $data['description'] ?? null,
@@ -46,7 +53,7 @@
                 InventoryMovement::create([
                     'inventory_batch_id' => $batch->id,
                     'type' => InventoryMovementType::IN,
-                    'quantity' => $data['quantity'],
+                    'quantity' => $quantity,
                     'reason' => 'inventory_receipt',
                     'description' => $data['description'] ?? null,
                     'moved_at' => $data['received_at'] ?? now(),
