@@ -11,6 +11,7 @@
     use Illuminate\Database\Eloquent\Builder;
     use Illuminate\Database\Eloquent\Factories\HasFactory;
     use Illuminate\Database\Eloquent\Relations\BelongsTo;
+    use Illuminate\Database\Eloquent\Relations\HasMany;
     use Illuminate\Database\Eloquent\SoftDeletes;
 
     class Product extends BaseModel implements HasGeneratedCode {
@@ -64,6 +65,14 @@
             return $this->belongsTo(ProductCategory::class, 'product_category_id');
         }
 
+        public function orderItems(): HasMany {
+            return $this->hasMany(OrderItem::class);
+        }
+
+        public function inventoryBatches(): HasMany {
+            return $this->hasMany(InventoryBatch::class);
+        }
+
         public function scopeActive(Builder $query): Builder {
             return $query->where('status', ProductStatus::ACTIVE->value);
         }
@@ -72,19 +81,19 @@
             return $query->where('status', ProductStatus::INACTIVE->value);
         }
 
-        public function scopeSearch($query, string $value) {
-            return $query->where(function ($query) use ($value) {
+        public function scopeSearch(Builder $query, string $value): Builder {
+            return $query->where(function (Builder $query) use ($value) {
                 $query->where('title', 'like', "%{$value}%")->orWhere('barcode', 'like', "%{$value}%")
                     ->orWhere('code', 'like', "%{$value}%");
             });
         }
 
         public function scopeFilter(Builder $query, array $filters): Builder {
-            return $query->when($filters['search'] ?? null, fn($q, $value) => $q->search($value))
-                ->when($filters['brand_id'] ?? null, fn($q, $value) => $q->where('brand_id', $value))
+            return $query->when($filters['search'] ?? null, fn(Builder $q, $value) => $q->search($value))
+                ->when($filters['brand_id'] ?? null, fn(Builder $q, $value) => $q->where('brand_id', $value))
                 ->when($filters['product_category_id'] ?? null,
-                    fn($q, $value) => $q->where('product_category_id', $value))->when(array_key_exists('status',
-                    $filters));
+                    fn(Builder $q, $value) => $q->where('product_category_id', $value))->when(array_key_exists('status',
+                    $filters), fn(Builder $q) => $q->where('status', $filters['status']));
         }
 
         public function scopeDefaultSort(Builder $query): Builder {
@@ -92,8 +101,15 @@
         }
 
         public function canBeDeleted(): bool {
-            return !($this->orderItems()->exists() || $this->inventoryMovements()->exists() || $this->sampleItems()
-                    ->exists());
+            if ($this->orderItems()->exists()) {
+                return false;
+            }
+
+            if ($this->inventoryBatches()->whereHas('movements')->exists()) {
+                return false;
+            }
+
+            return true;
         }
 
         public static function codeGenerator(): CodeGeneratorData {
