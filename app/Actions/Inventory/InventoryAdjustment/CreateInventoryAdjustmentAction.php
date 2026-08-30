@@ -39,7 +39,10 @@
                 $batch->save();
 
                 $adjustment = new InventoryAdjustment();
-                $adjustment->fill($data);
+                $adjustment->fill([
+                    ...$data,
+                    'quantity' => $quantity,
+                ]);
                 $adjustment->save();
 
                 InventoryMovement::create([
