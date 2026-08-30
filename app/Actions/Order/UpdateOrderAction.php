@@ -38,6 +38,10 @@
                 $order->save();
 
                 if (array_key_exists('items', $data)) {
+                    if (empty($data['items'])) {
+                        throw new BusinessRuleException('سفارش باید حداقل یک آیتم داشته باشد.');
+                    }
+
                     $order->items()->delete();
 
                     foreach ($data['items'] as $itemData) {
@@ -45,6 +49,14 @@
 
                         $quantity = (int)$itemData['quantity'];
                         $unitPrice = (float)$itemData['unit_price'];
+
+                        if ($quantity <= 0) {
+                            throw new BusinessRuleException('تعداد محصول باید بیشتر از صفر باشد.');
+                        }
+
+                        if ($unitPrice < 0) {
+                            throw new BusinessRuleException('قیمت واحد نمی‌تواند منفی باشد.');
+                        }
 
                         $order->items()->create([
                             'product_id' => $product->id,

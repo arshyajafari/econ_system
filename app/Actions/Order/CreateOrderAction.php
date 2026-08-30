@@ -3,6 +3,7 @@
     namespace App\Actions\Order;
 
     use App\Enums\OrderStatus;
+    use App\Exceptions\BusinessRuleException;
     use App\Models\Customer;
     use App\Models\Employee;
     use App\Models\Order;
@@ -15,6 +16,10 @@
                 $customer = Customer::query()->where('public_id', $data['customer_id'])->firstOrFail();
 
                 $salesEmployee = Employee::query()->where('public_id', $data['sales_employee_id'])->firstOrFail();
+
+                if (empty($data['items'])) {
+                    throw new BusinessRuleException('سفارش باید حداقل یک آیتم داشته باشد.');
+                }
 
                 $order = Order::create([
                     'customer_id' => $customer->id,
@@ -29,6 +34,14 @@
 
                     $quantity = (int)$itemData['quantity'];
                     $unitPrice = (float)$itemData['unit_price'];
+
+                    if ($quantity <= 0) {
+                        throw new BusinessRuleException('تعداد محصول باید بیشتر از صفر باشد.');
+                    }
+
+                    if ($unitPrice < 0) {
+                        throw new BusinessRuleException('قیمت واحد نمی‌تواند منفی باشد.');
+                    }
 
                     $order->items()->create([
                         'product_id' => $product->id,
