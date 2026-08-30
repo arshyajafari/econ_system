@@ -95,8 +95,7 @@
             return $query->where(function (Builder $query) use ($search) {
                 $query->where('code', 'like', "%{$search}%")->orWhere('customer_name', 'like', "%{$search}%")
                     ->orWhere('owner_name', 'like', "%{$search}%")->orWhere('phone_number', 'like', "%{$search}%")
-                    ->orWhere('telephone_number', 'like', "%{$search}%")->orWhere('city', 'like', "%{$search}%")
-                    ->orWhere('social_link', 'like', "%{$search}%");
+                    ->orWhere('telephone_number', 'like', "%{$search}%")->orWhere('social_link', 'like', "%{$search}%");
             });
         }
 
