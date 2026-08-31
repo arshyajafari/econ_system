@@ -12,7 +12,7 @@
     class AllocateOrderReturnItemAction {
         public function execute(OrderReturnItem $orderReturnItem, array $allocations): OrderReturnItem {
             return DB::transaction(function () use (
-                $orderReturnItem, $allocations
+                $orderReturnItem, $allocations,
             ) {
                 $orderReturnItem = OrderReturnItem::query()->lockForUpdate()->with('orderReturn')
                     ->findOrFail($orderReturnItem->id);
@@ -36,19 +36,21 @@
                     throw new BusinessRuleException('برای این قلم مرجوعی قبلاً تخصیص انبار ثبت شده است.');
                 }
 
-                $allocatedQuantity = 0;
+                $requestedAllocations = collect($allocations)->groupBy('inventory_batch_id')
+                    ->map(fn($items) => $items->sum(fn($item) => (int)$item['quantity']));
 
+                $allocatedQuantity = 0;
                 $batches = [];
 
-                foreach ($allocations as $allocation) {
-                    $quantity = (int)$allocation['quantity'];
+                foreach ($requestedAllocations as $inventoryBatchPublicId => $quantity) {
+                    $quantity = (int)$quantity;
 
                     if ($quantity <= 0) {
                         throw new BusinessRuleException('مقدار تخصیص باید بیشتر از صفر باشد.');
                     }
 
-                    $batch = InventoryBatch::query()->lockForUpdate()
-                        ->where('public_id', $allocation['inventory_batch_id'])->firstOrFail();
+                    $batch = InventoryBatch::query()->lockForUpdate()->where('public_id', $inventoryBatchPublicId)
+                        ->firstOrFail();
 
                     if ((int)$batch->product_id !== (int)$orderReturnItem->product_id) {
                         throw new BusinessRuleException('Batch انتخاب‌شده متعلق به محصول این قلم مرجوعی نیست.');
