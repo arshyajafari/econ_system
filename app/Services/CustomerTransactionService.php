@@ -12,19 +12,19 @@
 
     class CustomerTransactionService {
         public function debit(int $customerId, float|int|string $amount, ?Model $source = null,
-            ?string $description = null, $transactionAt = null, ?array $meta = null): CustomerTransaction {
+            ?string $description = null, $transactionAt = null, ?array $meta = null,): CustomerTransaction {
             return $this->create(customerId: $customerId, type: CustomerTransactionType::DEBIT, amount: $amount,
                 source: $source, description: $description, transactionAt: $transactionAt, meta: $meta,);
         }
 
         public function credit(int $customerId, float|int|string $amount, ?Model $source = null,
-            ?string $description = null, $transactionAt = null, ?array $meta = null): CustomerTransaction {
+            ?string $description = null, $transactionAt = null, ?array $meta = null,): CustomerTransaction {
             return $this->create(customerId: $customerId, type: CustomerTransactionType::CREDIT, amount: $amount,
                 source: $source, description: $description, transactionAt: $transactionAt, meta: $meta,);
         }
 
         protected function create(int $customerId, CustomerTransactionType $type, float|int|string $amount,
-            ?Model $source, ?string $description, $transactionAt, ?array $meta): CustomerTransaction {
+            ?Model $source, ?string $description, $transactionAt, ?array $meta,): CustomerTransaction {
             $amount = (float)$amount;
 
             if ($amount <= 0) {
@@ -42,7 +42,35 @@
 
             $this->attachSource($data, $customerId, $source);
 
+            $existingTransaction = $this->findExistingTransaction(customerId: $customerId, type: $type,
+                source: $source,);
+
+            if ($existingTransaction) {
+                return $existingTransaction;
+            }
+
             return CustomerTransaction::create($data);
+        }
+
+        protected function findExistingTransaction(int $customerId, CustomerTransactionType $type,
+            ?Model $source,): ?CustomerTransaction {
+            if (!$source) {
+                return null;
+            }
+
+            $query = CustomerTransaction::query()->where('customer_id', $customerId)->where('type', $type);
+
+            match (true) {
+                $source instanceof Invoice => $query->where('invoice_id', $source->id),
+
+                $source instanceof Payment => $query->where('payment_id', $source->id),
+
+                $source instanceof OrderReturn => $query->where('order_return_id', $source->id),
+
+                default => throw new BusinessRuleException('منبع تراکنش مالی پشتیبانی نمی‌شود.'),
+            };
+
+            return $query->first();
         }
 
         protected function attachSource(array &$data, int $customerId, ?Model $source): void {
