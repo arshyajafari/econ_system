@@ -53,6 +53,10 @@
                     foreach ($item->allocations as $allocation) {
                         $batch = InventoryBatch::query()->lockForUpdate()->findOrFail($allocation->inventory_batch_id);
 
+                        if ((int)$batch->product_id !== (int)$item->product_id) {
+                            throw new BusinessRuleException('Batch انتخاب‌شده متعلق به محصول مرجوعی نیست.');
+                        }
+
                         $quantity = (int)$allocation->quantity;
 
                         if ($quantity <= 0) {
@@ -60,6 +64,7 @@
                         }
 
                         $batch->quantity += $quantity;
+
                         $batch->save();
 
                         InventoryMovement::create([
@@ -80,10 +85,12 @@
                 }
 
                 $this->customerTransactionService->credit(customerId: $orderReturn->customer_id, amount: $returnAmount,
-                    source: $orderReturn, description: "مرجوعی سفارش {$orderReturn->code}", transactionAt: now());
+                    source: $orderReturn, description: "مرجوعی سفارش {$orderReturn->code}", transactionAt: now(),);
 
                 $orderReturn->status = OrderReturnStatus::COMPLETED;
+
                 $orderReturn->completed_at = now();
+
                 $orderReturn->save();
 
                 return $orderReturn->fresh([

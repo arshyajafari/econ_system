@@ -23,6 +23,10 @@
                     throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
                 }
 
+                if (empty($data['items'])) {
+                    throw new BusinessRuleException('مرجوعی باید حداقل یک آیتم داشته باشد.');
+                }
+
                 $order = Order::query()->where('public_id', $data['order_id'])->lockForUpdate()->with([
                     'items',
                     'returns.items',
@@ -32,8 +36,36 @@
                     throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل برگشت است.');
                 }
 
-                if (empty($data['items'])) {
-                    throw new BusinessRuleException('مرجوعی باید حداقل یک آیتم داشته باشد.');
+                /*
+                 * Aggregate requested quantities first.
+                 *
+                 * This prevents the same OrderItem from appearing
+                 * multiple times in the same return and bypassing
+                 * the returnable-quantity limit.
+                 */
+                $requestedQuantities = collect($data['items'])->groupBy('order_item_id')
+                    ->map(fn($items) => $items->sum(fn($item) => (int)$item['quantity']));
+
+                foreach ($requestedQuantities as $orderItemPublicId => $quantity) {
+                    if ($quantity <= 0) {
+                        throw new BusinessRuleException('مقدار برگشتی باید بیشتر از صفر باشد.');
+                    }
+
+                    $orderItem = $order->items->firstWhere('public_id', $orderItemPublicId);
+
+                    if (!$orderItem) {
+                        throw new BusinessRuleException('آیتم انتخاب‌شده متعلق به این سفارش نیست.');
+                    }
+
+                    $alreadyReturned = $order->returns->reject(fn($return) => $return->status === OrderReturnStatus::DRAFT || $return->status === OrderReturnStatus::CANCELLED)
+                        ->flatMap(fn($return) => $return->items)->where('order_item_id', $orderItem->id)
+                        ->sum('quantity');
+
+                    $returnableQuantity = (int)$orderItem->quantity - (int)$alreadyReturned;
+
+                    if ($quantity > $returnableQuantity) {
+                        throw new BusinessRuleException('مقدار برگشتی بیشتر از مقدار قابل برگشت است.');
+                    }
                 }
 
                 $code = $this->codeGenerator->generate(OrderReturn::class);
@@ -50,34 +82,12 @@
                 foreach ($data['items'] as $itemData) {
                     $orderItem = $order->items->firstWhere('public_id', $itemData['order_item_id']);
 
-                    if (!$orderItem) {
-                        throw new BusinessRuleException('آیتم انتخاب‌شده متعلق به این سفارش نیست.');
-                    }
-
-                    $alreadyReturned = $order->returns->reject(fn($return) => $return->status === OrderReturnStatus::DRAFT || $return->status === OrderReturnStatus::CANCELLED)
-                        ->flatMap(fn($return) => $return->items)->where('order_item_id', $orderItem->id)
-                        ->sum('quantity');
-
-                    $returnableQuantity = (int)$orderItem->quantity - (int)$alreadyReturned;
-
-                    $quantity = (int)$itemData['quantity'];
-
-                    if ($quantity <= 0) {
-                        throw new BusinessRuleException('مقدار برگشتی باید بیشتر از صفر باشد.');
-                    }
-
-                    if ($quantity > $returnableQuantity) {
-                        throw new BusinessRuleException('مقدار برگشتی بیشتر از مقدار قابل برگشت است.');
-                    }
-
-                    $unitPrice = (float)$orderItem->unit_price;
-
                     $orderReturn->items()->create([
                         'order_item_id' => $orderItem->id,
                         'product_id' => $orderItem->product_id,
-                        'quantity' => $quantity,
-                        'unit_price' => $unitPrice,
-                        'total_price' => $quantity * $unitPrice,
+                        'quantity' => (int)$itemData['quantity'],
+                        'unit_price' => (float)$orderItem->unit_price,
+                        'total_price' => (int)$itemData['quantity'] * (float)$orderItem->unit_price,
                         'description' => $itemData['description'] ?? null,
                     ]);
                 }
@@ -86,6 +96,7 @@
                     'customer',
                     'employee',
                     'items.product',
+                    'items.orderItem',
                 ]);
             });
         }

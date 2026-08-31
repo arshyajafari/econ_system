@@ -35,8 +35,11 @@
                     throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل تأیید مرجوعی است.');
                 }
 
-                foreach ($orderReturn->items as $item) {
-                    $orderItem = $item->orderItem;
+                $requestedQuantities = $orderReturn->items->groupBy('order_item_id')
+                    ->map(fn($items) => $items->sum('quantity'));
+
+                foreach ($requestedQuantities as $orderItemId => $requestedQuantity) {
+                    $orderItem = $order->items->firstWhere('id', $orderItemId);
 
                     if (!$orderItem) {
                         throw new BusinessRuleException('آیتم سفارش مربوط به برگشت پیدا نشد.');
@@ -44,17 +47,31 @@
 
                     $alreadyReturned = $order->returns->where('id', '!=', $orderReturn->id)
                         ->reject(fn($return) => $return->status === OrderReturnStatus::DRAFT || $return->status === OrderReturnStatus::CANCELLED)
-                        ->flatMap(fn($return) => $return->items)->where('order_item_id', $orderItem->id)
-                        ->sum('quantity');
+                        ->flatMap(fn($return) => $return->items)->where('order_item_id', $orderItemId)->sum('quantity');
 
                     $returnableQuantity = (int)$orderItem->quantity - (int)$alreadyReturned;
 
-                    if ((int)$item->quantity > $returnableQuantity) {
+                    if ((int)$requestedQuantity <= 0) {
+                        throw new BusinessRuleException('مقدار برگشتی باید بیشتر از صفر باشد.');
+                    }
+
+                    if ((int)$requestedQuantity > $returnableQuantity) {
                         throw new BusinessRuleException('مقدار برگشتی بیشتر از مقدار قابل برگشت است.');
                     }
                 }
 
+                foreach ($orderReturn->items as $item) {
+                    if (!$item->orderItem) {
+                        throw new BusinessRuleException('آیتم سفارش مربوط به برگشت پیدا نشد.');
+                    }
+
+                    if ((int)$item->product_id !== (int)$item->orderItem->product_id) {
+                        throw new BusinessRuleException('محصول آیتم مرجوعی با محصول آیتم سفارش مطابقت ندارد.');
+                    }
+                }
+
                 $orderReturn->status = OrderReturnStatus::CONFIRMED;
+
                 $orderReturn->save();
 
                 return $orderReturn->fresh([
