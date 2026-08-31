@@ -7,13 +7,17 @@
     use App\Models\Customer;
     use App\Models\Employee;
     use App\Models\Order;
-    use App\Models\Product;
     use Illuminate\Support\Facades\DB;
 
     class UpdateOrderAction {
+        public function __construct(protected SyncOrderItemsAction $syncOrderItems) {
+        }
+
         public function execute(Order $order, array $data): Order {
-            return DB::transaction(function () use ($order, $data) {
-                $order = Order::query()->lockForUpdate()->with('items')->findOrFail($order->id);
+            return DB::transaction(function () use (
+                $order, $data
+            ) {
+                $order = Order::query()->lockForUpdate()->findOrFail($order->id);
 
                 if ($order->status !== OrderStatus::DRAFT) {
                     throw new BusinessRuleException('فقط سفارش در وضعیت draft قابل ویرایش است.');
@@ -38,34 +42,7 @@
                 $order->save();
 
                 if (array_key_exists('items', $data)) {
-                    if (empty($data['items'])) {
-                        throw new BusinessRuleException('سفارش باید حداقل یک آیتم داشته باشد.');
-                    }
-
-                    $order->items()->delete();
-
-                    foreach ($data['items'] as $itemData) {
-                        $product = Product::query()->where('public_id', $itemData['product_id'])->firstOrFail();
-
-                        $quantity = (int)$itemData['quantity'];
-                        $unitPrice = (float)$itemData['unit_price'];
-
-                        if ($quantity <= 0) {
-                            throw new BusinessRuleException('تعداد محصول باید بیشتر از صفر باشد.');
-                        }
-
-                        if ($unitPrice < 0) {
-                            throw new BusinessRuleException('قیمت واحد نمی‌تواند منفی باشد.');
-                        }
-
-                        $order->items()->create([
-                            'product_id' => $product->id,
-                            'quantity' => $quantity,
-                            'unit_price' => $unitPrice,
-                            'total_price' => $quantity * $unitPrice,
-                            'description' => $itemData['description'] ?? null,
-                        ]);
-                    }
+                    $this->syncOrderItems->execute($order, $data['items']);
                 }
 
                 return $order->fresh(Order::DEFAULT_RELATIONS);
