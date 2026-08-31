@@ -7,10 +7,13 @@
     use App\Traits\HasAudit;
     use App\Traits\HasPublicId;
     use Illuminate\Database\Eloquent\Relations\BelongsTo;
+    use Illuminate\Database\Eloquent\Relations\HasOne;
     use Illuminate\Database\Eloquent\SoftDeletes;
 
     class Payment extends BaseModel {
-        use HasPublicId, HasAudit, SoftDeletes;
+        use HasPublicId;
+        use HasAudit;
+        use SoftDeletes;
 
         public const DEFAULT_RELATIONS = [
             'invoice',
@@ -60,5 +63,9 @@
 
         public function employee(): BelongsTo {
             return $this->belongsTo(Employee::class);
+        }
+
+        public function customerTransaction(): HasOne {
+            return $this->hasOne(CustomerTransaction::class);
         }
     }
