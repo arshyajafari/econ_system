@@ -13,7 +13,7 @@
     use App\Http\Requests\Employee\EmployeeIndexRequest;
     use App\Http\Requests\Employee\StoreEmployeeRequest;
     use App\Http\Requests\Employee\UpdateEmployeeRequest;
-    use App\Http\Resources\Employee\EmployeeResource;
+    use App\Http\Resources\EmployeeResource;
     use App\Models\Employee;
 
     class EmployeeController extends Controller {

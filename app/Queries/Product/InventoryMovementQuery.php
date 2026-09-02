@@ -20,19 +20,18 @@
             return $this;
         }
 
-        protected function applyBatch(?int $batchId): void {
-            if (!$batchId) {
+        protected function applyBatch(?string $publicId): void {
+            if (!$publicId) {
                 return;
             }
-
-            $this->query->where('inventory_batch_id', $batchId);
+            $this->query->whereHas('inventoryBatch',
+                function ($query) use ($publicId) { $query->where('public_id', $publicId); });
         }
 
         protected function applyType(?string $type): void {
             if (!$type) {
                 return;
             }
-
             $this->query->where('type', $type);
         }
 
@@ -40,7 +39,6 @@
             if ($from) {
                 $this->query->whereDate('moved_at', '>=', $from);
             }
-
             if ($to) {
                 $this->query->whereDate('moved_at', '<=', $to);
             }

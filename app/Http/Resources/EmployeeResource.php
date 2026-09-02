@@ -1,6 +1,6 @@
 <?php
 
-    namespace App\Http\Resources\Employee;
+    namespace App\Http\Resources;
 
     use App\Http\Resources\AddressResource;
     use App\Http\Resources\UserResource;

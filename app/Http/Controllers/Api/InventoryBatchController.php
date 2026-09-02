@@ -10,7 +10,7 @@
     use App\Http\Requests\InventoryBatch\InventoryBatchIndexRequest;
     use App\Http\Requests\InventoryBatch\StoreInventoryBatchRequest;
     use App\Http\Requests\InventoryBatch\UpdateInventoryBatchRequest;
-    use App\Http\Resources\InventoryBatch\InventoryBatchResource;
+    use App\Http\Resources\InventoryBatchResource;
     use App\Models\InventoryBatch;
     use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
     use Symfony\Component\HttpFoundation\Response;

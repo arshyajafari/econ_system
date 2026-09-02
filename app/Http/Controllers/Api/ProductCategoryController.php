@@ -14,7 +14,7 @@
     use App\Http\Requests\ProductCategory\ProductCategoryIndexRequest;
     use App\Http\Requests\ProductCategory\StoreProductCategoryRequest;
     use App\Http\Requests\ProductCategory\UpdateProductCategoryRequest;
-    use App\Http\Resources\ProductCategory\ProductCategoryResource;
+    use App\Http\Resources\ProductCategoryResource;
     use App\Models\ProductCategory;
     use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
     use Symfony\Component\HttpFoundation\Response;

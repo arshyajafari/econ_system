@@ -13,7 +13,7 @@
     use App\Http\Requests\Brand\ChangeBrandActivityRequest;
     use App\Http\Requests\Brand\StoreBrandRequest;
     use App\Http\Requests\Brand\UpdateBrandRequest;
-    use App\Http\Resources\Brand\BrandResource;
+    use App\Http\Resources\BrandResource;
     use App\Models\Brand;
     use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
     use Symfony\Component\HttpFoundation\Response;

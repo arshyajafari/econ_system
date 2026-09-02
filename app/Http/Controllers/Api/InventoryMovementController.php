@@ -5,7 +5,7 @@
     use App\Actions\Inventory\InventoryMovement\ListInventoryMovementsAction;
     use App\Actions\Inventory\InventoryMovement\ShowInventoryMovementAction;
     use App\Http\Requests\InventoryMovement\InventoryMovementIndexRequest;
-    use App\Http\Resources\InventoryMovement\InventoryMovementResource;
+    use App\Http\Resources\InventoryMovementResource;
     use App\Models\InventoryMovement;
     use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 

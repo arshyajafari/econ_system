@@ -7,7 +7,7 @@
     use App\Actions\Inventory\InventoryAdjustment\ShowInventoryAdjustmentAction;
     use App\Http\Requests\InventoryAdjustment\CreateInventoryAdjustmentRequest;
     use App\Http\Requests\InventoryAdjustment\InventoryAdjustmentIndexRequest;
-    use App\Http\Resources\InventoryAdjustment\InventoryAdjustmentResource;
+    use App\Http\Resources\InventoryAdjustmentResource;
     use App\Models\InventoryAdjustment;
     use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 

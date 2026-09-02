@@ -5,10 +5,9 @@
     use App\Enums\InventoryMovementType;
     use App\Traits\HasPublicId;
     use Illuminate\Database\Eloquent\Relations\BelongsTo;
-    use Illuminate\Database\Eloquent\SoftDeletes;
 
     class InventoryMovement extends BaseModel {
-        use HasPublicId, SoftDeletes;
+        use HasPublicId;
 
         public const DEFAULT_RELATIONS = [
             'inventoryBatch.product',
