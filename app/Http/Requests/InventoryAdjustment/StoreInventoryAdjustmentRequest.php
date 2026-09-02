@@ -7,13 +7,13 @@
     use App\Validation\ValidationRules;
     use Illuminate\Validation\Rule;
 
-    class CreateInventoryAdjustmentRequest extends CrudRequest {
+    class StoreInventoryAdjustmentRequest extends CrudRequest {
         public function rules(): array {
             return [
                 'inventory_batch_id' => [
                     'required',
-                    'integer',
-                    'exists:inventory_batches,id',
+                    'string',
+                    'exists:inventory_batches,public_id',
                 ],
                 'type' => [
                     'required',
@@ -25,7 +25,7 @@
                     'min:1',
                 ],
                 'reason' => [
-                    'nullable',
+                    'required',
                     'string',
                     'max:300',
                 ],

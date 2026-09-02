@@ -13,7 +13,8 @@
     class CreateInventoryAdjustmentAction {
         public function execute(array $data): InventoryAdjustment {
             return DB::transaction(function () use ($data) {
-                $batch = InventoryBatch::query()->lockForUpdate()->findOrFail($data['inventory_batch_id']);
+                $batch = InventoryBatch::query()->where('public_id', $data['inventory_batch_id'])->lockForUpdate()
+                    ->firstOrFail();
 
                 $type = $data['type'] instanceof InventoryAdjustmentType ? $data['type'] : InventoryAdjustmentType::tryFrom($data['type']);
 
@@ -27,15 +28,15 @@
                     throw new BusinessRuleException('مقدار اصلاح موجودی باید بیشتر از صفر باشد.');
                 }
 
+                if (blank($data['reason'] ?? null)) {
+                    throw new BusinessRuleException('علت اصلاح موجودی الزامی است.');
+                }
+
                 if ($type === InventoryAdjustmentType::DECREASE) {
-                    /*
-                     * Reserved inventory belongs to confirmed orders
-                     * and must not be removed by a manual adjustment.
-                     */
-                    if ($quantity > (int)$batch->available_quantity) {
+                    $availableQuantity = (int)$batch->available_quantity;
+                    if ($quantity > $availableQuantity) {
                         throw new BusinessRuleException('موجودی قابل دسترس برای این اصلاح کافی نیست.');
                     }
-
                     $batch->quantity -= $quantity;
                 }
 
@@ -43,9 +44,6 @@
                     $batch->quantity += $quantity;
                 }
 
-                /*
-                 * Defensive inventory invariants.
-                 */
                 if ($batch->quantity < 0) {
                     throw new BusinessRuleException('موجودی انبار نمی‌تواند منفی شود.');
                 }
@@ -73,7 +71,7 @@
                     'type' => $type === InventoryAdjustmentType::INCREASE ? InventoryMovementType::IN : InventoryMovementType::OUT,
                     'quantity' => $quantity,
                     'reason' => 'inventory_adjustment',
-                    'description' => $data['description'] ?? null,
+                    'description' => $data['description'] ?? $data['reason'],
                     'moved_at' => now(),
                 ]);
 

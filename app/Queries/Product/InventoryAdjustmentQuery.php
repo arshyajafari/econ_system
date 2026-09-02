@@ -4,6 +4,7 @@
 
     use App\Models\InventoryAdjustment;
     use App\Queries\BaseQuery;
+    use Illuminate\Database\Eloquent\Builder;
 
     class InventoryAdjustmentQuery extends BaseQuery {
         protected function initialize(): void {
@@ -15,7 +16,6 @@
             $this->applyType($filters['type'] ?? null);
             $this->applyBatch($filters['inventory_batch_id'] ?? null);
             $this->applySort($filters['sort'] ?? null, InventoryAdjustment::SORTABLE, 'created_at');
-
             return $this;
         }
 
@@ -23,15 +23,14 @@
             if (!$type) {
                 return;
             }
-
             $this->query->where('type', $type);
         }
 
-        protected function applyBatch(?int $batchId): void {
-            if (!$batchId) {
+        protected function applyBatch(?string $batchPublicId): void {
+            if (!$batchPublicId) {
                 return;
             }
-
-            $this->query->where('inventory_batch_id', $batchId);
+            $this->query->whereHas('inventoryBatch',
+                function (Builder $query) use ($batchPublicId) { $query->where('public_id', $batchPublicId); });
         }
     }
