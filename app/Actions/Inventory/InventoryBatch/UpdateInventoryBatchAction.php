@@ -8,9 +8,12 @@
     class UpdateInventoryBatchAction {
         public function execute(InventoryBatch $batch, array $data): InventoryBatch {
             return DB::transaction(function () use (
-                $batch, $data
+                $batch, $data,
             ) {
-                unset($data['quantity'], $data['reserved_quantity']);
+                $batch = InventoryBatch::query()->lockForUpdate()->findOrFail($batch->id);
+
+                unset($data['quantity'], $data['reserved_quantity'],);
+
                 $batch->fill($data);
                 $batch->save();
 

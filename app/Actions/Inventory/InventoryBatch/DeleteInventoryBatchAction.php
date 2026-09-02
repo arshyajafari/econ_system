@@ -9,12 +9,12 @@
     class DeleteInventoryBatchAction {
         public function execute(InventoryBatch $batch): void {
             DB::transaction(function () use ($batch) {
-                $hasMovements = $batch->movements()->exists();
-                $hasAdjustments = $batch->adjustments()->exists();
-                $hasAllocations = $batch->allocations()->exists();
-                $hasReturnAllocations = $batch->returnAllocations()->exists();
+                $batch = InventoryBatch::query()->lockForUpdate()->findOrFail($batch->id);
 
-                if ($hasMovements || $hasAdjustments || $hasAllocations || $hasReturnAllocations) {
+                $hasOperationalHistory = $batch->movements()->exists() || $batch->adjustments()
+                        ->exists() || $batch->allocations()->exists() || $batch->returnAllocations()->exists();
+
+                if ($hasOperationalHistory) {
                     throw new BusinessRuleException('بچ موجودی دارای سابقه عملیاتی است و امکان حذف آن وجود ندارد.');
                 }
 
