@@ -3,12 +3,13 @@
     namespace App\Models;
 
     use App\Enums\InventoryAdjustmentType;
+    use App\Traits\HasAudit;
     use App\Traits\HasPublicId;
     use Illuminate\Database\Eloquent\Relations\BelongsTo;
     use Illuminate\Database\Eloquent\SoftDeletes;
 
     class InventoryAdjustment extends BaseModel {
-        use HasPublicId, SoftDeletes;
+        use HasAudit, HasPublicId, SoftDeletes;
 
         public const DEFAULT_RELATIONS = [
             'inventoryBatch.product',

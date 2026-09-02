@@ -3,11 +3,12 @@
     namespace App\Models;
 
     use App\Enums\InventoryMovementType;
+    use App\Traits\HasAudit;
     use App\Traits\HasPublicId;
     use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
     class InventoryMovement extends BaseModel {
-        use HasPublicId;
+        use HasAudit, HasPublicId;
 
         public const DEFAULT_RELATIONS = [
             'inventoryBatch.product',

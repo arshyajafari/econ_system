@@ -68,7 +68,7 @@
 
                 InventoryMovement::create([
                     'inventory_batch_id' => $batch->id,
-                    'type' => $type === InventoryAdjustmentType::INCREASE ? InventoryMovementType::IN : InventoryMovementType::OUT,
+                    'type' => $type === InventoryAdjustmentType::INCREASE ? InventoryMovementType::ADJUSTMENT_IN : InventoryMovementType::ADJUSTMENT_OUT,
                     'quantity' => $quantity,
                     'reason' => 'inventory_adjustment',
                     'description' => $data['description'] ?? $data['reason'],
