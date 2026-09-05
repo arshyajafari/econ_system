@@ -1,6 +1,6 @@
 <?php
 
-    namespace App\Http\Controllers;
+    namespace App\Http\Controllers\Api;
 
     use App\Actions\Payment\CancelPaymentAction;
     use App\Actions\Payment\ConfirmPaymentAction;
@@ -8,6 +8,7 @@
     use App\Actions\Payment\ListPaymentsAction;
     use App\Actions\Payment\ShowPaymentAction;
     use App\Actions\Payment\UpdatePaymentAction;
+    use App\Http\Controllers\Controller;
     use App\Http\Requests\Payment\PaymentIndexRequest;
     use App\Http\Requests\Payment\StorePaymentRequest;
     use App\Http\Requests\Payment\UpdatePaymentRequest;

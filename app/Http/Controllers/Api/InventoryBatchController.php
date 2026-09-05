@@ -1,12 +1,13 @@
 <?php
 
-    namespace App\Http\Controllers;
+    namespace App\Http\Controllers\Api;
 
     use App\Actions\Inventory\InventoryBatch\CreateInventoryBatchAction;
     use App\Actions\Inventory\InventoryBatch\DeleteInventoryBatchAction;
     use App\Actions\Inventory\InventoryBatch\ListInventoryBatchesAction;
     use App\Actions\Inventory\InventoryBatch\ShowInventoryBatchAction;
     use App\Actions\Inventory\InventoryBatch\UpdateInventoryBatchAction;
+    use App\Http\Controllers\Controller;
     use App\Http\Requests\InventoryBatch\InventoryBatchIndexRequest;
     use App\Http\Requests\InventoryBatch\StoreInventoryBatchRequest;
     use App\Http\Requests\InventoryBatch\UpdateInventoryBatchRequest;

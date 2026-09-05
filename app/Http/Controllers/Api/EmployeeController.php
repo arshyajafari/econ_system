@@ -3,6 +3,7 @@
     namespace App\Http\Controllers\Api;
 
     use App\Actions\Employee\ChangeEmployeeStatusAction;
+    use App\Actions\Employee\CreateEmployeeAction;
     use App\Actions\Employee\DeleteEmployeeAction;
     use App\Actions\Employee\ListEmployeesAction;
     use App\Actions\Employee\RestoreEmployeeAction;
@@ -27,7 +28,7 @@
             return EmployeeResource::collection($action->execute($request->filters()));
         }
 
-        public function store(StoreEmployeeRequest $request, StoreEmployeeRequest $action): EmployeeResource {
+        public function store(StoreEmployeeRequest $request, CreateEmployeeAction $action): EmployeeResource {
             $this->authorize('create', Employee::class);
 
             return EmployeeResource::make($action->execute($request->validated()));

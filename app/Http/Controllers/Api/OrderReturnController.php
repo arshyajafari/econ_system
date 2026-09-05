@@ -1,6 +1,6 @@
 <?php
 
-    namespace App\Http\Controllers;
+    namespace App\Http\Controllers\Api;
 
     use App\Actions\OrderReturn\CancelOrderReturnAction;
     use App\Actions\OrderReturn\CompleteOrderReturnAction;
@@ -9,6 +9,7 @@
     use App\Actions\OrderReturn\OrderReturnItem\AllocateOrderReturnItemAction;
     use App\Actions\OrderReturn\SubmitOrderReturnAction;
     use App\Actions\OrderReturn\UpdateOrderReturnAction;
+    use App\Http\Controllers\Controller;
     use App\Http\Requests\OrderReturn\AllocateOrderReturnItemRequest;
     use App\Http\Requests\OrderReturn\OrderReturnIndexRequest;
     use App\Http\Requests\OrderReturn\StoreOrderReturnRequest;

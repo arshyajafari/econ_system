@@ -1,9 +1,10 @@
 <?php
 
-    namespace App\Http\Controllers;
+    namespace App\Http\Controllers\Api;
 
     use App\Actions\Inventory\InventoryMovement\ListInventoryMovementsAction;
     use App\Actions\Inventory\InventoryMovement\ShowInventoryMovementAction;
+    use App\Http\Controllers\Controller;
     use App\Http\Requests\InventoryMovement\InventoryMovementIndexRequest;
     use App\Http\Resources\InventoryMovementResource;
     use App\Models\InventoryMovement;

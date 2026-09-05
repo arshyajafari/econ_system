@@ -1,6 +1,6 @@
 <?php
 
-    namespace App\Http\Controllers;
+    namespace App\Http\Controllers\Api;
 
     use App\Actions\Visit\CancelVisitAction;
     use App\Actions\Visit\CompleteVisitAction;
@@ -8,6 +8,7 @@
     use App\Actions\Visit\ListVisitsAction;
     use App\Actions\Visit\ShowVisitAction;
     use App\Actions\Visit\UpdateVisitAction;
+    use App\Http\Controllers\Controller;
     use App\Http\Requests\Visit\StoreVisitRequest;
     use App\Http\Requests\Visit\UpdateVisitRequest;
     use App\Http\Requests\Visit\VisitIndexRequest;

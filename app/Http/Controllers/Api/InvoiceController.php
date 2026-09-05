@@ -1,6 +1,6 @@
 <?php
 
-    namespace App\Http\Controllers;
+    namespace App\Http\Controllers\Api;
 
     use App\Actions\Invoice\CancelInvoiceAction;
     use App\Actions\Invoice\CreateInvoiceAction;
@@ -8,6 +8,7 @@
     use App\Actions\Invoice\ListInvoicesAction;
     use App\Actions\Invoice\ShowInvoiceAction;
     use App\Actions\Invoice\UpdateInvoiceAction;
+    use App\Http\Controllers\Controller;
     use App\Http\Requests\Invoice\InvoiceIndexRequest;
     use App\Http\Requests\Invoice\UpdateInvoiceRequest;
     use App\Http\Resources\InvoiceResource;

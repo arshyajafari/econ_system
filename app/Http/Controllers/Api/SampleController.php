@@ -1,12 +1,13 @@
 <?php
 
-    namespace App\Http\Controllers;
+    namespace App\Http\Controllers\Api;
 
     use App\Actions\Sample\CreateSampleAction;
     use App\Actions\Sample\DeleteSampleAction;
     use App\Actions\Sample\ListSamplesAction;
     use App\Actions\Sample\ShowSampleAction;
     use App\Actions\Sample\UpdateSampleAction;
+    use App\Http\Controllers\Controller;
     use App\Http\Requests\Sample\SampleIndexRequest;
     use App\Http\Requests\Sample\StoreSampleRequest;
     use App\Http\Requests\Sample\UpdateSampleRequest;

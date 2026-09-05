@@ -1,6 +1,6 @@
 <?php
 
-    namespace App\Http\Controllers;
+    namespace App\Http\Controllers\Api;
 
     use App\Actions\Order\CancelOrderAction;
     use App\Actions\Order\CompleteOrderAction;
@@ -8,6 +8,7 @@
     use App\Actions\Order\CreateOrderAction;
     use App\Actions\Order\SubmitOrderAction;
     use App\Actions\Order\UpdateOrderAction;
+    use App\Http\Controllers\Controller;
     use App\Http\Requests\Order\StoreOrderRequest;
     use App\Http\Requests\Order\UpdateOrderRequest;
     use App\Http\Resources\OrderResource;

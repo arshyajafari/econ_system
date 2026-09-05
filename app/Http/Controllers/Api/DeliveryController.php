@@ -1,6 +1,6 @@
 <?php
 
-    namespace App\Http\Controllers;
+    namespace App\Http\Controllers\Api;
 
     use App\Actions\Delivery\CancelDeliveryAction;
     use App\Actions\Delivery\CompleteDeliveryAction;
@@ -8,6 +8,7 @@
     use App\Actions\Delivery\PrepareDeliveryAction;
     use App\Actions\Delivery\ShipDeliveryAction;
     use App\Actions\Delivery\UpdateDeliveryAction;
+    use App\Http\Controllers\Controller;
     use App\Http\Requests\Delivery\DeliveryIndexRequest;
     use App\Http\Requests\Delivery\StoreDeliveryRequest;
     use App\Http\Requests\Delivery\UpdateDeliveryRequest;
