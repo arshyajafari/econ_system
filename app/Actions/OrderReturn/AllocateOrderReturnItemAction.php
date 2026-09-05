@@ -1,6 +1,6 @@
 <?php
 
-    namespace App\Actions\OrderReturn\OrderReturnItem;
+    namespace App\Actions\OrderReturn;
 
     use App\Enums\OrderReturnStatus;
     use App\Exceptions\BusinessRuleException;

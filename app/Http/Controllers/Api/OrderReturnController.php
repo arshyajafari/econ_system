@@ -6,7 +6,7 @@
     use App\Actions\OrderReturn\CompleteOrderReturnAction;
     use App\Actions\OrderReturn\ConfirmOrderReturnAction;
     use App\Actions\OrderReturn\CreateOrderReturnAction;
-    use App\Actions\OrderReturn\OrderReturnItem\AllocateOrderReturnItemAction;
+    use App\Actions\OrderReturn\AllocateOrderReturnItemAction;
     use App\Actions\OrderReturn\SubmitOrderReturnAction;
     use App\Actions\OrderReturn\UpdateOrderReturnAction;
     use App\Http\Controllers\Controller;
