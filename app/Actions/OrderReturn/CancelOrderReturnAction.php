@@ -10,7 +10,8 @@
     class CancelOrderReturnAction {
         public function execute(OrderReturn $orderReturn): OrderReturn {
             return DB::transaction(function () use ($orderReturn) {
-                $orderReturn = OrderReturn::query()->lockForUpdate()->findOrFail($orderReturn->id);
+                $orderReturn = OrderReturn::query()->lockForUpdate()->with('items.allocations')
+                    ->findOrFail($orderReturn->id);
 
                 $cancellableStatuses = [
                     OrderReturnStatus::DRAFT,
@@ -22,9 +23,14 @@
                     throw new BusinessRuleException('این برگشت سفارش قابل لغو نیست.');
                 }
 
-                $orderReturn->update([
-                    'status' => OrderReturnStatus::CANCELLED,
-                ]);
+                foreach ($orderReturn->items as $item) {
+                    if ($item->allocations->isNotEmpty()) {
+                        $item->allocations()->delete();
+                    }
+                }
+
+                $orderReturn->status = OrderReturnStatus::CANCELLED;
+                $orderReturn->save();
 
                 return $orderReturn->fresh([
                     'order',

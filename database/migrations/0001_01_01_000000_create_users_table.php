@@ -12,8 +12,6 @@
             Schema::create('users', function (Blueprint $table) {
                 $table->id();
                 $table->publicId();
-                $table->foreignId('employee_id')->unique()->constrained('employees')->cascadeOnUpdate()
-                    ->restrictOnDelete();
                 $table->string('login', 50)->unique();
                 $table->string('password');
                 $table->ipAddress('last_login_ip')->nullable();

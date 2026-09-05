@@ -12,6 +12,8 @@
         use SoftDeletes;
         use HasAudit;
 
+        protected static $modelsShouldPreventLazyLoading = true;
+
         protected $fillable = [];
 
         protected function casts(): array {

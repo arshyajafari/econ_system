@@ -3,19 +3,21 @@
     namespace App\Models;
 
     use App\Enums\UserStatus;
-    use App\Traits\HasAudit;
     use App\Traits\HasCodeGenerator;
     use App\Traits\HasPublicId;
     use Illuminate\Database\Eloquent\Builder;
-    use Illuminate\Database\Eloquent\Factories\HasFactory;
     use Illuminate\Database\Eloquent\Relations\BelongsTo;
     use Illuminate\Database\Eloquent\Relations\HasMany;
-    use Illuminate\Database\Eloquent\SoftDeletes;
     use Illuminate\Notifications\Notifiable;
     use Laravel\Sanctum\HasApiTokens;
+    use Spatie\Permission\Traits\HasRoles;
 
     class User extends BaseAuthenticatable {
-        use HasPublicId, HasApiTokens, Notifiable, HasFactory, HasCodeGenerator, SoftDeletes, HasAudit;
+        use HasPublicId;
+        use HasApiTokens;
+        use Notifiable;
+        use HasCodeGenerator;
+        use HasRoles;
 
         protected $fillable = [
             'employee_id',
@@ -31,12 +33,14 @@
             'remember_token',
         ];
 
+        protected string $guard_name = 'web';
+
         protected function casts(): array {
-            return [
+            return array_merge(parent::casts(), [
                 'status' => UserStatus::class,
-                'last_login_at' => 'datetime',
+                'last_login_at' => 'immutable_datetime',
                 'password' => 'hashed',
-            ];
+            ]);
         }
 
         public function employee(): BelongsTo {
