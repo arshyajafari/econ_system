@@ -6,8 +6,10 @@
     use App\Enums\InvoiceStatus;
     use App\Enums\OrderReturnStatus;
     use App\Exceptions\BusinessRuleException;
+    use App\Models\CustomerTransaction;
     use App\Models\InventoryBatch;
     use App\Models\InventoryMovement;
+    use App\Models\Order;
     use App\Models\OrderReturn;
     use App\Services\CustomerTransactionService;
     use Illuminate\Support\Facades\DB;
@@ -31,11 +33,15 @@
                     throw new BusinessRuleException('مرجوعی باید حداقل یک آیتم داشته باشد.');
                 }
 
-                if (!$orderReturn->order?->invoice) {
+                $order = Order::query()->lockForUpdate()->with('invoice')->findOrFail($orderReturn->order_id);
+
+                $invoice = $order->invoice;
+
+                if (!$invoice) {
                     throw new BusinessRuleException('برای سفارش مربوط به مرجوعی فاکتور وجود ندارد.');
                 }
 
-                if ($orderReturn->order->invoice->status !== InvoiceStatus::ISSUED) {
+                if ($invoice->status !== InvoiceStatus::ISSUED) {
                     throw new BusinessRuleException('فقط سفارش دارای فاکتور صادرشده قابل تکمیل مرجوعی است.');
                 }
 
@@ -44,7 +50,7 @@
                         throw new BusinessRuleException('برای تمام اقلام مرجوعی باید تخصیص انبار ثبت شود.');
                     }
 
-                    $allocatedQuantity = $item->allocations->sum('quantity');
+                    $allocatedQuantity = $item->allocations->sum(fn($allocation) => (int)$allocation->quantity);
 
                     if ((int)$allocatedQuantity !== (int)$item->quantity) {
                         throw new BusinessRuleException('مجموع تخصیص‌های انبار با مقدار مرجوعی برابر نیست.');
@@ -64,7 +70,6 @@
                         }
 
                         $batch->quantity += $quantity;
-
                         $batch->save();
 
                         InventoryMovement::create([
@@ -84,13 +89,52 @@
                     throw new BusinessRuleException('مبلغ مرجوعی باید بیشتر از صفر باشد.');
                 }
 
+                $invoiceSubtotal = (float)$invoice->subtotal;
+                $invoiceTotal = (float)$invoice->total_amount;
+
+                if ($invoiceSubtotal <= 0) {
+                    throw new BusinessRuleException('مبلغ پایه فاکتور برای محاسبه مرجوعی معتبر نیست.');
+                }
+
+                if ($invoiceTotal <= 0) {
+                    throw new BusinessRuleException('مبلغ نهایی فاکتور برای محاسبه مرجوعی معتبر نیست.');
+                }
+
+                $calculatedReturnAmount = round(($returnGrossAmount / $invoiceSubtotal) * $invoiceTotal, 2);
+
+                if ($calculatedReturnAmount <= 0) {
+                    throw new BusinessRuleException('مبلغ اعتبار مرجوعی باید بیشتر از صفر باشد.');
+                }
+
+                $previousReturnCredit = (float)CustomerTransaction::query()
+                    ->where('customer_id', $orderReturn->customer_id)
+                    ->whereHas('orderReturn', function ($query) use ($orderReturn) {
+                        $query->where('order_id', $orderReturn->order_id)->where('status', OrderReturnStatus::COMPLETED)
+                            ->whereKeyNot($orderReturn->id);
+                    })->where('type', 'credit')->sum('amount');
+
+                $remainingReturnCredit = round($invoiceTotal - $previousReturnCredit, 2);
+
+                $remainingReturnCredit = round($invoiceTotal - $previousReturnCredit, 2);
+
+                if ($remainingReturnCredit <= 0) {
+                    throw new BusinessRuleException('مبلغ قابل اعتبار برای این مرجوعی باقی نمانده است.');
+                }
+
+                $returnAmount = min($calculatedReturnAmount, $remainingReturnCredit);
+
+                if ($returnAmount <= 0) {
+                    throw new BusinessRuleException('مبلغ اعتبار مرجوعی باید بیشتر از صفر باشد.');
+                }
+
+                $completedAt = now();
+
                 $this->customerTransactionService->credit(customerId: $orderReturn->customer_id, amount: $returnAmount,
-                    source: $orderReturn, description: "مرجوعی سفارش {$orderReturn->code}", transactionAt: now(),);
+                    source: $orderReturn, description: "مرجوعی سفارش {$orderReturn->code}",
+                    transactionAt: $completedAt);
 
                 $orderReturn->status = OrderReturnStatus::COMPLETED;
-
-                $orderReturn->completed_at = now();
-
+                $orderReturn->completed_at = $completedAt;
                 $orderReturn->save();
 
                 return $orderReturn->fresh([
