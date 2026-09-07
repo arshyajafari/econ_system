@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\CustomerLedgerController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('customers')->name('customers.')->group(function () {
     Route::get('/', [CustomerController::class, 'index'])->name('index');
     Route::post('/', [CustomerController::class, 'store'])->name('store');
+    Route::get('/{customer}/ledger', [CustomerLedgerController::class, 'show'])->name('ledger');
     Route::get('/{customer}', [CustomerController::class, 'show'])->name('show');
     Route::put('/{customer}', [CustomerController::class, 'update'])->name('update');
     Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
