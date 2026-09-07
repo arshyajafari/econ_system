@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\OrderReturnController;
-use App\Http\Requests\OrderReturn\AllocateOrderReturnItemRequest;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('order-returns')->name('order-returns.')->group(function () {
