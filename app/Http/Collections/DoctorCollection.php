@@ -1,6 +1,6 @@
 <?php
 
-    namespace App\Http\Resources\Doctor;
+    namespace App\Http\Collections;
 
     use App\Http\Resources\DoctorResource;
     use Illuminate\Http\Request;

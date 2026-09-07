@@ -1,6 +1,6 @@
 <?php
 
-    namespace App\Queries\Brand;
+    namespace App\Queries\Product;
 
     use App\Models\Brand;
     use App\Queries\BaseQuery;
