@@ -27,8 +27,6 @@ Route::prefix('v1')->group(function () {
         require __DIR__ . '/api/delivery.php';
         require __DIR__ . '/api/visit.php';
         require __DIR__ . '/api/sample.php';
-        require __DIR__ . '/api/message.php';
-        require __DIR__ . '/api/customer-ledger.php';
         require __DIR__ . '/api/report.php';
     });
 });
