@@ -1,33 +1,33 @@
 <?php
 
-    namespace App\Actions\Doctor;
+namespace App\Actions\Doctor;
 
-    use App\Contracts\CodeGeneratorInterface;
-    use App\Models\Doctor;
-    use App\Models\DoctorAddress;
-    use Illuminate\Support\Facades\DB;
+use App\Models\Doctor;
+use App\Models\DoctorAddress;
+use Illuminate\Support\Facades\DB;
 
-    class CreateDoctorAction {
-        public function __construct(private readonly CodeGeneratorInterface $codeGenerator) {
-        }
+class CreateDoctorAction
+{
+    public function execute(array $data): Doctor
+    {
+        return DB::transaction(function () use ($data) {
+            $addressData = $data['address'] ?? [];
+            unset($data['address']);
 
-        public function execute(array $data): Doctor {
-            return DB::transaction(function () use ($data) {
-                $addressData = $data['address'] ?? [];
-                unset($data['address']);
-                $data['code'] = $this->codeGenerator->generate(Doctor::class);
-                $doctor = new Doctor();
-                $doctor->fill($data);
-                $doctor->save();
+            $data['code'] = Doctor::generateCode();
 
-                if (!empty($addressData)) {
-                    $address = new DoctorAddress();
-                    $address->fill($addressData);
-                    $address->is_default = true;
-                    $doctor->addresses()->save($address);
-                }
+            $doctor = new Doctor();
+            $doctor->fill($data);
+            $doctor->save();
 
-                return $doctor->fresh(Doctor::DEFAULT_RELATIONS);
-            });
-        }
+            if (!empty($addressData)) {
+                $address = new DoctorAddress();
+                $address->fill($addressData);
+                $address->is_default = true;
+                $doctor->addresses()->save($address);
+            }
+
+            return $doctor->fresh(Doctor::DEFAULT_RELATIONS);
+        });
     }
+}
