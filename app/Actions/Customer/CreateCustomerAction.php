@@ -1,33 +1,33 @@
 <?php
 
-    namespace App\Actions\Customer;
+namespace App\Actions\Customer;
 
-    use App\Contracts\CodeGeneratorInterface;
-    use App\Models\Customer;
-    use App\Models\CustomerAddress;
-    use Illuminate\Support\Facades\DB;
+use App\Models\Customer;
+use App\Models\CustomerAddress;
+use Illuminate\Support\Facades\DB;
 
-    class CreateCustomerAction {
-        public function __construct(private readonly CodeGeneratorInterface $codeGenerator) {
-        }
+class CreateCustomerAction
+{
+    public function execute(array $data): Customer
+    {
+        return DB::transaction(function () use ($data) {
+            $addressData = $data['address'] ?? [];
+            unset($data['address']);
 
-        public function execute(array $data): Customer {
-            return DB::transaction(function () use ($data) {
-                $addressData = $data['address'] ?? [];
-                unset($data['address']);
-                $data['code'] = $this->codeGenerator->generate(Customer::class);
-                $customer = new Customer();
-                $customer->fill($data);
-                $customer->save();
+            $data['code'] = Customer::generateCode();
 
-                if (!empty($addressData)) {
-                    $address = new CustomerAddress();
-                    $address->fill($addressData);
-                    $address->is_default = true;
-                    $customer->addresses()->save($address);
-                }
+            $customer = new Customer();
+            $customer->fill($data);
+            $customer->save();
 
-                return $customer->fresh(Customer::DEFAULT_RELATIONS);
-            });
-        }
+            if (!empty($addressData)) {
+                $address = new CustomerAddress();
+                $address->fill($addressData);
+                $address->is_default = true;
+                $customer->addresses()->save($address);
+            }
+
+            return $customer->fresh(Customer::DEFAULT_RELATIONS);
+        });
     }
+}
