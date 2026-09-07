@@ -47,6 +47,8 @@
 
         public function changeActivity(ChangeBrandActivityRequest $request, Brand $brand,
             ChangeBrandActivityAction $action): BrandResource {
+            $this->authorize('changeActivity', $brand);
+
             return new BrandResource($action->execute($brand, $request->boolean('is_active')));
         }
     }

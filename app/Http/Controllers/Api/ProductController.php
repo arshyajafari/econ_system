@@ -48,6 +48,8 @@
 
         public function changeStatus(ChangeProductStatusRequest $request, Product $product,
             ChangeProductStatusAction $action): ProductResource {
+            $this->authorize('changeStatus', $product);
+
             return new ProductResource($action->execute($product, $request->validated()['status']));
         }
     }

@@ -56,6 +56,8 @@
 
         public function changeActivity(ChangePCActivityRequest $request, ProductCategory $productCategory,
             ChangeProductCategoryActivityAction $action): ProductCategoryResource {
+            $this->authorize('changeActivity', $productCategory);
+
             return new ProductCategoryResource($action->execute($productCategory, $request->boolean('is_active')));
         }
     }
