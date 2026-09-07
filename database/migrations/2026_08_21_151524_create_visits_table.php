@@ -29,7 +29,6 @@
 
                 $table->index('doctor_id');
                 $table->index('employee_id');
-                $table->index('status');
                 $table->index('visit_date');
 
                 $table->index([

@@ -33,7 +33,6 @@
 
                 $table->index('customer_name');
                 $table->index('phone_number');
-                $table->index('status');
             });
         }
 

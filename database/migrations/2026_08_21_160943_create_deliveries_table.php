@@ -17,7 +17,7 @@
                 $table->foreignId('customer_id')->constrained('customers')->restrictOnDelete()->cascadeOnUpdate();
                 $table->foreignId('employee_id')->nullable()->constrained('employees')->restrictOnDelete()
                     ->cascadeOnUpdate();
-                $table->status()->default(DeliveryStatus::PENDING->value);
+                $table->status(DeliveryStatus::PENDING->value);
                 $table->timestamp('prepared_at')->nullable();
                 $table->timestamp('shipped_at')->nullable();
                 $table->timestamp('delivered_at')->nullable();
@@ -32,7 +32,6 @@
 
                 $table->index('customer_id');
                 $table->index('employee_id');
-                $table->index('status');
                 $table->index('delivered_at');
             });
         }

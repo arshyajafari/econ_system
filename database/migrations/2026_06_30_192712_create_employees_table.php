@@ -34,7 +34,6 @@
                 $table->index('last_name');
                 $table->index('national_code');
                 $table->index('phone_number');
-                $table->index('status');
             });
         }
 

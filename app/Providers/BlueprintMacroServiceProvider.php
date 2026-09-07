@@ -63,7 +63,7 @@
             Blueprint::macro('status', function (string $default = 'active') {
                 /** @var Blueprint $this */
 
-                $this->string('status', 20)->default($default)->index();
+                return $this->string('status', 20)->default($default)->index();
             });
         }
 

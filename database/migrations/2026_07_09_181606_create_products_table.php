@@ -31,7 +31,6 @@
                     'product_category_id'
                 ]);
                 $table->index('title');
-                $table->index('status');
             });
         }
 

@@ -20,9 +20,10 @@
                 $table->common();
 
                 $table->unique([
-                    'order_return_item_id',
-                    'inventory_batch_id',
-                ]);
+                        'order_return_item_id',
+                        'inventory_batch_id'
+                    ], 'return_item_batch_unique');
+
                 $table->index('inventory_batch_id');
             });
         }
