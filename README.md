@@ -16,7 +16,7 @@ The frontend is intentionally a separate React/PWA application and is not part o
 ## Backend responsibilities
 
 - Authentication and authorization
-- Customers and employees
+- Customers, customer ledger and employees
 - Doctors, visits and samples
 - Products, brands and product categories
 - Inventory batches, adjustments and movements
@@ -24,7 +24,6 @@ The frontend is intentionally a separate React/PWA application and is not part o
 - Invoices and payments
 - Deliveries
 - Dashboard/report endpoints
-- Customer ledger and accounting workflows as their API modules are completed
 
 ## API
 
@@ -56,18 +55,19 @@ php artisan optimize:clear
 
 ## API verification
 
-The API is intended to be verified with Postman after the backend route/controller/action layer is finalized.
+The API should be verified with Postman after the backend route/controller/action layer is finalized.
 
 Recommended verification order:
 
 1. Login and obtain the Sanctum token.
 2. Verify CRUD endpoints.
 3. Verify workflow/state endpoints such as submit, confirm, complete, cancel and restore.
-4. Verify authorization for each role.
-5. Verify validation and error responses.
-6. Verify pagination, filtering and sorting.
-7. Verify inventory/order/return consistency.
-8. Verify invoice/payment/ledger consistency.
+4. Verify customer ledger calculations.
+5. Verify authorization for each role.
+6. Verify validation and error responses.
+7. Verify pagination, filtering and sorting.
+8. Verify inventory/order/return consistency.
+9. Verify invoice/payment consistency.
 
 ## Frontend architecture
 
