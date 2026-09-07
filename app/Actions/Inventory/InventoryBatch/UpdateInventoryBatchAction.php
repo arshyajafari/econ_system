@@ -2,7 +2,6 @@
 
     namespace App\Actions\Inventory\InventoryBatch;
 
-    use App\Exceptions\BusinessRuleException;
     use App\Models\InventoryBatch;
     use Illuminate\Support\Facades\DB;
 
@@ -11,18 +10,17 @@
             return DB::transaction(function () use ($batch, $data) {
                 $batch = InventoryBatch::query()->lockForUpdate()->findOrFail($batch->id);
 
-                $hasOperationalHistory = $batch->movements()->exists() || $batch->adjustments()
-                        ->exists() || $batch->allocations()->exists() || $batch->returnAllocations()->exists();
+                $batch->fill([
+                    'batch_number' => array_key_exists('batch_number',
+                        $data) ? $data['batch_number'] : $batch->batch_number,
 
-                if ($hasOperationalHistory) {
-                    if (array_key_exists('product_id', $data) || array_key_exists('received_at', $data)) {
-                        throw new BusinessRuleException('محصول و تاریخ دریافت بچ دارای سابقه عملیاتی قابل تغییر نیست.');
-                    }
-                }
+                    'expire_date' => array_key_exists('expire_date',
+                        $data) ? $data['expire_date'] : $batch->expire_date,
 
-                unset($data['product_id'], $data['quantity'], $data['reserved_quantity'], $data['received_at'],);
+                    'description' => array_key_exists('description',
+                        $data) ? $data['description'] : $batch->description,
+                ]);
 
-                $batch->fill($data);
                 $batch->save();
 
                 return $batch->fresh(InventoryBatch::DEFAULT_RELATIONS);

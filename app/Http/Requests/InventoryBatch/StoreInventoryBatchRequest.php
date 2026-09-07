@@ -10,8 +10,8 @@
             return [
                 'product_id' => [
                     'required',
-                    'integer',
-                    'exists:products,id',
+                    'string',
+                    'exists:products,public_id',
                 ],
                 'batch_number' => [
                     'nullable',
