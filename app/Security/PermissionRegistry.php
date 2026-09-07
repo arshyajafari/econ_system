@@ -7,6 +7,7 @@ class PermissionRegistry
     public static function all(): array
     {
         return [
+            'dashboard' => ['view'],
             'customers' => ['view', 'create', 'update', 'delete', 'restore', 'change_status', 'export'],
             'employees' => ['view', 'create', 'update', 'delete', 'export'],
             'doctors' => ['view', 'create', 'update', 'delete', 'restore', 'change_status', 'export'],
