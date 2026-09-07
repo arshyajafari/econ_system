@@ -11,7 +11,7 @@ class DashboardController extends Controller
 {
     public function index(Request $request, GetDashboardAction $action): DashboardResource
     {
-        $this->authorize('viewDashboard', $request->user());
+        abort_unless($request->user()->can('dashboard.view'), 403);
 
         return new DashboardResource($action->execute());
     }
