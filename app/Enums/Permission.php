@@ -4,6 +4,8 @@ namespace App\Enums;
 
 enum Permission: string
 {
+    case DASHBOARD_VIEW = 'dashboard.view';
+
     // Customers
     case CUSTOMER_VIEW = 'customers.view';
     case CUSTOMER_CREATE = 'customers.create';
