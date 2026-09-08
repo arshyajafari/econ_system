@@ -8,10 +8,12 @@
             InventoryAdjustmentController::class,
             'index'
         ])->name('index');
+
         Route::post('/', [
             InventoryAdjustmentController::class,
             'store'
         ])->name('store');
+
         Route::get('/{inventoryAdjustment}', [
             InventoryAdjustmentController::class,
             'show'

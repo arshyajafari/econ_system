@@ -1,10 +1,9 @@
 <?php
 
-namespace App\Contracts;
+    namespace App\Contracts;
 
-use App\Services\CodeGeneratorData;
+    use App\Services\CodeGeneratorData;
 
-interface CodeGeneratorInterface
-{
-    public function generate(CodeGeneratorData|string $data): string;
-}
+    interface CodeGeneratorInterface {
+        public function generate(CodeGeneratorData|string $data): string;
+    }

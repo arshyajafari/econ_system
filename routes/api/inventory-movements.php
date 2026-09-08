@@ -9,6 +9,7 @@
             InventoryMovementController::class,
             'index'
         ])->name('index');
+
         Route::get('/{inventoryMovement}', [
             InventoryMovementController::class,
             'show'

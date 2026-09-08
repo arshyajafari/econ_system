@@ -3,32 +3,44 @@
     use App\Http\Controllers\Api\PaymentController;
     use Illuminate\Support\Facades\Route;
 
-    Route::get('payments', [
-        PaymentController::class,
-        'index',
-    ]);
 
-    Route::get('payments/{payment}', [
-        PaymentController::class,
-        'show',
-    ]);
+    Route::prefix('payments')->name('payments.')->group(function () {
+        Route::get('/', [
+            PaymentController::class,
+            'index',
+        ]);
 
-    Route::post('payments', [
-        PaymentController::class,
-        'store',
-    ]);
+        Route::post('/', [
+            PaymentController::class,
+            'store',
+        ]);
 
-    Route::put('payments/{payment}', [
-        PaymentController::class,
-        'update',
-    ]);
+        Route::get('/{payment}', [
+            PaymentController::class,
+            'show',
+        ]);
 
-    Route::post('payments/{payment}/confirm', [
-        PaymentController::class,
-        'confirm',
-    ]);
+        Route::put('/{payment}', [
+            PaymentController::class,
+            'update',
+        ]);
 
-    Route::post('payments/{payment}/cancel', [
-        PaymentController::class,
-        'cancel',
-    ]);
+        Route::post('/{payment}/confirm', [
+            PaymentController::class,
+            'confirm',
+        ]);
+
+        Route::post('/{payment}/cancel', [
+            PaymentController::class,
+            'cancel',
+        ]);
+    });
+
+
+
+
+
+
+
+
+
