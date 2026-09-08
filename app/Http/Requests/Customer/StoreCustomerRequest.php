@@ -35,7 +35,7 @@
                     'string',
                     'max:20',
                 ],
-                'social_address' => [
+                'social_link' => [
                     'nullable',
                     'email',
                     'max:255',

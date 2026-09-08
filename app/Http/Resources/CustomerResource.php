@@ -18,7 +18,7 @@
                 'national_code' => $this->national_code,
                 'phone_number' => $this->phone_number,
                 'telephone_number' => $this->telephone_number,
-                'social_address' => $this->social_address,
+                'social_link' => $this->social_link,
                 'birth_date' => $this->birth_date?->toISOString(),
                 'status' => $this->status,
                 'description' => $this->description,
