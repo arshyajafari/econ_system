@@ -37,7 +37,7 @@
                 ],
                 'social_link' => [
                     'nullable',
-                    'email',
+                    'url',
                     'max:255',
                 ],
                 'national_code' => [
