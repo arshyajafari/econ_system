@@ -1,52 +1,61 @@
 <?php
 
-    namespace App\Http\Requests\Product;
+    namespace App\Http\Requests\Api\Product;
 
     use App\Enums\ProductStatus;
-    use App\Http\Requests\CrudRequest;
-    use App\Validation\ValidationRules;
+    use Illuminate\Foundation\Http\FormRequest;
     use Illuminate\Validation\Rule;
 
-    class StoreProductRequest extends CrudRequest {
+    class StoreProductRequest extends FormRequest {
+        public function authorize(): bool {
+            return true;
+        }
+
         public function rules(): array {
             return [
                 'brand_id' => [
                     'required',
-                    'integer',
-                    'exists:brands,id'
+                    'string',
+                    'exists:brands,public_id',
                 ],
                 'product_category_id' => [
                     'required',
-                    'integer',
-                    'exists:product_categories,id'
+                    'string',
+                    'exists:product_categories,public_id',
                 ],
                 'title' => [
                     'required',
                     'string',
-                    'max:300'
+                    'max:300',
                 ],
                 'barcode' => [
                     'nullable',
                     'string',
                     'max:50',
-                    'unique:products,barcode'
+                    'unique:products,barcode',
                 ],
                 'sort_order' => [
                     'nullable',
                     'integer',
-                    'min:0'
+                    'min:0',
                 ],
                 'status' => [
                     'required',
-                    Rule::enum(ProductStatus::class)
+                    Rule::enum(ProductStatus::class),
                 ],
                 'image' => [
                     'nullable',
                     'string',
-                    'max:500'
+                    'max:500',
                 ],
-                ...ValidationRules::description(),
-                ...ValidationRules::meta(),
+                'description' => [
+                    'nullable',
+                    'string',
+                ],
+                'meta' => [
+                    'nullable',
+                    'array',
+                ],
             ];
         }
     }

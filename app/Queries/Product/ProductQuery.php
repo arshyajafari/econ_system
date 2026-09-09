@@ -2,7 +2,9 @@
 
     namespace App\Queries\Product;
 
+    use App\Models\Brand;
     use App\Models\Product;
+    use App\Models\ProductCategory;
     use App\Queries\BaseQuery;
 
     class ProductQuery extends BaseQuery {
@@ -20,16 +22,32 @@
             return $this;
         }
 
-        protected function applyBrand(?int $brandId): void {
+        protected function applyBrand(?string $brandPublicId): void {
+            if (!$brandPublicId) {
+                return;
+            }
+
+            $brandId = Brand::query()->where('public_id', $brandPublicId)->value('id');
+
             if (!$brandId) {
+                $this->query->whereRaw('1 = 0');
+
                 return;
             }
 
             $this->query->where('brand_id', $brandId);
         }
 
-        protected function applyCategory(?int $categoryId): void {
+        protected function applyCategory(?string $categoryPublicId): void {
+            if (!$categoryPublicId) {
+                return;
+            }
+
+            $categoryId = ProductCategory::query()->where('public_id', $categoryPublicId)->value('id');
+
             if (!$categoryId) {
+                $this->query->whereRaw('1 = 0');
+
                 return;
             }
 
