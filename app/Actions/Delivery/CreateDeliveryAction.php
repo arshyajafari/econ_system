@@ -19,8 +19,7 @@
                     throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
                 }
 
-                $order = Order::query()->lockForUpdate()->with('delivery')->where('public_id', $data['order_id'])
-                    ->firstOrFail();
+                $order = Order::query()->lockForUpdate()->with('delivery')->where('public_id', $data['order_id'])->firstOrFail();
 
                 if ($order->status !== OrderStatus::COMPLETED) {
                     throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل ثبت برای ارسال است.');
@@ -33,7 +32,7 @@
                 $delivery = Delivery::create([
                     'order_id' => $order->id,
                     'customer_id' => $order->customer_id,
-                    'employee_id' => null,
+                    'employee_id' => $employee->id,
                     'status' => DeliveryStatus::PENDING,
                     'recipient_name' => $data['recipient_name'],
                     'recipient_phone' => $data['recipient_phone'],
