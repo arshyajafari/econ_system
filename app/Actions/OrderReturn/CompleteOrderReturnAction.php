@@ -70,6 +70,7 @@
                         }
 
                         $batch->quantity += $quantity;
+
                         $batch->save();
 
                         InventoryMovement::create([
@@ -90,6 +91,7 @@
                 }
 
                 $invoiceSubtotal = (float)$invoice->subtotal;
+
                 $invoiceTotal = (float)$invoice->total_amount;
 
                 if ($invoiceSubtotal <= 0) {
@@ -107,8 +109,9 @@
                 }
 
                 $previousReturnCredit = (float)CustomerTransaction::query()
-                    ->where('customer_id', $orderReturn->customer_id)
-                    ->whereHas('orderReturn', function ($query) use ($orderReturn) {
+                    ->where('customer_id', $orderReturn->customer_id)->whereHas('orderReturn', function ($query) use (
+                        $orderReturn
+                    ) {
                         $query->where('order_id', $orderReturn->order_id)->where('status', OrderReturnStatus::COMPLETED)
                             ->whereKeyNot($orderReturn->id);
                     })->where('type', 'credit')->sum('amount');

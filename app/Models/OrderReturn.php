@@ -21,7 +21,8 @@
             'items.product',
         ];
 
-        public const SEARCHABLE = [
+        protected const SEARCHABLE = [
+            'code',
             'description',
         ];
 

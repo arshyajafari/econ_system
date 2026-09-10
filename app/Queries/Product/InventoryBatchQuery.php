@@ -19,12 +19,14 @@
             return $this;
         }
 
-        protected function applyProduct(?int $productId): void {
-            if (!$productId) {
+        protected function applyProduct(?string $productPublicId): void {
+            if (!$productPublicId) {
                 return;
             }
 
-            $this->query->where('product_id', $productId);
+            $this->query->whereHas('product', function ($query) use ($productPublicId) {
+                $query->where('public_id', $productPublicId);
+            });
         }
 
         protected function applyExpired(?bool $expired): void {
