@@ -4,8 +4,8 @@
 
     use App\Enums\DoctorSpecialty;
     use App\Enums\DoctorStatus;
-    use Illuminate\Validation\Rule;
     use App\Http\Requests\IndexRequest;
+    use Illuminate\Validation\Rule;
 
     class DoctorIndexRequest extends IndexRequest {
         public function rules(): array {
@@ -15,7 +15,7 @@
                     'nullable',
                     Rule::enum(DoctorStatus::class),
                 ],
-                'type' => [
+                'specialty' => [
                     'nullable',
                     Rule::enum(DoctorSpecialty::class),
                 ],
