@@ -9,6 +9,7 @@
     use App\Enums\PaymentStatus;
     use App\Models\CustomerTransaction;
     use App\Models\Delivery;
+    use App\Models\InventoryBatch;
     use App\Models\Invoice;
     use App\Models\Order;
     use App\Models\OrderReturn;
@@ -27,6 +28,7 @@
                 'deliveries' => $this->deliveryStats(),
                 'visits' => $this->visitStats(),
                 'samples' => $this->sampleStats(),
+                'inventory' => $this->inventoryStats(),
                 'recent' => $this->recentStats(),
             ];
         }
@@ -36,10 +38,8 @@
 
             return [
                 'today' => (float)(clone $query)->whereDate('issued_at', today())->sum('total_amount'),
-
                 'month' => (float)(clone $query)->whereYear('issued_at', now()->year)
                     ->whereMonth('issued_at', now()->month)->sum('total_amount'),
-
                 'year' => (float)(clone $query)->whereYear('issued_at', now()->year)->sum('total_amount'),
             ];
         }
@@ -47,9 +47,8 @@
         protected function orderStats(): array {
             return [
                 'today' => Order::query()->whereDate('ordered_at', today())->count(),
-
-                'month' => Order::query()->whereYear('ordered_at', now()->year)->whereMonth('ordered_at', now()->month)
-                    ->count(),
+                'month' => Order::query()->whereYear('ordered_at', now()->year)
+                    ->whereMonth('ordered_at', now()->month)->count(),
             ];
         }
 
@@ -58,7 +57,6 @@
 
             return [
                 'today' => (float)(clone $query)->whereDate('payment_date', today())->sum('amount'),
-
                 'month' => (float)(clone $query)->whereYear('payment_date', now()->year)
                     ->whereMonth('payment_date', now()->month)->sum('amount'),
             ];
@@ -66,7 +64,6 @@
 
         protected function receivableStats(): array {
             $debit = CustomerTransaction::query()->where('type', CustomerTransactionType::DEBIT)->sum('amount');
-
             $credit = CustomerTransaction::query()->where('type', CustomerTransactionType::CREDIT)->sum('amount');
 
             return [
@@ -77,7 +74,6 @@
         protected function returnStats(): array {
             return [
                 'pending' => OrderReturn::query()->where('status', OrderReturnStatus::PENDING)->count(),
-
                 'confirmed' => OrderReturn::query()->where('status', OrderReturnStatus::CONFIRMED)->count(),
             ];
         }
@@ -85,7 +81,6 @@
         protected function deliveryStats(): array {
             return [
                 'pending' => Delivery::query()->where('status', DeliveryStatus::PENDING)->count(),
-
                 'shipped' => Delivery::query()->where('status', DeliveryStatus::SHIPPED)->count(),
             ];
         }
@@ -93,9 +88,8 @@
         protected function visitStats(): array {
             return [
                 'today' => Visit::query()->whereDate('visit_date', today())->count(),
-
-                'month' => Visit::query()->whereYear('visit_date', now()->year)->whereMonth('visit_date', now()->month)
-                    ->count(),
+                'month' => Visit::query()->whereYear('visit_date', now()->year)
+                    ->whereMonth('visit_date', now()->month)->count(),
             ];
         }
 
@@ -104,10 +98,26 @@
                 'today' => (int)Sample::query()->whereHas('visit', function ($query) {
                     $query->whereDate('visit_date', today());
                 })->sum('quantity'),
-
                 'month' => (int)Sample::query()->whereHas('visit', function ($query) {
                     $query->whereYear('visit_date', now()->year)->whereMonth('visit_date', now()->month);
                 })->sum('quantity'),
+            ];
+        }
+
+        protected function inventoryStats(): array {
+            $query = InventoryBatch::query();
+
+            return [
+                'batches' => (clone $query)->count(),
+                'quantity' => (int)(clone $query)->sum('quantity'),
+                'reserved_quantity' => (int)(clone $query)->sum('reserved_quantity'),
+                'available_quantity' => (int)(clone $query)->sum('quantity') - (int)(clone $query)->sum('reserved_quantity'),
+                'expired_batches' => (clone $query)->whereDate('expire_date', '<', today())->count(),
+                'near_expire_batches' => (clone $query)
+                    ->whereNotNull('expire_date')
+                    ->whereDate('expire_date', '>=', today())
+                    ->whereDate('expire_date', '<=', today()->addDays(90))
+                    ->count(),
             ];
         }
 
@@ -119,7 +129,6 @@
                     'status' => $order->status?->value,
                     'created_at' => $order->created_at?->toISOString(),
                 ])->values()->all(),
-
                 'payments' => Payment::query()->with('customer')->latest('created_at')->limit(5)->get()
                     ->map(fn(Payment $payment) => [
                         'id' => $payment->public_id,
@@ -132,7 +141,6 @@
                         ] : null,
                         'created_at' => $payment->created_at?->toISOString(),
                     ])->values()->all(),
-
                 'returns' => OrderReturn::query()->latest('created_at')->limit(5)->get()
                     ->map(fn(OrderReturn $return) => [
                         'id' => $return->public_id,
@@ -140,7 +148,6 @@
                         'status' => $return->status?->value,
                         'created_at' => $return->created_at?->toISOString(),
                     ])->values()->all(),
-
                 'visits' => Visit::query()->with('doctor')->latest('visit_date')->limit(5)->get()
                     ->map(fn(Visit $visit) => [
                         'id' => $visit->public_id,
