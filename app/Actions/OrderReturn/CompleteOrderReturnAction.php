@@ -100,7 +100,7 @@
                     throw new BusinessRuleException('مبلغ نهایی فاکتور برای محاسبه مرجوعی معتبر نیست.');
                 }
 
-                $calculatedReturnAmount = round(($returnGrossAmount / $invoiceSubtotal) * $invoiceTotal, 2);
+                $calculatedReturnAmount = round(($returnAmount / $invoiceSubtotal) * $invoiceTotal, 2);
 
                 if ($calculatedReturnAmount <= 0) {
                     throw new BusinessRuleException('مبلغ اعتبار مرجوعی باید بیشتر از صفر باشد.');
@@ -112,8 +112,6 @@
                         $query->where('order_id', $orderReturn->order_id)->where('status', OrderReturnStatus::COMPLETED)
                             ->whereKeyNot($orderReturn->id);
                     })->where('type', 'credit')->sum('amount');
-
-                $remainingReturnCredit = round($invoiceTotal - $previousReturnCredit, 2);
 
                 $remainingReturnCredit = round($invoiceTotal - $previousReturnCredit, 2);
 
