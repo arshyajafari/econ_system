@@ -33,6 +33,7 @@
                 'total_amount' => $this->total_amount,
                 'description' => $this->description,
                 'items' => InvoiceItemResource::collection($this->whenLoaded('items')),
+                'payments' => PaymentResource::collection($this->whenLoaded('payments')),
                 'created_at' => $this->created_at?->toISOString(),
                 'updated_at' => $this->updated_at?->toISOString(),
             ];

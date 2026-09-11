@@ -20,6 +20,12 @@
                     'code' => $this->salesEmployee->code,
                     'name' => trim($this->salesEmployee->first_name . ' ' . $this->salesEmployee->last_name),
                 ]),
+                'invoice' => $this->whenLoaded('invoice', fn() => [
+                    'id' => $this->invoice?->public_id,
+                    'code' => $this->invoice?->code,
+                    'status' => $this->invoice?->status?->value,
+                    'total_amount' => $this->invoice?->total_amount,
+                ]),
                 'status' => $this->status?->value,
                 'ordered_at' => $this->ordered_at?->toISOString(),
                 'description' => $this->description,
