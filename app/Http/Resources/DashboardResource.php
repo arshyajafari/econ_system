@@ -42,6 +42,14 @@ class DashboardResource extends JsonResource
                 'today' => data_get($this->resource, 'samples.today', 0),
                 'month' => data_get($this->resource, 'samples.month', 0),
             ],
+            'inventory' => [
+                'batches' => data_get($this->resource, 'inventory.batches', 0),
+                'quantity' => data_get($this->resource, 'inventory.quantity', 0),
+                'reserved_quantity' => data_get($this->resource, 'inventory.reserved_quantity', 0),
+                'available_quantity' => data_get($this->resource, 'inventory.available_quantity', 0),
+                'expired_batches' => data_get($this->resource, 'inventory.expired_batches', 0),
+                'near_expire_batches' => data_get($this->resource, 'inventory.near_expire_batches', 0),
+            ],
             'recent' => [
                 'orders' => data_get($this->resource, 'recent.orders', []),
                 'payments' => data_get($this->resource, 'recent.payments', []),
