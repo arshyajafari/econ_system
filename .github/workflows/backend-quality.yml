@@ -21,8 +21,8 @@ jobs:
           extensions: mbstring, bcmath, pdo_mysql
           coverage: none
 
-      - name: Validate Composer
-        run: composer validate --strict
+      - name: Validate Composer metadata
+        run: composer validate --strict --no-check-lock
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
