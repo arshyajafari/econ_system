@@ -3,6 +3,7 @@
     namespace App\Http\Requests\Customer;
 
     use App\Enums\CustomerStatus;
+    use App\Enums\CustomerType;
     use App\Http\Requests\BaseFormRequest;
     use App\Validation\ValidationRules;
     use Illuminate\Validation\Rule;
@@ -14,6 +15,10 @@
                     'required',
                     'string',
                     'max:300',
+                ],
+                'type' => [
+                    'required',
+                    Rule::enum(CustomerType::class),
                 ],
                 'owner_name' => [
                     'nullable',
