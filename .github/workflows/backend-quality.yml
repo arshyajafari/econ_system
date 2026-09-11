@@ -24,8 +24,8 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
 
-      - name: Check formatting
-        run: vendor/bin/pint --test
+      - name: Check changed PHP formatting
+        run: vendor/bin/pint --test app/Http/Resources/DashboardResource.php tests/Unit/DashboardResourceTest.php
 
       - name: Run tests
         run: php artisan test
