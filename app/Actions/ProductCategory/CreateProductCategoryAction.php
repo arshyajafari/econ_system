@@ -13,6 +13,11 @@
 
         public function execute(array $data): ProductCategory {
             return DB::transaction(function () use ($data) {
+                if (!empty($data['parent_id'])) {
+                    $parent = ProductCategory::query()->where('public_id', $data['parent_id'])->firstOrFail();
+                    $data['parent_id'] = $parent->id;
+                }
+
                 $data['code'] = $this->codeGenerator->generate(ProductCategory::class);
                 $category = new ProductCategory();
                 $category->fill($data);

@@ -15,8 +15,8 @@
                 ],
                 'parent_id' => [
                     'nullable',
-                    'integer',
-                    'exists:product_categories,id',
+                    'string',
+                    'exists:product_categories,public_id',
                 ],
                 'sort_order' => [
                     'nullable',
