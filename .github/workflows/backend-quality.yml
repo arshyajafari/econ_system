@@ -29,3 +29,6 @@ jobs:
 
       - name: Check formatting
         run: vendor/bin/pint --test
+
+      - name: Run tests
+        run: php artisan test
