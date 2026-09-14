@@ -28,5 +28,6 @@
             require __DIR__ . '/api/visit.php';
             require __DIR__ . '/api/sample.php';
             require __DIR__ . '/api/report.php';
+            require __DIR__ . '/api/notification.php';
         });
     });
