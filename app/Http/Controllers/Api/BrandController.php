@@ -51,13 +51,14 @@ class BrandController extends Controller
     {
         $this->authorize('update', $brand);
 
-        if ($brand->logo && Storage::disk('public')->exists($brand->logo)) {
-            Storage::disk('public')->delete($brand->logo);
-        }
+        $oldLogo = $brand->logo;
+        $newLogo = $request->file('logo')->store('brands', 'public');
 
-        $brand->update([
-            'logo' => $request->file('logo')->store('brands', 'public'),
-        ]);
+        $brand->update(['logo' => $newLogo]);
+
+        if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
+            Storage::disk('public')->delete($oldLogo);
+        }
 
         return new BrandResource($brand->fresh());
     }
