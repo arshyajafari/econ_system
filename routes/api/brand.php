@@ -1,36 +1,14 @@
 <?php
 
-    use App\Http\Controllers\Api\BrandController;
-    use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\BrandController;
+use Illuminate\Support\Facades\Route;
 
-    Route::prefix('brands')->name('brands.')->group(function () {
-        Route::get('/', [
-            BrandController::class,
-            'index'
-        ]);
-
-        Route::post('/', [
-            BrandController::class,
-            'store'
-        ]);
-
-        Route::get('/{brand}', [
-            BrandController::class,
-            'show'
-        ]);
-
-        Route::put('/{brand}', [
-            BrandController::class,
-            'update'
-        ]);
-
-        Route::delete('/{brand}', [
-            BrandController::class,
-            'destroy'
-        ]);
-
-        Route::patch('/{brand}/activity', [
-            BrandController::class,
-            'changeActivity'
-        ]);
-    });
+Route::prefix('brands')->name('brands.')->group(function () {
+    Route::get('/', [BrandController::class, 'index']);
+    Route::post('/', [BrandController::class, 'store']);
+    Route::get('/{brand}', [BrandController::class, 'show']);
+    Route::post('/{brand}/logo', [BrandController::class, 'uploadLogo']);
+    Route::put('/{brand}', [BrandController::class, 'update']);
+    Route::delete('/{brand}', [BrandController::class, 'destroy']);
+    Route::patch('/{brand}/activity', [BrandController::class, 'changeActivity']);
+});
