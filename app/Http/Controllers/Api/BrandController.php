@@ -1,54 +1,79 @@
 <?php
 
-    namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api;
 
-    use App\Actions\Brand\ChangeBrandActivityAction;
-    use App\Actions\Brand\CreateBrandAction;
-    use App\Actions\Brand\DeleteBrandAction;
-    use App\Actions\Brand\ListBrandsAction;
-    use App\Actions\Brand\ShowBrandAction;
-    use App\Actions\Brand\UpdateBrandAction;
-    use App\Http\Controllers\Controller;
-    use App\Http\Requests\Brand\BrandIndexRequest;
-    use App\Http\Requests\Brand\ChangeBrandActivityRequest;
-    use App\Http\Requests\Brand\StoreBrandRequest;
-    use App\Http\Requests\Brand\UpdateBrandRequest;
-    use App\Http\Resources\BrandResource;
-    use App\Models\Brand;
-    use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-    use Symfony\Component\HttpFoundation\Response;
+use App\Actions\Brand\ChangeBrandActivityAction;
+use App\Actions\Brand\CreateBrandAction;
+use App\Actions\Brand\DeleteBrandAction;
+use App\Actions\Brand\ListBrandsAction;
+use App\Actions\Brand\ShowBrandAction;
+use App\Actions\Brand\UpdateBrandAction;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Brand\BrandIndexRequest;
+use App\Http\Requests\Brand\ChangeBrandActivityRequest;
+use App\Http\Requests\Brand\StoreBrandRequest;
+use App\Http\Requests\Brand\UpdateBrandRequest;
+use App\Http\Requests\Brand\UploadBrandLogoRequest;
+use App\Http\Resources\BrandResource;
+use App\Models\Brand;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response;
 
-    class BrandController extends Controller {
-        public function __construct() {
-            $this->authorizeModel(Brand::class, 'brand');
-        }
-
-        public function index(BrandIndexRequest $request, ListBrandsAction $action): AnonymousResourceCollection {
-            return BrandResource::collection($action->execute($request->validated()));
-        }
-
-        public function show(Brand $brand, ShowBrandAction $action): BrandResource {
-            return new BrandResource($action->execute($brand));
-        }
-
-        public function store(StoreBrandRequest $request, CreateBrandAction $action): BrandResource {
-            return new BrandResource($action->execute($request->validated()));
-        }
-
-        public function update(UpdateBrandRequest $request, Brand $brand, UpdateBrandAction $action): BrandResource {
-            return new BrandResource($action->execute($brand, $request->validated()));
-        }
-
-        public function destroy(Brand $brand, DeleteBrandAction $action): Response {
-            $action->execute($brand);
-
-            return response()->noContent();
-        }
-
-        public function changeActivity(ChangeBrandActivityRequest $request, Brand $brand,
-            ChangeBrandActivityAction $action): BrandResource {
-            $this->authorize('changeActivity', $brand);
-
-            return new BrandResource($action->execute($brand, $request->boolean('is_active')));
-        }
+class BrandController extends Controller
+{
+    public function __construct()
+    {
+        $this->authorizeModel(Brand::class, 'brand');
     }
+
+    public function index(BrandIndexRequest $request, ListBrandsAction $action): AnonymousResourceCollection
+    {
+        return BrandResource::collection($action->execute($request->validated()));
+    }
+
+    public function show(Brand $brand, ShowBrandAction $action): BrandResource
+    {
+        return new BrandResource($action->execute($brand));
+    }
+
+    public function store(StoreBrandRequest $request, CreateBrandAction $action): BrandResource
+    {
+        return new BrandResource($action->execute($request->validated()));
+    }
+
+    public function update(UpdateBrandRequest $request, Brand $brand, UpdateBrandAction $action): BrandResource
+    {
+        return new BrandResource($action->execute($brand, $request->validated()));
+    }
+
+    public function uploadLogo(UploadBrandLogoRequest $request, Brand $brand): BrandResource
+    {
+        $this->authorize('update', $brand);
+
+        if ($brand->logo && Storage::disk('public')->exists($brand->logo)) {
+            Storage::disk('public')->delete($brand->logo);
+        }
+
+        $brand->update([
+            'logo' => $request->file('logo')->store('brands', 'public'),
+        ]);
+
+        return new BrandResource($brand->fresh());
+    }
+
+    public function destroy(Brand $brand, DeleteBrandAction $action): Response
+    {
+        $action->execute($brand);
+
+        return response()->noContent();
+    }
+
+    public function changeActivity(ChangeBrandActivityRequest $request, Brand $brand,
+        ChangeBrandActivityAction $action): BrandResource
+    {
+        $this->authorize('changeActivity', $brand);
+
+        return new BrandResource($action->execute($brand, $request->boolean('is_active')));
+    }
+}
