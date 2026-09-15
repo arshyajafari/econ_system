@@ -52,13 +52,14 @@ class ProductController extends Controller
     {
         $this->authorize('update', $product);
 
-        if ($product->image && Storage::disk('public')->exists($product->image)) {
-            Storage::disk('public')->delete($product->image);
-        }
+        $oldImage = $product->image;
+        $newImage = $request->file('image')->store('products', 'public');
 
-        $product->update([
-            'image' => $request->file('image')->store('products', 'public'),
-        ]);
+        $product->update(['image' => $newImage]);
+
+        if ($oldImage && Storage::disk('public')->exists($oldImage)) {
+            Storage::disk('public')->delete($oldImage);
+        }
 
         return new ProductResource($product->fresh());
     }
