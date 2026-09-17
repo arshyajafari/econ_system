@@ -11,6 +11,10 @@ class ReportController extends Controller
 {
     public function index(ReportRequest $request, GetReportAction $action): ReportResource
     {
-        return new ReportResource($action->execute($request->string('from')->toString(), $request->string('to')->toString()));
+        abort_unless($request->user()->can('reports.view'), 403);
+
+        return new ReportResource(
+            $action->execute($request->string('from')->toString(), $request->string('to')->toString())
+        );
     }
 }
