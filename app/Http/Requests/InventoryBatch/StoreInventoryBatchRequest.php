@@ -8,34 +8,13 @@
     class StoreInventoryBatchRequest extends CrudRequest {
         public function rules(): array {
             return [
-                'product_id' => [
-                    'required',
-                    'string',
-                    'exists:products,public_id',
-                ],
-                'batch_number' => [
-                    'nullable',
-                    'string',
-                    'max:100',
-                ],
-                'expire_date' => [
-                    'nullable',
-                    'date',
-                ],
-                'received_at' => [
-                    'nullable',
-                    'date',
-                ],
-                'quantity' => [
-                    'required',
-                    'integer',
-                    'min:1',
-                ],
-                'reserved_quantity' => [
-                    'nullable',
-                    'integer',
-                    'min:0',
-                ],
+                'product_id' => ['required', 'string', 'exists:products,public_id'],
+                'batch_number' => ['nullable', 'string', 'max:100'],
+                'expire_date' => ['nullable', 'date'],
+                'received_at' => ['nullable', 'date'],
+                'quantity' => ['required', 'integer', 'min:1'],
+                'purchase_price' => ['required', 'numeric', 'min:0'],
+                'reserved_quantity' => ['nullable', 'integer', 'min:0'],
                 ...ValidationRules::description(),
             ];
         }
