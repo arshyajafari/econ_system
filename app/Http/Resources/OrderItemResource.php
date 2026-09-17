@@ -13,6 +13,7 @@
                     'id' => $this->product->public_id,
                     'code' => $this->product->code,
                     'title' => $this->product->title,
+                    'sale_price' => $this->product->sale_price,
                 ]),
                 'quantity' => $this->quantity,
                 'unit_price' => $this->unit_price,
