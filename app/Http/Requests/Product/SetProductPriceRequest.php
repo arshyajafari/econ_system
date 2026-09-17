@@ -12,7 +12,7 @@ class SetProductPriceRequest extends FormRequest
     {
         return [
             'sale_price' => ['required', 'numeric', 'min:0'],
-            'effective_from' => ['nullable', 'date'],
+            'effective_from' => ['nullable', 'date', 'before_or_equal:now'],
             'description' => ['nullable', 'string'],
         ];
     }
