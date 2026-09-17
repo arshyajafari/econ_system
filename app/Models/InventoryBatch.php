@@ -28,7 +28,7 @@ class InventoryBatch extends BaseModel
         'reserved_quantity' => 'integer',
     ];
 
-    public function product(): BelongsTo { return $this->belongsTo(Product::class); }
+    public function product(): BelongsTo { return $this->belongsTo(Product::class)->withTrashed(); }
     public function movements(): HasMany { return $this->hasMany(InventoryMovement::class); }
     public function adjustments(): HasMany { return $this->hasMany(InventoryAdjustment::class); }
     public function allocations(): HasMany { return $this->hasMany(OrderItemAllocation::class); }
