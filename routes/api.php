@@ -11,6 +11,7 @@
             require __DIR__ . '/api/product.php';
 
             require __DIR__ . '/api/customer.php';
+            require __DIR__ . '/api/employee-locations.php';
             require __DIR__ . '/api/employee.php';
             require __DIR__ . '/api/doctor.php';
 

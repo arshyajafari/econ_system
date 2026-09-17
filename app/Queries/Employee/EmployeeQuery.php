@@ -27,7 +27,7 @@ class EmployeeQuery extends BaseQuery {
         if ($employmentType) $this->query->where('employment_type', $employmentType);
     }
     protected function applyActivityType(?string $activityType): void {
-        if ($activityType) $this->query->where('activity_type', $activityType);
+        if ($activityType) $this->query->whereHas('activities', fn($query) => $query->where('activity_type', $activityType));
     }
     protected function applyGender(?string $gender): void {
         if ($gender) $this->query->where('gender', $gender);

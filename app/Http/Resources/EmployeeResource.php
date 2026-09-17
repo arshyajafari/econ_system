@@ -20,6 +20,7 @@ class EmployeeResource extends JsonResource {
             'birth_date' => $this->birth_date?->toISOString(),
             'employment_type' => $this->employment_type,
             'activity_type' => $this->activity_type,
+            'activities' => $this->whenLoaded('activities', fn() => $this->activities->map(fn($activity) => $activity->activity_type?->value)->filter()->values()->all()),
             'hire_date' => $this->hire_date?->toISOString(),
             'termination_date' => $this->termination_date?->toISOString(),
             'status' => $this->status,

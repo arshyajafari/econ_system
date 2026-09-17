@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Employee extends BaseModel implements HasGeneratedCode {
     use HasPublicId, HasFactory, HasCodeGenerator, SoftDeletes, HasAudit;
 
-    public const DEFAULT_RELATIONS = ['defaultAddress', 'user'];
+    public const DEFAULT_RELATIONS = ['defaultAddress', 'user', 'activities'];
     public const SEARCHABLE = ['code', 'first_name', 'last_name', 'phone_number', 'national_code'];
     public const SORTABLE = ['code', 'first_name', 'last_name', 'hire_date', 'created_at'];
 
@@ -45,8 +45,10 @@ class Employee extends BaseModel implements HasGeneratedCode {
     }
 
     public function user(): HasOne { return $this->hasOne(User::class); }
+    public function activities(): HasMany { return $this->hasMany(EmployeeActivity::class); }
     public function addresses(): HasMany { return $this->hasMany(EmployeeAddress::class); }
     public function locations(): HasMany { return $this->hasMany(EmployeeLocation::class); }
+    public function latestLocation(): HasOne { return $this->hasOne(EmployeeLocation::class)->latestOfMany('captured_at'); }
     public function deliveries(): HasMany { return $this->hasMany(Delivery::class); }
     public function defaultAddress(): HasOne { return $this->hasOne(EmployeeAddress::class)->where('is_default', true); }
     public function customerAssignments(): HasMany { return $this->hasMany(CustomerAssignment::class); }
