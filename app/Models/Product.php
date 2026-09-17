@@ -42,6 +42,7 @@
             'brand_id',
             'product_category_id',
             'title',
+            'sale_price',
             'image',
             'barcode',
             'sort_order',
@@ -53,6 +54,7 @@
         protected function casts(): array {
             return array_merge(parent::casts(), [
                 'status' => ProductStatus::class,
+                'sale_price' => 'decimal:2',
                 'meta' => 'array',
             ]);
         }
