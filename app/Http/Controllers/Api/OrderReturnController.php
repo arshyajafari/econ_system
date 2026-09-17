@@ -23,7 +23,10 @@
 
     class OrderReturnController extends Controller {
         public function __construct() {
-            $this->authorizeModel(OrderReturn::class, 'order_return');
+            // The route parameter is {orderReturn}; keep it aligned with
+            // authorizeResource so the show/update resource authorization
+            // receives the actual OrderReturn model instance.
+            $this->authorizeModel(OrderReturn::class, 'orderReturn');
         }
 
         public function index(OrderReturnIndexRequest $request, OrderReturnQuery $query) {
