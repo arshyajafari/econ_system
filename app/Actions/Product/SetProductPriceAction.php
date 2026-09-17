@@ -4,6 +4,7 @@ namespace App\Actions\Product;
 
 use App\Models\Product;
 use App\Models\ProductPrice;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class SetProductPriceAction
@@ -11,7 +12,9 @@ class SetProductPriceAction
     public function execute(Product $product, array $data): ProductPrice
     {
         return DB::transaction(function () use ($product, $data) {
-            $effectiveFrom = isset($data['effective_from']) ? now()->parse($data['effective_from']) : now();
+            $effectiveFrom = isset($data['effective_from'])
+                ? Carbon::parse($data['effective_from'])
+                : now();
 
             $product->prices()
                 ->where('is_active', true)
