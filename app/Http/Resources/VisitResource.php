@@ -7,14 +7,17 @@
 
     class VisitResource extends JsonResource {
         public function toArray(Request $request): array {
+            $doctor = $this->relationLoaded('doctor') ? $this->doctor : null;
+
             return [
                 'id' => $this->public_id,
-                'doctor' => $this->whenLoaded('doctor', fn() => [
-                    'id' => $this->doctor->public_id,
-                    'name' => trim($this->doctor->first_name . ' ' . $this->doctor->last_name),
-                    'specialty' => $this->doctor->specialty?->value,
-                    'clinic_name' => $this->doctor->clinic_name,
-                ]),
+                'doctor' => $doctor ? [
+                    'id' => $doctor->public_id,
+                    'name' => trim($doctor->first_name . ' ' . $doctor->last_name),
+                    'specialty' => $doctor->specialty?->value,
+                    'clinic_name' => $doctor->clinic_name,
+                ] : null,
+                'doctor_name' => $doctor ? trim($doctor->first_name . ' ' . $doctor->last_name) : null,
                 'employee' => $this->whenLoaded('employee', fn() => [
                     'id' => $this->employee->public_id,
                     'name' => trim($this->employee->first_name . ' ' . $this->employee->last_name),
