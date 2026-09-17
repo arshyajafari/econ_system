@@ -28,6 +28,7 @@
                     'expire_date' => $data['expire_date'] ?? null,
                     'received_at' => $data['received_at'] ?? now(),
                     'quantity' => $quantity,
+                    'purchase_price' => $data['purchase_price'],
                     'reserved_quantity' => 0,
                     'description' => $data['description'] ?? null,
                 ]);
