@@ -22,10 +22,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        $user = User::query()->find(1);
-
-        if ($user) {
-            $user->removeRole(Role::ADMIN->value);
-        }
+        // Intentionally irreversible: removing the administrator role during a rollback
+        // could revoke access from the existing initial administrator.
     }
 };
