@@ -12,10 +12,12 @@
                 $addressData = $data['address'] ?? [];
                 unset($data['address']);
 
-                $data['code'] = Doctor::generateCode();
+                $code = Doctor::generateCode();
 
                 $doctor = new Doctor();
                 $doctor->fill($data);
+                // The generated code is server-owned and must never depend on mass-assignment configuration.
+                $doctor->code = $code;
                 $doctor->save();
 
                 if (!empty($addressData)) {
