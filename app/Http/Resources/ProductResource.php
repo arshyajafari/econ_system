@@ -14,7 +14,12 @@ class ProductResource extends JsonResource
             'id' => $this->public_id,
             'code' => $this->code,
             'title' => $this->title,
-            'sale_price' => $this->sale_price,
+            'current_price' => $this->whenLoaded('currentPrice', fn() => [
+                'id' => $this->currentPrice->public_id,
+                'sale_price' => $this->currentPrice->sale_price,
+                'effective_from' => $this->currentPrice->effective_from?->toISOString(),
+                'effective_to' => $this->currentPrice->effective_to?->toISOString(),
+            ]),
             'image' => $this->image && !filter_var($this->image, FILTER_VALIDATE_URL)
                 ? Storage::disk('public')->url($this->image)
                 : $this->image,
