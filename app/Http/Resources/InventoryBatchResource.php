@@ -23,6 +23,7 @@ class InventoryBatchResource extends JsonResource
                     'sale_price' => $price->sale_price,
                     'effective_from' => $price->effective_from?->toISOString(),
                 ] : null,
+                'sale_price' => $price?->sale_price,
             ] : null,
             'batch_number' => $this->batch_number,
             'expire_date' => $this->expire_date?->toISOString(),
