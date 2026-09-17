@@ -14,6 +14,7 @@ class RoleRegistry {
                 Permission::CUSTOMER_VIEW->value, Permission::CUSTOMER_CREATE->value, Permission::CUSTOMER_UPDATE->value,
                 Permission::PRODUCT_VIEW->value, Permission::ORDER_VIEW->value, Permission::ORDER_CREATE->value,
                 Permission::ORDER_UPDATE->value, Permission::ORDER_SUBMIT->value,
+                Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value, Permission::ORDER_RETURN_UPDATE->value,
             ],
             Role::SCIENTIFIC_VISITOR->value => [
                 Permission::DOCTOR_VIEW->value, Permission::DOCTOR_CREATE->value, Permission::DOCTOR_UPDATE->value,
