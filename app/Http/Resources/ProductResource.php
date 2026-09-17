@@ -14,6 +14,7 @@ class ProductResource extends JsonResource
             'id' => $this->public_id,
             'code' => $this->code,
             'title' => $this->title,
+            'sale_price' => $this->sale_price,
             'image' => $this->image && !filter_var($this->image, FILTER_VALIDATE_URL)
                 ? Storage::disk('public')->url($this->image)
                 : $this->image,
