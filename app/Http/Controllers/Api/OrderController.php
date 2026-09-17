@@ -29,7 +29,7 @@
         }
 
         public function store(StoreOrderRequest $request, CreateOrderAction $action): JsonResponse {
-            $order = $action->execute($request->validated());
+            $order = $action->execute($request->validated(), $request->user());
 
             return response()->json(new OrderResource($order), 201);
         }
