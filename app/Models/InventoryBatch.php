@@ -30,6 +30,7 @@
             'expire_date',
             'received_at',
             'quantity',
+            'purchase_price',
             'reserved_quantity',
             'description',
         ];
@@ -38,6 +39,7 @@
             'expire_date' => 'date',
             'received_at' => 'datetime',
             'quantity' => 'integer',
+            'purchase_price' => 'decimal:2',
             'reserved_quantity' => 'integer',
         ];
 
