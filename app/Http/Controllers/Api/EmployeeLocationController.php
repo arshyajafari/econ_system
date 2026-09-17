@@ -7,13 +7,12 @@ use App\Http\Requests\Employee\StoreEmployeeLocationRequest;
 use App\Http\Resources\EmployeeLocationResource;
 use App\Models\Employee;
 use App\Models\EmployeeLocation;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class EmployeeLocationController extends Controller {
     public function store(StoreEmployeeLocationRequest $request): EmployeeLocationResource {
         $employee = $request->user()->employee;
-        abort_unless($employee, 422, 'کاربر به کارمند فعال متصل نیست.');
+        abort_unless($employee && $employee->status->value === 'active', 422, 'کاربر به کارمند فعال متصل نیست.');
 
         $data = $request->validated();
         $data['employee_id'] = $employee->id;
@@ -21,12 +20,11 @@ class EmployeeLocationController extends Controller {
         $data['source'] = $data['source'] ?? 'browser';
 
         $location = EmployeeLocation::create($data)->load('employee');
-
         return EmployeeLocationResource::make($location);
     }
 
     public function index(Request $request) {
-        $this->authorize('viewAny', Employee::class);
+        abort_unless($request->user()->hasRole('admin'), 403);
 
         $employees = Employee::query()
             ->active()
