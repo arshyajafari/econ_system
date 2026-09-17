@@ -14,7 +14,8 @@ class RoleRegistry {
                 Permission::CUSTOMER_VIEW->value, Permission::CUSTOMER_CREATE->value, Permission::CUSTOMER_UPDATE->value,
                 Permission::PRODUCT_VIEW->value, Permission::ORDER_VIEW->value, Permission::ORDER_CREATE->value,
                 Permission::ORDER_UPDATE->value, Permission::ORDER_SUBMIT->value,
-                Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value, Permission::ORDER_RETURN_UPDATE->value,
+                Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value,
+                Permission::ORDER_RETURN_UPDATE->value, Permission::ORDER_RETURN_CONFIRM->value,
             ],
             Role::SCIENTIFIC_VISITOR->value => [
                 Permission::DOCTOR_VIEW->value, Permission::DOCTOR_CREATE->value, Permission::DOCTOR_UPDATE->value,
@@ -29,12 +30,12 @@ class RoleRegistry {
                 Permission::INVOICE_UPDATE->value, Permission::INVOICE_ISSUE->value, Permission::INVOICE_CANCEL->value,
                 Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value, Permission::PAYMENT_UPDATE->value,
                 Permission::PAYMENT_CONFIRM->value, Permission::PAYMENT_CANCEL->value,
-                Permission::ORDER_RETURN_VIEW->value,
+                Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CONFIRM->value,
             ],
             Role::SETTLEMENT_OPERATOR->value => [
                 Permission::CUSTOMER_VIEW->value, Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value,
                 Permission::PAYMENT_UPDATE->value, Permission::PAYMENT_CONFIRM->value, Permission::PAYMENT_CANCEL->value,
-                Permission::ORDER_RETURN_VIEW->value,
+                Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CONFIRM->value,
             ],
             Role::DELIVERY_OPERATOR->value => [
                 Permission::ORDER_VIEW->value, Permission::DELIVERY_VIEW->value, Permission::DELIVERY_CREATE->value,
