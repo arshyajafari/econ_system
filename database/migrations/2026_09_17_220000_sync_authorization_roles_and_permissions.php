@@ -5,10 +5,10 @@ use App\Security\RoleSyncService;
 use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration {
-    public function up(PermissionSyncService $permissions, RoleSyncService $roles): void
+    public function up(): void
     {
-        $permissions->sync();
-        $roles->sync();
+        app(PermissionSyncService::class)->sync();
+        app(RoleSyncService::class)->sync();
     }
 
     public function down(): void
