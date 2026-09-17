@@ -12,11 +12,6 @@
                     'string',
                     'exists:customers,public_id',
                 ],
-                'sales_employee_id' => [
-                    'required',
-                    'string',
-                    'exists:employees,public_id',
-                ],
                 'ordered_at' => [
                     'nullable',
                     'date',
