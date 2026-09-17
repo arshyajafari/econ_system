@@ -1,49 +1,26 @@
 <?php
 
-    namespace App\Models;
+namespace App\Models;
 
-    use App\Traits\HasAudit;
-    use App\Traits\HasPublicId;
-    use Illuminate\Database\Eloquent\Relations\BelongsTo;
-    use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\HasAudit;
+use App\Traits\HasPublicId;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-    class Sample extends BaseModel {
-        use HasPublicId, HasAudit, SoftDeletes;
+class Sample extends BaseModel
+{
+    use HasPublicId, HasAudit, SoftDeletes;
 
-        public const DEFAULT_RELATIONS = [
-            'visit.doctor',
-            'visit.employee',
-            'product',
-        ];
+    public const DEFAULT_RELATIONS = ['visit.doctor', 'visit.employee', 'product'];
+    public const SEARCHABLE = ['description'];
+    public const SORTABLE = ['quantity', 'created_at'];
 
-        public const SEARCHABLE = [
-            'description',
-        ];
+    protected $fillable = [
+        'client_operation_id', 'visit_id', 'product_id', 'quantity', 'description', 'meta',
+    ];
 
-        public const SORTABLE = [
-            'quantity',
-            'created_at',
-        ];
+    protected $casts = ['quantity' => 'integer', 'meta' => 'array'];
 
-        protected $fillable = [
-            'client_operation_id',
-            'visit_id',
-            'product_id',
-            'quantity',
-            'description',
-            'meta',
-        ];
-
-        protected $casts = [
-            'quantity' => 'integer',
-            'meta' => 'array',
-        ];
-
-        public function visit(): BelongsTo {
-            return $this->belongsTo(Visit::class);
-        }
-
-        public function product(): BelongsTo {
-            return $this->belongsTo(Product::class);
-        }
-    }
+    public function visit(): BelongsTo { return $this->belongsTo(Visit::class)->withTrashed(); }
+    public function product(): BelongsTo { return $this->belongsTo(Product::class)->withTrashed(); }
+}
