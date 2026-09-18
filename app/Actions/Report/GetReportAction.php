@@ -26,9 +26,6 @@ class GetReportAction
             ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
         $pendingPayments = Payment::query()->where('status', PaymentStatus::PENDING)
             ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
-        $recordedPayments = Payment::query()
-            ->whereIn('status', [PaymentStatus::PENDING, PaymentStatus::CONFIRMED])
-            ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
         $orders = Order::query()->whereBetween('ordered_at', [$fromDate, $toDate]);
         $returns = OrderReturn::query()
             ->where('status', OrderReturnStatus::COMPLETED)
