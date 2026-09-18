@@ -13,6 +13,7 @@ class StorePaymentRequest extends CrudRequest {
             'invoice_id' => ['required', 'string', 'exists:invoices,public_id'],
             'method' => ['required', Rule::enum(PaymentMethod::class)],
             'amount' => ['required', 'numeric', 'gt:0'],
+            'settlement_discount_amount' => ['nullable', 'numeric', 'gte:0'],
             'reference_number' => ['nullable', 'string', 'max:100'],
             'payment_date' => ['required', 'date'],
             'receipt_image' => [
