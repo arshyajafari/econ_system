@@ -28,6 +28,14 @@
                     'nullable',
                     'boolean',
                 ],
+                'invoiceable' => [
+                    'nullable',
+                    'boolean',
+                ],
+                'deliverable' => [
+                    'nullable',
+                    'boolean',
+                ],
                 'ordered_from' => [
                     'nullable',
                     'date',
