@@ -10,6 +10,7 @@ use App\Models\InvoiceItem;
 use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\Payment;
+use App\Models\CustomerTransaction;
 use Illuminate\Support\Carbon;
 
 class GetReportAction
@@ -30,8 +31,13 @@ class GetReportAction
             ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
         $orders = Order::query()->whereBetween('ordered_at', [$fromDate, $toDate]);
         $returns = OrderReturn::query()
-            ->whereIn('status', [OrderReturnStatus::CONFIRMED, OrderReturnStatus::COMPLETED])
+            ->where('status', OrderReturnStatus::COMPLETED)
             ->whereBetween('completed_at', [$fromDate, $toDate]);
+
+        $returnCredits = CustomerTransaction::query()
+            ->where('type', 'credit')
+            ->whereNotNull('order_return_id')
+            ->whereBetween('transaction_at', [$fromDate, $toDate]);
 
         $productSales = InvoiceItem::query()
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
@@ -72,11 +78,13 @@ class GetReportAction
             ],
             'returns' => [
                 'count' => (int) (clone $returns)->count(),
-                'amount' => (float) (clone $returns)->with('items')->get()->sum(fn ($return) => $return->items->sum('total_price')),
+                'amount' => (float) (clone $returnCredits)->sum('amount'),
             ],
             'receivables' => [
-                'total' => (float) Invoice::query()->where('status', InvoiceStatus::ISSUED)
-                    ->sum('total_amount') - (float) Payment::query()->where('status', PaymentStatus::CONFIRMED)->sum('amount'),
+                'debit' => (float) CustomerTransaction::query()->where('type', 'debit')->sum('amount'),
+                'credit' => (float) CustomerTransaction::query()->where('type', 'credit')->sum('amount'),
+                'total' => (float) CustomerTransaction::query()->where('type', 'debit')->sum('amount')
+                    - (float) CustomerTransaction::query()->where('type', 'credit')->sum('amount'),
             ],
             'top_products' => $productSales,
         ];
