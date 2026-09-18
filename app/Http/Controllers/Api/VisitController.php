@@ -6,6 +6,7 @@
     use App\Actions\Visit\CompleteVisitAction;
     use App\Actions\Visit\CreateVisitAction;
     use App\Actions\Visit\ListVisitsAction;
+    use App\Actions\Visit\DeleteVisitAction;
     use App\Actions\Visit\ShowVisitAction;
     use App\Actions\Visit\UpdateVisitAction;
     use App\Http\Controllers\Controller;
@@ -41,6 +42,12 @@
             $this->authorize('update', $visit);
 
             return new VisitResource($action->execute($visit, $request->validated()));
+        }
+
+        public function destroy(Visit $visit, DeleteVisitAction $action): JsonResponse {
+            $this->authorize('delete', $visit);
+            $action->execute($visit);
+            return response()->json([], 204);
         }
 
         public function complete(Visit $visit, CompleteVisitAction $action): VisitResource {
