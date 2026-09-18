@@ -30,6 +30,7 @@ class PaymentResource extends JsonResource {
             'status' => $this->status?->value,
             'method' => $this->method?->value,
             'amount' => $this->amount,
+            'settlement_discount_amount' => $this->settlement_discount_amount,
             'reference_number' => $this->reference_number,
             'payment_date' => $this->payment_date?->toDateString(),
             'description' => $this->description,
