@@ -55,6 +55,16 @@ class GetReportAction
                 'total_amount' => (float) $item->total_amount,
             ])->values()->all();
 
+        $confirmedPaymentTotal = (float) (clone $payments)->sum('amount');
+        $confirmedPaymentCount = (int) (clone $payments)->count();
+        $pendingPaymentTotal = (float) (clone $pendingPayments)->sum('amount');
+        $pendingPaymentCount = (int) (clone $pendingPayments)->count();
+
+        // "ثبت‌شده" در گزارش به معنی پرداخت معتبر ثبت‌شده است:
+        // تأییدشده + در انتظار تأیید. پرداخت‌های لغوشده عمداً در مبلغ/تعداد لحاظ نمی‌شوند.
+        $recordedPaymentTotal = $confirmedPaymentTotal + $pendingPaymentTotal;
+        $recordedPaymentCount = $confirmedPaymentCount + $pendingPaymentCount;
+
         return [
             'period' => ['from' => $fromDate->toDateString(), 'to' => $toDate->toDateString()],
             'sales' => [
@@ -65,12 +75,12 @@ class GetReportAction
                 'invoice_count' => (int) (clone $issued)->count(),
             ],
             'payments' => [
-                'total' => (float) (clone $payments)->sum('amount'),
-                'count' => (int) (clone $payments)->count(),
-                'pending_total' => (float) (clone $pendingPayments)->sum('amount'),
-                'pending_count' => (int) (clone $pendingPayments)->count(),
-                'recorded_total' => (float) (clone $recordedPayments)->sum('amount'),
-                'recorded_count' => (int) (clone $recordedPayments)->count(),
+                'total' => $confirmedPaymentTotal,
+                'count' => $confirmedPaymentCount,
+                'pending_total' => $pendingPaymentTotal,
+                'pending_count' => $pendingPaymentCount,
+                'recorded_total' => $recordedPaymentTotal,
+                'recorded_count' => $recordedPaymentCount,
             ],
             'orders' => [
                 'total' => (int) (clone $orders)->count(),
