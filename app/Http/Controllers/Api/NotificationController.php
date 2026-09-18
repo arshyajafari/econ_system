@@ -91,7 +91,7 @@ class NotificationController extends Controller {
 
     public function destroy(Request $request, string $notification) {
         abort_unless($request->user()->hasRole(Role::ADMIN->value), 403);
-        $rows = $request->user()->notifications()
+        $rows = DatabaseNotification::query()
             ->where('data->message_id', $notification)
             ->where('data->sender_id', (int) $request->user()->getKey())
             ->get();
