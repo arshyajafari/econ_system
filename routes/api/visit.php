@@ -24,6 +24,11 @@
             'update'
         ])->name('update');
 
+        Route::delete('/{visit}', [
+            VisitController::class,
+            'destroy'
+        ])->name('destroy');
+
         Route::post('/{visit}/complete', [
             VisitController::class,
             'complete'
