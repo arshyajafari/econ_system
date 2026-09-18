@@ -57,10 +57,15 @@ class GetReportAction
         $pendingPaymentTotal = (float) (clone $pendingPayments)->sum('amount');
         $pendingPaymentCount = (int) (clone $pendingPayments)->count();
 
-        // "ثبت‌شده" در گزارش به معنی پرداخت معتبر ثبت‌شده است:
-        // تأییدشده + در انتظار تأیید. پرداخت‌های لغوشده عمداً در مبلغ/تعداد لحاظ نمی‌شوند.
-        $recordedPaymentTotal = $confirmedPaymentTotal + $pendingPaymentTotal;
-        $recordedPaymentCount = $confirmedPaymentCount + $pendingPaymentCount;
+        // مبلغ واریزی مشتریان = تمام پرداخت‌های معتبر ثبت‌شده در بازه:
+        // confirmed + pending؛ cancelled نباید در گزارش مالی دیده شود.
+        // این مقدار مستقیماً از Payment خوانده می‌شود تا مستقل از ایجاد CustomerTransaction باشد.
+        $recordedPayments = Payment::query()
+            ->whereIn('status', [PaymentStatus::CONFIRMED, PaymentStatus::PENDING])
+            ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
+
+        $recordedPaymentTotal = (float) (clone $recordedPayments)->sum('amount');
+        $recordedPaymentCount = (int) (clone $recordedPayments)->count();
 
         return [
             'period' => ['from' => $fromDate->toDateString(), 'to' => $toDate->toDateString()],
