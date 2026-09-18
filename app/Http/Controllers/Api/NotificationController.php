@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\SystemMessageNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Notifications\DatabaseNotification;
 use Spatie\Permission\Models\Role as SpatieRole;
 
 class NotificationController extends Controller {
@@ -72,7 +73,7 @@ class NotificationController extends Controller {
             'body' => ['required', 'string', 'max:5000'],
             'priority' => ['required', 'in:low,normal,high,urgent'],
         ]);
-        $rows = $request->user()->notifications()
+        $rows = DatabaseNotification::query()
             ->where('data->message_id', $notification)
             ->where('data->sender_id', (int) $request->user()->getKey())
             ->get();
