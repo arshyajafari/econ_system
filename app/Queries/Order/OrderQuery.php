@@ -33,6 +33,7 @@ class OrderQuery extends BaseQuery
         }
 
         $this->applyStatus($filters['status'] ?? null);
+        $this->applyReturnable($filters['returnable'] ?? null);
         $this->applyDateRange($filters['ordered_from'] ?? null, $filters['ordered_to'] ?? null);
         $this->applySort($filters['sort'] ?? null, Order::SORTABLE, 'ordered_at');
 
@@ -57,6 +58,29 @@ class OrderQuery extends BaseQuery
     {
         if (!$status) return;
         $this->query->where('status', $status);
+    }
+
+    protected function applyReturnable(?bool $returnable): void
+    {
+        if ($returnable !== true) {
+            return;
+        }
+
+        $this->query->where('status', \App\Enums\OrderStatus::COMPLETED)
+            ->whereHas('items', function ($query) {
+                $query->whereRaw(
+                    'order_items.quantity > (
+                        SELECT COALESCE(SUM(order_return_items.quantity), 0)
+                        FROM order_return_items
+                        INNER JOIN order_returns ON order_returns.id = order_return_items.order_return_id
+                        WHERE order_return_items.order_item_id = order_items.id
+                          AND order_returns.status NOT IN (?, ?)
+                          AND order_returns.deleted_at IS NULL
+                          AND order_return_items.deleted_at IS NULL
+                    )',
+                    ['draft', 'cancelled'],
+                );
+            });
     }
 
     protected function applyDateRange(?string $from, ?string $to): void
