@@ -8,16 +8,30 @@ use Illuminate\Validation\Rule;
 
 class InvoiceIndexRequest extends IndexRequest {
     protected function prepareForValidation(): void {
-        if (!$this->has('settled')) {
-            return;
+        $merge = [];
+
+        if ($this->has('settled')) {
+            $value = $this->input('settled');
+
+            if ($value === 'true' || $value === '1') {
+                $merge['settled'] = true;
+            } elseif ($value === 'false' || $value === '0') {
+                $merge['settled'] = false;
+            }
         }
 
-        $value = $this->input('settled');
+        if ($this->has('payable')) {
+            $value = $this->input('payable');
 
-        if ($value === 'true' || $value === '1') {
-            $this->merge(['settled' => true]);
-        } elseif ($value === 'false' || $value === '0') {
-            $this->merge(['settled' => false]);
+            if ($value === 'true' || $value === '1') {
+                $merge['payable'] = true;
+            } elseif ($value === 'false' || $value === '0') {
+                $merge['payable'] = false;
+            }
+        }
+
+        if ($merge) {
+            $this->merge($merge);
         }
     }
 
@@ -44,6 +58,10 @@ class InvoiceIndexRequest extends IndexRequest {
                 Rule::enum(InvoiceStatus::class),
             ],
             'settled' => [
+                'nullable',
+                'boolean',
+            ],
+            'payable' => [
                 'nullable',
                 'boolean',
             ],
