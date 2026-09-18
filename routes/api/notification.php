@@ -10,4 +10,6 @@ Route::prefix('notifications')->name('notifications.')->group(function () {
     Route::post('/read-all', [NotificationController::class, 'markAllRead'])->name('mark-all-read');
     Route::get('/recipients', [NotificationController::class, 'recipients'])->name('recipients');
     Route::post('/send', [NotificationController::class, 'send'])->name('send');
+    Route::put('/{notification}', [NotificationController::class, 'update'])->name('update');
+    Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
 });
