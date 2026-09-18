@@ -59,6 +59,9 @@
                 'today' => (float)(clone $query)->whereDate('payment_date', today())->sum('amount'),
                 'month' => (float)(clone $query)->whereYear('payment_date', now()->year)
                     ->whereMonth('payment_date', now()->month)->sum('amount'),
+                'pending_today' => (float)Payment::query()->where('status', PaymentStatus::PENDING)
+                    ->whereDate('payment_date', today())->sum('amount'),
+                'pending_count' => (int)Payment::query()->where('status', PaymentStatus::PENDING)->count(),
             ];
         }
 
