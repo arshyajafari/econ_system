@@ -19,24 +19,23 @@ class GetReportAction
     {
         $fromDate = Carbon::parse($from)->startOfDay();
         $toDate = Carbon::parse($to)->endOfDay();
-        $fromPaymentDate = $fromDate->toDateString();
-        $toPaymentDate = $toDate->toDateString();
 
         $issued = Invoice::query()->where('status', InvoiceStatus::ISSUED)
             ->whereBetween('issued_at', [$fromDate, $toDate]);
 
-        // Payments are the source of truth for customer deposits.
-        // A payment is recorded immediately as pending, then becomes confirmed
-        // after approval. Cancelled payments are excluded from report totals.
+        // Payment is the source of truth for customer deposits.
+        // payment_date is a DATE column, so whereDate avoids time/timezone edge cases.
         $recordedPayments = Payment::query()
-            ->whereIn('status', [
-                PaymentStatus::CONFIRMED->value,
-                PaymentStatus::PENDING->value,
-            ])
-            ->whereBetween('payment_date', [$fromPaymentDate, $toPaymentDate]);
+            ->whereDate('payment_date', '>=', $fromDate->toDateString())
+            ->whereDate('payment_date', '<=', $toDate->toDateString())
+            ->where(function ($query) {
+                $query->where('status', PaymentStatus::PENDING->value)
+                    ->orWhere('status', PaymentStatus::CONFIRMED->value);
+            });
 
         $confirmedPayments = (clone $recordedPayments)
             ->where('status', PaymentStatus::CONFIRMED->value);
+
         $pendingPayments = (clone $recordedPayments)
             ->where('status', PaymentStatus::PENDING->value);
 
