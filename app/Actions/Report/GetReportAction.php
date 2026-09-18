@@ -19,14 +19,29 @@ class GetReportAction
     {
         $fromDate = Carbon::parse($from)->startOfDay();
         $toDate = Carbon::parse($to)->endOfDay();
+        $fromPaymentDate = $fromDate->toDateString();
+        $toPaymentDate = $toDate->toDateString();
 
         $issued = Invoice::query()->where('status', InvoiceStatus::ISSUED)
             ->whereBetween('issued_at', [$fromDate, $toDate]);
-        $payments = Payment::query()->where('status', PaymentStatus::CONFIRMED)
-            ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
-        $pendingPayments = Payment::query()->where('status', PaymentStatus::PENDING)
-            ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
+
+        // Payments are the source of truth for customer deposits.
+        // A payment is recorded immediately as pending, then becomes confirmed
+        // after approval. Cancelled payments are excluded from report totals.
+        $recordedPayments = Payment::query()
+            ->whereIn('status', [
+                PaymentStatus::CONFIRMED->value,
+                PaymentStatus::PENDING->value,
+            ])
+            ->whereBetween('payment_date', [$fromPaymentDate, $toPaymentDate]);
+
+        $confirmedPayments = (clone $recordedPayments)
+            ->where('status', PaymentStatus::CONFIRMED->value);
+        $pendingPayments = (clone $recordedPayments)
+            ->where('status', PaymentStatus::PENDING->value);
+
         $orders = Order::query()->whereBetween('ordered_at', [$fromDate, $toDate]);
+
         $returns = OrderReturn::query()
             ->where('status', OrderReturnStatus::COMPLETED)
             ->whereBetween('completed_at', [$fromDate, $toDate]);
@@ -52,20 +67,12 @@ class GetReportAction
                 'total_amount' => (float) $item->total_amount,
             ])->values()->all();
 
-        $confirmedPaymentTotal = (float) (clone $payments)->sum('amount');
-        $confirmedPaymentCount = (int) (clone $payments)->count();
-        $pendingPaymentTotal = (float) (clone $pendingPayments)->sum('amount');
-        $pendingPaymentCount = (int) (clone $pendingPayments)->count();
-
-        // مبلغ واریزی مشتریان = تمام پرداخت‌های معتبر ثبت‌شده در بازه:
-        // confirmed + pending؛ cancelled نباید در گزارش مالی دیده شود.
-        // این مقدار مستقیماً از Payment خوانده می‌شود تا مستقل از ایجاد CustomerTransaction باشد.
-        $recordedPayments = Payment::query()
-            ->whereIn('status', [PaymentStatus::CONFIRMED, PaymentStatus::PENDING])
-            ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
-
         $recordedPaymentTotal = (float) (clone $recordedPayments)->sum('amount');
         $recordedPaymentCount = (int) (clone $recordedPayments)->count();
+        $confirmedPaymentTotal = (float) (clone $confirmedPayments)->sum('amount');
+        $confirmedPaymentCount = (int) (clone $confirmedPayments)->count();
+        $pendingPaymentTotal = (float) (clone $pendingPayments)->sum('amount');
+        $pendingPaymentCount = (int) (clone $pendingPayments)->count();
 
         return [
             'period' => ['from' => $fromDate->toDateString(), 'to' => $toDate->toDateString()],
