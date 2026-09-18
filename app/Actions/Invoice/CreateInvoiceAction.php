@@ -21,8 +21,8 @@
                     'items',
                 ])->findOrFail($order->id);
 
-                if ($order->status !== OrderStatus::COMPLETED) {
-                    throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل ایجاد فاکتور است.');
+                if ($order->status !== OrderStatus::PENDING) {
+                    throw new BusinessRuleException('فقط سفارش در انتظار تأیید قابل ایجاد فاکتور است.');
                 }
 
                 if ($order->invoice()->exists()) {
