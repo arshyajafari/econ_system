@@ -24,7 +24,7 @@ class OrderPolicy
         return $this->isAdmin($user) || ($user->can('orders.view') && $this->ownsOrder($user, $order));
     }
 
-    public function create(User $user): bool { return $user->can('orders.create'); }
+    public function create(User $user): bool { return $this->isAdmin($user) || ($user->hasRole('sales visitor') && $user->can('orders.create')); }
     public function update(User $user, Order $order): bool { return $this->isAdmin($user) || ($user->can('orders.update') && $this->ownsOrder($user, $order)); }
     public function submit(User $user, Order $order): bool { return $this->isAdmin($user) || ($user->can('orders.submit') && $this->ownsOrder($user, $order)); }
     public function confirm(User $user, Order $order): bool { return $this->isAdmin($user) || ($user->can('orders.confirm') && $this->ownsOrder($user, $order)); }
