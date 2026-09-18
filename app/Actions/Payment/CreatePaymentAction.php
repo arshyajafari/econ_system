@@ -20,30 +20,40 @@ class CreatePaymentAction {
                 throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
             }
 
-            $invoice = Invoice::query()->lockForUpdate()->with(['payments', 'returnTransactions.orderReturn'])->where('public_id', $data['invoice_id'])
+            $invoice = Invoice::query()->lockForUpdate()
+                ->with(['payments', 'returnTransactions.orderReturn'])
+                ->where('public_id', $data['invoice_id'])
                 ->firstOrFail();
 
             if ($invoice->status !== InvoiceStatus::ISSUED) {
                 throw new BusinessRuleException('فقط فاکتور صادرشده قابل پرداخت است.');
             }
 
-
             $remainingAmount = $invoice->effectiveRemainingAmount(includePending: true);
-            $amount = (float)$data['amount'];
+            $amount = (float) $data['amount'];
+            $discountAmount = (float) ($data['settlement_discount_amount'] ?? 0);
 
             if ($amount <= 0) {
                 throw new BusinessRuleException('مبلغ پرداخت باید بیشتر از صفر باشد.');
+            }
+
+            if ($discountAmount < 0) {
+                throw new BusinessRuleException('مبلغ تخفیف تسویه نمی‌تواند منفی باشد.');
             }
 
             if ($remainingAmount <= 0) {
                 throw new BusinessRuleException('این فاکتور تسویه شده است.');
             }
 
-            // پرداخت بیشتر از مانده فاکتور مجاز است؛ مازاد پس از تأیید
-            // به‌عنوان بستانکاری مشتری در دفتر حساب ثبت می‌شود.
+            if ($discountAmount > $remainingAmount) {
+                throw new BusinessRuleException('تخفیف تسویه نمی‌تواند بیشتر از مانده فاکتور باشد.');
+            }
+
             $meta = [];
+
             if (!empty($data['receipt_image'])) {
-                $meta['receipt_image_path'] = Storage::disk('public')->putFile('payments/receipts', $data['receipt_image']);
+                $meta['receipt_image_path'] = Storage::disk('public')
+                    ->putFile('payments/receipts', $data['receipt_image']);
             }
 
             $payment = Payment::create([
@@ -53,6 +63,7 @@ class CreatePaymentAction {
                 'status' => PaymentStatus::PENDING,
                 'method' => $data['method'],
                 'amount' => $amount,
+                'settlement_discount_amount' => $discountAmount,
                 'reference_number' => $data['reference_number'] ?? null,
                 'payment_date' => $data['payment_date'],
                 'description' => $data['description'] ?? null,
