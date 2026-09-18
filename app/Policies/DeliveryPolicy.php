@@ -23,19 +23,19 @@
         }
 
         public function prepare(User $user, Delivery $delivery): bool {
-            return $user->can('deliveries.prepare');
+            return $user->hasRole('admin') && $user->can('deliveries.prepare');
         }
 
         public function ship(User $user, Delivery $delivery): bool {
-            return $user->can('deliveries.ship');
+            return $user->hasRole('admin') && $user->can('deliveries.ship');
         }
 
         public function complete(User $user, Delivery $delivery): bool {
-            return $user->can('deliveries.complete');
+            return $user->hasRole('admin') && $user->can('deliveries.complete');
         }
 
         public function cancel(User $user, Delivery $delivery): bool {
-            return $user->can('deliveries.cancel');
+            return $user->hasRole('admin') && $user->can('deliveries.cancel');
         }
 
         public function export(User $user): bool {
