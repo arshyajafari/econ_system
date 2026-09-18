@@ -28,7 +28,7 @@ class OrderPolicy
     public function update(User $user, Order $order): bool { return $this->isAdmin($user) || ($user->can('orders.update') && $this->ownsOrder($user, $order)); }
     public function submit(User $user, Order $order): bool { return $this->isAdmin($user) || ($user->can('orders.submit') && $this->ownsOrder($user, $order)); }
     public function confirm(User $user, Order $order): bool { return $this->isAdmin($user) || ($user->can('orders.confirm') && $this->ownsOrder($user, $order)); }
-    public function complete(User $user, Order $order): bool { return $this->isAdmin($user) || ($user->can('orders.complete') && $this->ownsOrder($user, $order)); }
+    public function complete(User $user, Order $order): bool { return $this->isAdmin($user) && $user->can('orders.complete'); }
     public function cancel(User $user, Order $order): bool { return $this->isAdmin($user) || ($user->can('orders.cancel') && $this->ownsOrder($user, $order)); }
     public function export(User $user): bool { return $this->isAdmin($user) || $user->can('orders.export'); }
 }
