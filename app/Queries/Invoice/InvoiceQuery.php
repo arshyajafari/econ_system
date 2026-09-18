@@ -3,6 +3,7 @@
 namespace App\Queries\Invoice;
 
 use App\Enums\InvoiceStatus;
+use App\Enums\OrderReturnStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\User;
@@ -60,8 +61,27 @@ class InvoiceQuery extends BaseQuery
     protected function applySettlement(?bool $settled): void
     {
         if ($settled === null) return;
+
         $operator = $settled ? '>=' : '<';
-        $this->query->whereRaw("(SELECT COALESCE(SUM(payments.amount), 0) FROM payments WHERE payments.invoice_id = invoices.id AND payments.status = ?) {$operator} invoices.total_amount", [PaymentStatus::CONFIRMED->value]);
+
+        $this->query->whereRaw(
+            "(SELECT COALESCE(SUM(payments.amount), 0)
+                FROM payments
+                WHERE payments.invoice_id = invoices.id
+                  AND payments.status = ?)
+             +
+             (SELECT COALESCE(SUM(customer_transactions.amount), 0)
+                FROM customer_transactions
+                INNER JOIN order_returns ON order_returns.id = customer_transactions.order_return_id
+                WHERE order_returns.order_id = invoices.order_id
+                  AND order_returns.status = ?
+                  AND customer_transactions.type = 'credit')
+             {$operator} invoices.total_amount",
+            [
+                PaymentStatus::CONFIRMED->value,
+                OrderReturnStatus::COMPLETED->value,
+            ],
+        );
     }
 
     protected function applyDateRange(?string $from, ?string $to): void
