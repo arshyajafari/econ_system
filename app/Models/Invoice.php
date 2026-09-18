@@ -107,7 +107,7 @@ class Invoice extends BaseModel {
         return $this->relationLoaded('payments')
             ? (float) $this->payments
                 ->where('status', PaymentStatus::CONFIRMED)
-                ->sum('amount')
+                ->sum(fn ($payment) => (float) $payment->amount + (float) $payment->settlement_discount_amount)
             : 0.0;
     }
 
@@ -115,7 +115,7 @@ class Invoice extends BaseModel {
         return $this->relationLoaded('payments')
             ? (float) $this->payments
                 ->where('status', PaymentStatus::PENDING)
-                ->sum('amount')
+                ->sum(fn ($payment) => (float) $payment->amount + (float) $payment->settlement_discount_amount)
             : 0.0;
     }
 
