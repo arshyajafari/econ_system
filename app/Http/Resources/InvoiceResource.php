@@ -2,27 +2,21 @@
 
 namespace App\Http\Resources;
 
-use App\Enums\CustomerTransactionType;
-use App\Enums\OrderReturnStatus;
-use App\Enums\PaymentStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class InvoiceResource extends JsonResource {
     public function toArray(Request $request): array {
+        $settledAmount = $this->relationLoaded('payments') && $this->relationLoaded('returnTransactions')
+            ? $this->settledAmount()
+            : null;
+
         $confirmedPaidAmount = $this->relationLoaded('payments')
-            ? (float) $this->payments->where('status', PaymentStatus::CONFIRMED)->sum('amount')
+            ? $this->confirmedPaidAmount()
             : null;
 
         $returnCreditAmount = $this->relationLoaded('returnTransactions')
-            ? (float) $this->returnTransactions
-                ->where('type', CustomerTransactionType::CREDIT)
-                ->filter(fn($transaction) => $transaction->orderReturn?->status === OrderReturnStatus::COMPLETED)
-                ->sum('amount')
-            : null;
-
-        $settledAmount = $confirmedPaidAmount !== null && $returnCreditAmount !== null
-            ? $confirmedPaidAmount + $returnCreditAmount
+            ? $this->completedReturnCreditAmount()
             : null;
 
         return [
