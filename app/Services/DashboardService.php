@@ -116,12 +116,12 @@
                 })->count(),
                 'quantity' => (int)(clone $query)->sum('quantity'),
                 'reserved_quantity' => (int)(clone $query)->sum('reserved_quantity'),
-                'available_quantity' => (int)(clone $query)
+                'available_quantity' => (int) ((clone $query)
                     ->where(function ($batch) {
                         $batch->whereNull('expire_date')->orWhereDate('expire_date', '>=', today());
                     })
                     ->selectRaw('COALESCE(SUM(CASE WHEN quantity > reserved_quantity THEN quantity - reserved_quantity ELSE 0 END), 0) as available_quantity')
-                    ->value('available_quantity'),
+                    ->first()?->available_quantity ?? 0),
                 'expired_batches' => (clone $query)->whereDate('expire_date', '<', today())->count(),
                 'near_expire_batches' => (clone $query)
                     ->whereNotNull('expire_date')
