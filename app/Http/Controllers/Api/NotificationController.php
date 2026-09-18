@@ -9,6 +9,7 @@ use App\Http\Resources\SystemNotificationResource;
 use App\Models\User;
 use App\Notifications\SystemMessageNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role as SpatieRole;
 
 class NotificationController extends Controller {
@@ -64,6 +65,40 @@ class NotificationController extends Controller {
         ]);
     }
 
+    public function update(Request $request, string $notification) {
+        abort_unless($request->user()->hasRole(Role::ADMIN->value), 403);
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:120'],
+            'body' => ['required', 'string', 'max:5000'],
+            'priority' => ['required', 'in:low,normal,high,urgent'],
+        ]);
+        $rows = $request->user()->notifications()
+            ->where('data->message_id', $notification)
+            ->where('data->sender_id', (int) $request->user()->getKey())
+            ->get();
+        if ($rows->isEmpty()) abort(404);
+        foreach ($rows as $row) {
+            $payload = $row->data;
+            $payload['title'] = $data['title'];
+            $payload['body'] = $data['body'];
+            $payload['priority'] = $data['priority'];
+            $row->data = $payload;
+            $row->save();
+        }
+        return response()->json(['success' => true]);
+    }
+
+    public function destroy(Request $request, string $notification) {
+        abort_unless($request->user()->hasRole(Role::ADMIN->value), 403);
+        $rows = $request->user()->notifications()
+            ->where('data->message_id', $notification)
+            ->where('data->sender_id', (int) $request->user()->getKey())
+            ->get();
+        if ($rows->isEmpty()) abort(404);
+        foreach ($rows as $row) $row->delete();
+        return response()->noContent();
+    }
+
     public function send(StoreSystemMessageRequest $request) {
         $data = $request->validated();
 
@@ -86,6 +121,7 @@ class NotificationController extends Controller {
             $data['body'],
             $data['priority'],
             (int) $request->user()->getKey(),
+            (string) Str::uuid(),
         );
 
         foreach ($users as $user) {
