@@ -66,7 +66,7 @@ class InvoiceQuery extends BaseQuery
         $operator = $settled ? '>=' : '<';
 
         $this->query->whereRaw(
-            "(SELECT COALESCE(SUM(payments.amount), 0)
+            "(SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
                 FROM payments
                 WHERE payments.invoice_id = invoices.id
                   AND payments.status = ?)
@@ -103,7 +103,7 @@ class InvoiceQuery extends BaseQuery
         $this->query->whereRaw(
             "(invoices.total_amount
                 -
-                (SELECT COALESCE(SUM(payments.amount), 0)
+                (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
                     FROM payments
                     WHERE payments.invoice_id = invoices.id
                       AND payments.status IN (?, ?))
