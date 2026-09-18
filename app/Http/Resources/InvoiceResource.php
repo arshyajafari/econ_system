@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\CustomerTransactionType;
+use App\Enums\OrderReturnStatus;
 use App\Enums\PaymentStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -10,6 +12,17 @@ class InvoiceResource extends JsonResource {
     public function toArray(Request $request): array {
         $confirmedPaidAmount = $this->relationLoaded('payments')
             ? (float) $this->payments->where('status', PaymentStatus::CONFIRMED)->sum('amount')
+            : null;
+
+        $returnCreditAmount = $this->relationLoaded('returnTransactions')
+            ? (float) $this->returnTransactions
+                ->where('type', CustomerTransactionType::CREDIT)
+                ->filter(fn($transaction) => $transaction->orderReturn?->status === OrderReturnStatus::COMPLETED)
+                ->sum('amount')
+            : null;
+
+        $settledAmount = $confirmedPaidAmount !== null && $returnCreditAmount !== null
+            ? $confirmedPaidAmount + $returnCreditAmount
             : null;
 
         return [
@@ -30,10 +43,14 @@ class InvoiceResource extends JsonResource {
                 'name' => trim($this->employee->first_name . ' ' . $this->employee->last_name),
             ]),
             'status' => $this->status?->value,
-            'is_settled' => $confirmedPaidAmount !== null
-                ? $confirmedPaidAmount >= (float) $this->total_amount
+            'is_settled' => $settledAmount !== null
+                ? $settledAmount >= (float) $this->total_amount
                 : null,
             'paid_amount' => $confirmedPaidAmount,
+            'return_credit_amount' => $returnCreditAmount,
+            'remaining_amount' => $settledAmount !== null
+                ? max(0, (float) $this->total_amount - $settledAmount)
+                : null,
             'issued_at' => $this->issued_at?->toISOString(),
             'due_date' => $this->due_date?->format('Y-m-d'),
             'subtotal' => $this->subtotal,
