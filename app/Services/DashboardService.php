@@ -5,6 +5,7 @@
     use App\Enums\CustomerTransactionType;
     use App\Enums\DeliveryStatus;
     use App\Enums\InvoiceStatus;
+    use App\Enums\OrderStatus;
     use App\Enums\OrderReturnStatus;
     use App\Enums\PaymentStatus;
     use App\Models\CustomerTransaction;
@@ -49,6 +50,7 @@
                 'today' => Order::query()->whereDate('ordered_at', today())->count(),
                 'month' => Order::query()->whereYear('ordered_at', now()->year)
                     ->whereMonth('ordered_at', now()->month)->count(),
+                'pending' => Order::query()->where('status', OrderStatus::PENDING)->count(),
             ];
         }
 
@@ -71,6 +73,14 @@
 
             return [
                 'total' => (float)$debit - (float)$credit,
+                'debtors_count' => (int) CustomerTransaction::query()
+                    ->select('customer_id')
+                    ->selectRaw('SUM(CASE WHEN type = ? THEN amount ELSE -amount END) as balance', [CustomerTransactionType::DEBIT->value])
+                    ->whereNotNull('customer_id')
+                    ->groupBy('customer_id')
+                    ->havingRaw('SUM(CASE WHEN type = ? THEN amount ELSE -amount END) > 0', [CustomerTransactionType::DEBIT->value])
+                    ->get()
+                    ->count(),
             ];
         }
 
@@ -85,6 +95,7 @@
             return [
                 'pending' => Delivery::query()->where('status', DeliveryStatus::PENDING)->count(),
                 'shipped' => Delivery::query()->where('status', DeliveryStatus::SHIPPED)->count(),
+                'ready_to_ship' => Delivery::query()->where('status', DeliveryStatus::PREPARING)->count(),
             ];
         }
 
