@@ -32,6 +32,10 @@
                     'returns.items',
                 ])->firstOrFail();
 
+                if (!$user->hasRole('admin') && $order->sales_employee_id !== $employee->id) {
+                    throw new BusinessRuleException('فقط سفارش‌های ثبت‌شده توسط خودتان قابل مرجوعی هستند.');
+                }
+
                 if ($order->status !== OrderStatus::COMPLETED) {
                     throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل برگشت است.');
                 }
