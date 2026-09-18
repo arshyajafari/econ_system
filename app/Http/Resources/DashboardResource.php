@@ -18,6 +18,7 @@ class DashboardResource extends JsonResource
             'orders' => [
                 'today' => data_get($this->resource, 'orders.today', 0),
                 'month' => data_get($this->resource, 'orders.month', 0),
+                'pending' => data_get($this->resource, 'orders.pending', 0),
             ],
             'payments' => [
                 'today' => data_get($this->resource, 'payments.today', 0),
@@ -27,6 +28,7 @@ class DashboardResource extends JsonResource
             ],
             'receivables' => [
                 'total' => data_get($this->resource, 'receivables.total', 0),
+                'debtors_count' => data_get($this->resource, 'receivables.debtors_count', 0),
             ],
             'returns' => [
                 'pending' => data_get($this->resource, 'returns.pending', 0),
@@ -35,6 +37,7 @@ class DashboardResource extends JsonResource
             'deliveries' => [
                 'pending' => data_get($this->resource, 'deliveries.pending', 0),
                 'shipped' => data_get($this->resource, 'deliveries.shipped', 0),
+                'ready_to_ship' => data_get($this->resource, 'deliveries.ready_to_ship', 0),
             ],
             'visits' => [
                 'today' => data_get($this->resource, 'visits.today', 0),
