@@ -22,6 +22,8 @@ class DashboardResource extends JsonResource
             'payments' => [
                 'today' => data_get($this->resource, 'payments.today', 0),
                 'month' => data_get($this->resource, 'payments.month', 0),
+                'pending_today' => data_get($this->resource, 'payments.pending_today', 0),
+                'pending_count' => data_get($this->resource, 'payments.pending_count', 0),
             ],
             'receivables' => [
                 'total' => data_get($this->resource, 'receivables.total', 0),
