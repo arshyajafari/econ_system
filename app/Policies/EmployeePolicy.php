@@ -15,7 +15,7 @@
         }
 
         public function create(User $user): bool {
-            return $user->can('employees.create');
+            return $user->hasRole('admin');
         }
 
         public function update(User $user, Employee $employee): bool {
