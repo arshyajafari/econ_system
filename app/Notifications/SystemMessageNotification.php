@@ -13,6 +13,7 @@ class SystemMessageNotification extends Notification {
         private readonly string $body,
         private readonly string $priority,
         private readonly int $senderId,
+        private readonly string $messageId,
     ) {}
 
     public function via(object $notifiable): array {
@@ -25,6 +26,7 @@ class SystemMessageNotification extends Notification {
             'body' => $this->body,
             'priority' => $this->priority,
             'sender_id' => $this->senderId,
+            'message_id' => $this->messageId,
         ];
     }
 }
