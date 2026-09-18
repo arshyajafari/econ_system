@@ -15,7 +15,7 @@ class CustomerPolicy
     // Customer deletion is intentionally restricted to administrators only.
     public function delete(User $user, Customer $customer): bool { return $user->hasRole('admin'); }
 
-    public function restore(User $user, Customer $customer): bool { return $user->can('customers.restore'); }
-    public function changeStatus(User $user, Customer $customer): bool { return $user->can('customers.change_status'); }
-    public function export(User $user): bool { return $user->can('customers.export'); }
+    public function restore(User $user, Customer $customer): bool { return $user->hasRole('admin'); }
+    public function changeStatus(User $user, Customer $customer): bool { return $user->hasRole('admin'); }
+    public function export(User $user): bool { return $user->hasRole('admin'); }
 }
