@@ -22,16 +22,17 @@ class ConfirmPaymentAction {
                 throw new BusinessRuleException('فقط پرداخت در وضعیت pending قابل تأیید است.');
             }
 
-            $invoice = Invoice::query()->lockForUpdate()->with(['payments', 'returnTransactions.orderReturn'])->findOrFail($payment->invoice_id);
+            $invoice = Invoice::query()->lockForUpdate()
+                ->with(['payments', 'returnTransactions.orderReturn'])
+                ->findOrFail($payment->invoice_id);
 
             if ($invoice->status !== InvoiceStatus::ISSUED) {
                 throw new BusinessRuleException('فقط فاکتور صادرشده قابل تأیید پرداخت است.');
             }
 
-            if ($payment->customer_id !== $invoice->customer_id) {
+            if ((int) $payment->customer_id !== (int) $invoice->customer_id) {
                 throw new BusinessRuleException('مشتری پرداخت با مشتری فاکتور مطابقت ندارد.');
             }
-
 
             $remainingAmount = $invoice->effectiveRemainingAmount();
 
@@ -39,16 +40,27 @@ class ConfirmPaymentAction {
                 throw new BusinessRuleException('این فاکتور قبلاً با پرداخت‌ها یا اعتبار مرجوعی تسویه شده است.');
             }
 
-            // کل مبلغ پرداخت به حساب مشتری credit می‌شود؛ اگر مبلغ از مانده
-            // فاکتور بیشتر باشد، اختلاف به‌صورت بستانکاری مشتری باقی می‌ماند.
+            if ((float) $payment->settlement_discount_amount > $remainingAmount) {
+                throw new BusinessRuleException('تخفیف تسویه بیشتر از مانده فاکتور است.');
+            }
+
             $payment->status = PaymentStatus::CONFIRMED;
             $payment->save();
 
+            $customerCredit = (float) $payment->amount
+                + (float) $payment->settlement_discount_amount;
+
+            $description = $payment->settlement_discount_amount > 0
+                ? ($payment->description
+                    ? "{$payment->description} - شامل تخفیف تسویه"
+                    : "تأیید پرداخت {$payment->reference_number} - شامل تخفیف تسویه")
+                : ($payment->description ?? "تأیید پرداخت {$payment->reference_number}");
+
             $this->customerTransactionService->credit(
                 customerId: $payment->customer_id,
-                amount: $payment->amount,
+                amount: $customerCredit,
                 source: $payment,
-                description: $payment->description ?? "تأیید پرداخت {$payment->reference_number}",
+                description: $description,
                 transactionAt: $payment->payment_date,
             );
 
