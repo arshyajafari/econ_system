@@ -38,9 +38,7 @@ class RoleRegistry {
                 Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CONFIRM->value,
             ],
             Role::DELIVERY_OPERATOR->value => [
-                Permission::ORDER_VIEW->value, Permission::DELIVERY_VIEW->value, Permission::DELIVERY_CREATE->value,
-                Permission::DELIVERY_UPDATE->value, Permission::DELIVERY_PREPARE->value, Permission::DELIVERY_SHIP->value,
-                Permission::DELIVERY_COMPLETE->value, Permission::DELIVERY_CANCEL->value,
+                Permission::ORDER_VIEW->value, Permission::DELIVERY_VIEW->value,
                 Permission::ORDER_RETURN_VIEW->value,
             ],
         ];
