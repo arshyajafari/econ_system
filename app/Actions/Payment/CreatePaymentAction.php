@@ -20,7 +20,7 @@ class CreatePaymentAction {
                 throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
             }
 
-            $invoice = Invoice::query()->lockForUpdate()->with('payments')->where('public_id', $data['invoice_id'])
+            $invoice = Invoice::query()->lockForUpdate()->with(['payments', 'returnTransactions.orderReturn'])->where('public_id', $data['invoice_id'])
                 ->firstOrFail();
 
             if ($invoice->status !== InvoiceStatus::ISSUED) {
@@ -29,7 +29,15 @@ class CreatePaymentAction {
 
             $confirmedPaidAmount = $invoice->payments->where('status', PaymentStatus::CONFIRMED)->sum('amount');
             $pendingPaidAmount = $invoice->payments->where('status', PaymentStatus::PENDING)->sum('amount');
-            $remainingAmount = (float)$invoice->total_amount - (float)$confirmedPaidAmount - (float)$pendingPaidAmount;
+            $returnCreditAmount = $invoice->returnTransactions
+                ->where('type', 'credit')
+                ->filter(fn($transaction) => $transaction->orderReturn?->status?->value === 'completed')
+                ->sum('amount');
+
+            $remainingAmount = round(
+                (float)$invoice->total_amount - (float)$confirmedPaidAmount - (float)$pendingPaidAmount - (float)$returnCreditAmount,
+                2,
+            );
             $amount = (float)$data['amount'];
 
             if ($amount <= 0) {
@@ -40,10 +48,8 @@ class CreatePaymentAction {
                 throw new BusinessRuleException('این فاکتور تسویه شده است.');
             }
 
-            if ($amount > $remainingAmount) {
-                throw new BusinessRuleException('مبلغ پرداختی بیشتر از مبلغ باقی‌مانده فاکتور است.');
-            }
-
+            // پرداخت بیشتر از مانده فاکتور مجاز است؛ مازاد پس از تأیید
+            // به‌عنوان بستانکاری مشتری در دفتر حساب ثبت می‌شود.
             $meta = [];
             if (!empty($data['receipt_image'])) {
                 $meta['receipt_image_path'] = Storage::disk('public')->putFile('payments/receipts', $data['receipt_image']);
