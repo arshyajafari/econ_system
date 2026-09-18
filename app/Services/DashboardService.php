@@ -108,7 +108,7 @@
             $query = InventoryBatch::query();
 
             return [
-                'batches' => (clone $query)->where('quantity', '>', 0)->where(function ($batch) {
+                'batches' => (clone $query)->whereColumn('quantity', '>', 'reserved_quantity')->where(function ($batch) {
                     $batch->whereNull('expire_date')->orWhereDate('expire_date', '>=', today());
                 })->count(),
                 'quantity' => (int)(clone $query)->sum('quantity'),
@@ -117,7 +117,7 @@
                     ->where(function ($batch) {
                         $batch->whereNull('expire_date')->orWhereDate('expire_date', '>=', today());
                     })
-                    ->selectRaw('COALESCE(SUM(CASE WHEN quantity > reserved_quantity THEN quantity - reserved_quantity ELSE 0 END), 0)')
+                    ->selectRaw('COALESCE(SUM(CASE WHEN quantity > reserved_quantity THEN quantity - reserved_quantity ELSE 0 END), 0) as available_quantity')
                     ->value('available_quantity'),
                 'expired_batches' => (clone $query)->whereDate('expire_date', '<', today())->count(),
                 'near_expire_batches' => (clone $query)
