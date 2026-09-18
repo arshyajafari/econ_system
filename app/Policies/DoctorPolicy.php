@@ -23,7 +23,7 @@
         }
 
         public function delete(User $user, Doctor $doctor): bool {
-            return $user->can('doctors.delete');
+            return $user->hasRole('admin') && $user->can('doctors.delete');
         }
 
         public function restore(User $user, Doctor $doctor): bool {
