@@ -16,6 +16,7 @@
     use App\Http\Resources\VisitResource;
     use App\Models\Visit;
     use Illuminate\Http\JsonResponse;
+    use Symfony\Component\HttpFoundation\Response;
 
     class VisitController extends Controller {
         public function __construct() {
@@ -44,10 +45,10 @@
             return new VisitResource($action->execute($visit, $request->validated()));
         }
 
-        public function destroy(Visit $visit, DeleteVisitAction $action): JsonResponse {
+        public function destroy(Visit $visit, DeleteVisitAction $action): Response {
             $this->authorize('delete', $visit);
             $action->execute($visit);
-            return response()->json([], 204);
+            return response()->noContent();
         }
 
         public function complete(Visit $visit, CompleteVisitAction $action): VisitResource {
