@@ -24,6 +24,10 @@
                     'nullable',
                     Rule::enum(OrderStatus::class),
                 ],
+                'returnable' => [
+                    'nullable',
+                    'boolean',
+                ],
                 'ordered_from' => [
                     'nullable',
                     'date',
