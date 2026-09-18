@@ -28,8 +28,6 @@ class CreatePaymentAction {
             }
 
 
-            $confirmedPaidAmount = $invoice->confirmedPaidAmount();
-            $pendingPaidAmount = $invoice->pendingPaidAmount();
             $remainingAmount = $invoice->effectiveRemainingAmount(includePending: true);
             $amount = (float)$data['amount'];
 
