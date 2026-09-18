@@ -34,6 +34,8 @@ class OrderQuery extends BaseQuery
 
         $this->applyStatus($filters['status'] ?? null);
         $this->applyReturnable($filters['returnable'] ?? null);
+        $this->applyInvoiceable($filters['invoiceable'] ?? null);
+        $this->applyDeliverable($filters['deliverable'] ?? null);
         $this->applyDateRange($filters['ordered_from'] ?? null, $filters['ordered_to'] ?? null);
         $this->applySort($filters['sort'] ?? null, Order::SORTABLE, 'ordered_at');
 
@@ -81,6 +83,28 @@ class OrderQuery extends BaseQuery
                     ['draft', 'cancelled'],
                 );
             });
+    }
+
+    protected function applyInvoiceable(?bool $invoiceable): void
+    {
+        if ($invoiceable !== true) {
+            return;
+        }
+
+        $this->query
+            ->where('status', \App\Enums\OrderStatus::PENDING)
+            ->whereDoesntHave('invoice');
+    }
+
+    protected function applyDeliverable(?bool $deliverable): void
+    {
+        if ($deliverable !== true) {
+            return;
+        }
+
+        $this->query
+            ->where('status', \App\Enums\OrderStatus::PENDING)
+            ->whereDoesntHave('delivery');
     }
 
     protected function applyDateRange(?string $from, ?string $to): void
