@@ -9,7 +9,7 @@ class ProductCategoryPolicy
 {
     private function canView(User $user): bool
     {
-        return $user->hasRole('admin');
+        return $user->hasRole('admin') || $user->hasRole('sales visitor');
     }
 
     public function viewAny(User $user): bool { return $this->canView($user); }
