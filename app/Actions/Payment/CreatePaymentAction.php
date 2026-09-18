@@ -27,17 +27,10 @@ class CreatePaymentAction {
                 throw new BusinessRuleException('فقط فاکتور صادرشده قابل پرداخت است.');
             }
 
-            $confirmedPaidAmount = $invoice->payments->where('status', PaymentStatus::CONFIRMED)->sum('amount');
-            $pendingPaidAmount = $invoice->payments->where('status', PaymentStatus::PENDING)->sum('amount');
-            $returnCreditAmount = $invoice->returnTransactions
-                ->where('type', 'credit')
-                ->filter(fn($transaction) => $transaction->orderReturn?->status?->value === 'completed')
-                ->sum('amount');
 
-            $remainingAmount = round(
-                (float)$invoice->total_amount - (float)$confirmedPaidAmount - (float)$pendingPaidAmount - (float)$returnCreditAmount,
-                2,
-            );
+            $confirmedPaidAmount = $invoice->confirmedPaidAmount();
+            $pendingPaidAmount = $invoice->pendingPaidAmount();
+            $remainingAmount = $invoice->effectiveRemainingAmount(includePending: true);
             $amount = (float)$data['amount'];
 
             if ($amount <= 0) {
