@@ -22,6 +22,10 @@
             return $user->can('visits.update');
         }
 
+        public function delete(User $user, Visit $visit): bool {
+            return $user->hasRole('admin') && $user->can('visits.delete');
+        }
+
         public function complete(User $user, Visit $visit): bool {
             return $user->can('visits.complete');
         }
