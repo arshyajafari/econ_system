@@ -32,18 +32,8 @@ class ConfirmPaymentAction {
                 throw new BusinessRuleException('مشتری پرداخت با مشتری فاکتور مطابقت ندارد.');
             }
 
-            $confirmedPaidAmount = $invoice->payments->where('status', PaymentStatus::CONFIRMED)
-                ->where('id', '!=', $payment->id)->sum('amount');
 
-            $returnCreditAmount = $invoice->returnTransactions
-                ->where('type', 'credit')
-                ->filter(fn($transaction) => $transaction->orderReturn?->status?->value === 'completed')
-                ->sum('amount');
-
-            $remainingAmount = round(
-                (float)$invoice->total_amount - (float)$confirmedPaidAmount - (float)$returnCreditAmount,
-                2,
-            );
+            $remainingAmount = $invoice->effectiveRemainingAmount();
 
             if ($remainingAmount <= 0) {
                 throw new BusinessRuleException('این فاکتور قبلاً با پرداخت‌ها یا اعتبار مرجوعی تسویه شده است.');
