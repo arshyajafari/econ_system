@@ -22,7 +22,7 @@ class ReportRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'from' => $this->input('from', now()->startOfMonth()->toDateString()),
+            'from' => $this->input('from', now()->startOfYear()->toDateString()),
             'to' => $this->input('to', now()->toDateString()),
         ]);
     }
