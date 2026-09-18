@@ -12,6 +12,7 @@ class UpdatePaymentRequest extends CrudRequest {
         return [
             'method' => ['sometimes', Rule::enum(PaymentMethod::class)],
             'amount' => ['sometimes', 'numeric', 'gt:0'],
+            'settlement_discount_amount' => ['sometimes', 'numeric', 'gte:0'],
             'reference_number' => ['sometimes', 'nullable', 'string', 'max:100'],
             'payment_date' => ['sometimes', 'date'],
             'receipt_image' => [
