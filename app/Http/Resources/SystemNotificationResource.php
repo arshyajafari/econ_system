@@ -14,6 +14,8 @@ class SystemNotificationResource extends JsonResource {
             'is_read' => $this->read_at !== null,
             'created_at' => $this->created_at?->toIso8601String(),
             'read_at' => $this->read_at?->toIso8601String(),
+            'message_id' => data_get($this->data, 'message_id'),
+            'can_manage' => $request->user()?->hasRole('admin') && (int) data_get($this->data, 'sender_id') === (int) $request->user()?->getKey(),
         ];
     }
 }
