@@ -23,6 +23,11 @@ class GetReportAction
             ->whereBetween('issued_at', [$fromDate, $toDate]);
         $payments = Payment::query()->where('status', PaymentStatus::CONFIRMED)
             ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
+        $pendingPayments = Payment::query()->where('status', PaymentStatus::PENDING)
+            ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
+        $recordedPayments = Payment::query()
+            ->whereIn('status', [PaymentStatus::PENDING, PaymentStatus::CONFIRMED])
+            ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
         $orders = Order::query()->whereBetween('ordered_at', [$fromDate, $toDate]);
         $returns = OrderReturn::query()
             ->whereIn('status', [OrderReturnStatus::CONFIRMED, OrderReturnStatus::COMPLETED])
@@ -56,6 +61,10 @@ class GetReportAction
             'payments' => [
                 'total' => (float) (clone $payments)->sum('amount'),
                 'count' => (int) (clone $payments)->count(),
+                'pending_total' => (float) (clone $pendingPayments)->sum('amount'),
+                'pending_count' => (int) (clone $pendingPayments)->count(),
+                'recorded_total' => (float) (clone $recordedPayments)->sum('amount'),
+                'recorded_count' => (int) (clone $recordedPayments)->count(),
             ],
             'orders' => [
                 'total' => (int) (clone $orders)->count(),
