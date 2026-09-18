@@ -2,7 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\CustomerTransactionType;
 use App\Enums\InvoiceStatus;
+use App\Enums\OrderReturnStatus;
+use App\Enums\PaymentStatus;
 use App\Services\CodeGeneratorData;
 use App\Traits\HasAudit;
 use App\Traits\HasCodeGenerator;
@@ -93,6 +96,54 @@ class Invoice extends BaseModel {
             'order_id',
             'id',
         );
+    }
+
+    /**
+     * Effective invoice settlement is based only on confirmed payments and
+     * completed return credits. Pending payments are used only when deciding
+     * whether a new payment may be recorded.
+     */
+    public function confirmedPaidAmount(): float {
+        return $this->relationLoaded('payments')
+            ? (float) $this->payments
+                ->where('status', PaymentStatus::CONFIRMED)
+                ->sum('amount')
+            : 0.0;
+    }
+
+    public function pendingPaidAmount(): float {
+        return $this->relationLoaded('payments')
+            ? (float) $this->payments
+                ->where('status', PaymentStatus::PENDING)
+                ->sum('amount')
+            : 0.0;
+    }
+
+    public function completedReturnCreditAmount(): float {
+        return $this->relationLoaded('returnTransactions')
+            ? (float) $this->returnTransactions
+                ->where('type', CustomerTransactionType::CREDIT)
+                ->filter(fn ($transaction) => $transaction->orderReturn?->status === OrderReturnStatus::COMPLETED)
+                ->sum('amount')
+            : 0.0;
+    }
+
+    public function settledAmount(): float {
+        return $this->confirmedPaidAmount() + $this->completedReturnCreditAmount();
+    }
+
+    public function effectiveRemainingAmount(bool $includePending = false): float {
+        $remaining = (float) $this->total_amount - $this->settledAmount();
+
+        if ($includePending) {
+            $remaining -= $this->pendingPaidAmount();
+        }
+
+        return max(0.0, round($remaining, 2));
+    }
+
+    public function isSettled(): bool {
+        return $this->effectiveRemainingAmount() <= 0.0;
     }
 
     public static function codeGenerator(): CodeGeneratorData {
