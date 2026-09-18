@@ -55,6 +55,10 @@ class CreateOrderAction {
             throw new BusinessRuleException('درصد تخفیف نمی‌تواند بیشتر از ۱۰۰ باشد.');
         }
 
+        if ($order->discount_type === Order::DISCOUNT_TYPE_NONE) {
+            $order->discount_value = 0;
+        }
+
         if ((float) $order->discount_value > $subtotal) {
             throw new BusinessRuleException('مبلغ تخفیف نمی‌تواند بیشتر از مبلغ کل اقلام سفارش باشد.');
         }
