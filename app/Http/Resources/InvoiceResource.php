@@ -19,6 +19,12 @@ class InvoiceResource extends JsonResource {
             ? $this->completedReturnCreditAmount()
             : null;
 
+        $settlementDiscountAmount = $this->relationLoaded('payments')
+            ? (float) $this->payments
+                ->where('status', \App\Enums\PaymentStatus::CONFIRMED)
+                ->sum('settlement_discount_amount')
+            : null;
+
         return [
             'id' => $this->public_id,
             'code' => $this->code,
@@ -42,6 +48,7 @@ class InvoiceResource extends JsonResource {
                 : null,
             'paid_amount' => $confirmedPaidAmount,
             'return_credit_amount' => $returnCreditAmount,
+            'settlement_discount_amount' => $settlementDiscountAmount,
             'remaining_amount' => $settledAmount !== null
                 ? max(0, (float) $this->total_amount - $settledAmount)
                 : null,
