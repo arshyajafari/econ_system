@@ -24,7 +24,8 @@ class GetReportAction
         $payments = Payment::query()->where('status', PaymentStatus::CONFIRMED)
             ->whereBetween('payment_date', [$fromDate->toDateString(), $toDate->toDateString()]);
         $orders = Order::query()->whereBetween('ordered_at', [$fromDate, $toDate]);
-        $returns = OrderReturn::query()->where('status', OrderReturnStatus::CONFIRMED)
+        $returns = OrderReturn::query()
+            ->whereIn('status', [OrderReturnStatus::CONFIRMED, OrderReturnStatus::COMPLETED])
             ->whereBetween('completed_at', [$fromDate, $toDate]);
 
         $productSales = InvoiceItem::query()
