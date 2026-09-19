@@ -67,7 +67,30 @@ class CompleteOrderReturnAction {
             }
 
             $completedAt=now();
-            $this->customerTransactionService->credit(customerId:$orderReturn->customer_id,amount:$returnAmount,source:$orderReturn,description:"مرجوعی سفارش {$orderReturn->code}",transactionAt:$completedAt);
+            $creditTransaction = $this->customerTransactionService->credit(
+                customerId: $orderReturn->customer_id,
+                amount: $returnAmount,
+                source: $orderReturn,
+                description: "مرجوعی سفارش {$orderReturn->code}",
+                transactionAt: $completedAt,
+            );
+
+            /*
+             * A return against an invoice that still has a receivable balance
+             * belongs to that invoice first. This makes the invoice payable
+             * amount immediately smaller (e.g. 1000 - 200 = 800), while any
+             * excess return credit remains reusable for another invoice.
+             */
+            $invoiceRemainingBeforeReturn = $invoice->effectiveRemainingAmount();
+            if ($invoiceRemainingBeforeReturn > 0) {
+                app(\App\Services\CustomerCreditService::class)->allocateSourceToInvoice(
+                    sourceTransaction: $creditTransaction,
+                    invoice: $invoice,
+                    requestedAmount: $returnAmount,
+                    description: "کسر مبلغ مرجوعی {$orderReturn->code} از فاکتور {$invoice->code}",
+                );
+            }
+
             $orderReturn->status=OrderReturnStatus::COMPLETED; $orderReturn->completed_at=$completedAt; $orderReturn->save();
 
             return $orderReturn->fresh(['order','customer','employee','items.product','items.orderItem','items.allocations.inventoryBatch.product']);
