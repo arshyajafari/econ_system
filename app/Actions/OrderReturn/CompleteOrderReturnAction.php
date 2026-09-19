@@ -9,6 +9,7 @@ use App\Exceptions\BusinessRuleException;
 use App\Models\CustomerTransaction;
 use App\Models\InventoryBatch;
 use App\Models\InventoryMovement;
+use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Services\CustomerCreditService;
@@ -30,6 +31,7 @@ class CompleteOrderReturnAction {
             $order=Order::query()->lockForUpdate()->with('invoice')->findOrFail($orderReturn->order_id);
             $invoice=$order->invoice;
             if(!$invoice) throw new BusinessRuleException('برای سفارش مربوط به مرجوعی فاکتور وجود ندارد.');
+            $invoice = Invoice::query()->lockForUpdate()->with(['payments', 'creditAllocations'])->findOrFail($invoice->id);
             if($invoice->status!==InvoiceStatus::ISSUED) throw new BusinessRuleException('فقط سفارش دارای فاکتور صادرشده قابل تکمیل مرجوعی است.');
 
             foreach($orderReturn->items as $item){
