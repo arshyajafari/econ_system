@@ -1,115 +1,161 @@
 <?php
 
-    namespace App\Services;
+namespace App\Services;
 
-    use App\Enums\CustomerTransactionType;
-    use App\Models\CustomerTransaction;
-    use Carbon\CarbonImmutable;
+use App\Enums\CustomerTransactionType;
+use App\Models\CustomerCreditAllocation;
+use App\Models\CustomerTransaction;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
 
-    class CustomerLedgerService {
-        public function build(int $customerId, ?string $from = null, ?string $to = null): array {
-            $baseQuery = CustomerTransaction::query()->where('customer_id', $customerId);
+class CustomerLedgerService {
+    public function build(int $customerId, ?string $from = null, ?string $to = null): array {
+        $baseQuery = CustomerTransaction::query()->where('customer_id', $customerId);
 
-            $openingBalance = $this->calculateOpeningBalance($baseQuery, $from);
+        $openingBalance = $this->calculateOpeningBalance($baseQuery, $from);
 
-            $query = clone $baseQuery;
+        $query = clone $baseQuery;
 
-            if ($from) {
-                $fromDate = CarbonImmutable::parse($from)->startOfDay();
+        if ($from) {
+            $query->where('transaction_at', '>=', CarbonImmutable::parse($from)->startOfDay());
+        }
 
-                $query->where('transaction_at', '>=', $fromDate);
+        if ($to) {
+            $query->where('transaction_at', '<=', CarbonImmutable::parse($to)->endOfDay());
+        }
+
+        $transactions = $query
+            ->with(CustomerTransaction::DEFAULT_RELATIONS)
+            ->orderBy('transaction_at')
+            ->orderBy('id')
+            ->get();
+
+        $allocationsQuery = CustomerCreditAllocation::query()
+            ->where('customer_id', $customerId)
+            ->with('invoice');
+
+        if ($from) {
+            $allocationsQuery->where('allocated_at', '>=', CarbonImmutable::parse($from)->startOfDay());
+        }
+
+        if ($to) {
+            $allocationsQuery->where('allocated_at', '<=', CarbonImmutable::parse($to)->endOfDay());
+        }
+
+        $allocations = $allocationsQuery->orderBy('allocated_at')->orderBy('id')->get()
+            ->map(fn (CustomerCreditAllocation $allocation) => $this->allocationTransaction($allocation));
+
+        $transactions = $transactions
+            ->concat($allocations)
+            ->sortBy([
+                ['transaction_at', 'asc'],
+                ['id', 'asc'],
+            ])
+            ->values();
+
+        $balance = $openingBalance;
+        $totalDebit = 0.0;
+        $totalCredit = 0.0;
+
+        $transactions = $transactions->map(function (CustomerTransaction $transaction) use (
+            &$balance, &$totalDebit, &$totalCredit
+        ): CustomerTransaction {
+            $amount = (float) $transaction->amount;
+
+            if ($transaction->type === CustomerTransactionType::DEBIT) {
+                $debit = $amount;
+                $credit = 0.0;
+                $balance += $amount;
+                $totalDebit += $amount;
+            } else {
+                $debit = 0.0;
+                $credit = $amount;
+                $balance -= $amount;
+                $totalCredit += $amount;
             }
 
-            if ($to) {
-                $toDate = CarbonImmutable::parse($to)->endOfDay();
+            $transaction->debit = $debit;
+            $transaction->credit = $credit;
+            $transaction->balance = $balance;
+            $transaction->source = $this->sourceData($transaction);
 
-                $query->where('transaction_at', '<=', $toDate);
-            }
+            return $transaction;
+        });
 
-            $transactions = $query->with(CustomerTransaction::DEFAULT_RELATIONS)->orderBy('transaction_at')
-                ->orderBy('id')->get();
+        return [
+            'opening_balance' => $openingBalance,
+            'total_debit' => $totalDebit,
+            'total_credit' => $totalCredit,
+            'closing_balance' => $balance,
+            'transactions' => $transactions,
+        ];
+    }
 
-            $balance = $openingBalance;
-            $totalDebit = 0.0;
-            $totalCredit = 0.0;
+    protected function calculateOpeningBalance($baseQuery, ?string $from): float {
+        if (!$from) {
+            return 0.0;
+        }
 
-            $transactions = $transactions->map(function (CustomerTransaction $transaction) use (
-                &$balance, &$totalDebit, &$totalCredit
-            ): CustomerTransaction {
-                $amount = (float)$transaction->amount;
+        $fromDate = CarbonImmutable::parse($from)->startOfDay();
 
-                if ($transaction->type === CustomerTransactionType::DEBIT) {
-                    $debit = $amount;
-                    $credit = 0.0;
+        $debit = (clone $baseQuery)
+            ->where('type', CustomerTransactionType::DEBIT)
+            ->where('transaction_at', '<', $fromDate)
+            ->sum('amount');
 
-                    $balance += $amount;
-                    $totalDebit += $amount;
-                } else {
-                    $debit = 0.0;
-                    $credit = $amount;
+        $credit = (clone $baseQuery)
+            ->where('type', CustomerTransactionType::CREDIT)
+            ->where('transaction_at', '<', $fromDate)
+            ->sum('amount');
 
-                    $balance -= $amount;
-                    $totalCredit += $amount;
-                }
+        $allocated = CustomerCreditAllocation::query()
+            ->where('customer_id', $baseQuery->getModel()->customer_id ?? null)
+            ->where('allocated_at', '<', $fromDate)
+            ->sum('amount');
 
-                $transaction->debit = $debit;
-                $transaction->credit = $credit;
-                $transaction->balance = $balance;
-                $transaction->source = $this->sourceData($transaction);
+        return (float) $debit - (float) $credit + (float) $allocated;
+    }
 
-                return $transaction;
-            });
+    protected function allocationTransaction(CustomerCreditAllocation $allocation): CustomerTransaction {
+        $transaction = new CustomerTransaction();
+        $transaction->exists = true;
+        $transaction->id = -1 * (int) $allocation->id;
+        $transaction->public_id = "credit-allocation-{$allocation->id}";
+        $transaction->customer_id = $allocation->customer_id;
+        $transaction->invoice_id = $allocation->invoice_id;
+        $transaction->type = CustomerTransactionType::DEBIT;
+        $transaction->amount = $allocation->amount;
+        $transaction->transaction_at = $allocation->allocated_at;
+        $transaction->description = $allocation->description;
+        $transaction->setRelation('invoice', $allocation->invoice);
+        return $transaction;
+    }
 
+    protected function sourceData(CustomerTransaction $transaction): ?array {
+        if ($transaction->relationLoaded('invoice') && $transaction->invoice) {
             return [
-                'opening_balance' => $openingBalance,
-                'total_debit' => $totalDebit,
-                'total_credit' => $totalCredit,
-                'closing_balance' => $balance,
-                'transactions' => $transactions,
+                'type' => 'invoice',
+                'id' => $transaction->invoice->public_id,
+                'code' => $transaction->invoice->code,
             ];
         }
 
-        protected function calculateOpeningBalance($baseQuery, ?string $from): float {
-            if (!$from) {
-                return 0.0;
-            }
-
-            $fromDate = CarbonImmutable::parse($from)->startOfDay();
-
-            $debit = (clone $baseQuery)->where('type', CustomerTransactionType::DEBIT)
-                ->where('transaction_at', '<', $fromDate)->sum('amount');
-
-            $credit = (clone $baseQuery)->where('type', CustomerTransactionType::CREDIT)
-                ->where('transaction_at', '<', $fromDate)->sum('amount');
-
-            return (float)$debit - (float)$credit;
+        if ($transaction->relationLoaded('payment') && $transaction->payment) {
+            return [
+                'type' => 'payment',
+                'id' => $transaction->payment->public_id,
+                'reference_number' => $transaction->payment->reference_number,
+            ];
         }
 
-        protected function sourceData(CustomerTransaction $transaction): ?array {
-            if ($transaction->relationLoaded('invoice') && $transaction->invoice) {
-                return [
-                    'type' => 'invoice',
-                    'id' => $transaction->invoice->public_id,
-                    'code' => $transaction->invoice->code,
-                ];
-            }
-
-            if ($transaction->relationLoaded('payment') && $transaction->payment) {
-                return [
-                    'type' => 'payment',
-                    'id' => $transaction->payment->public_id,
-                    'reference_number' => $transaction->payment->reference_number,
-                ];
-            }
-
-            if ($transaction->relationLoaded('orderReturn') && $transaction->orderReturn) {
-                return [
-                    'type' => 'order_return',
-                    'id' => $transaction->orderReturn->public_id,
-                    'code' => $transaction->orderReturn->code,
-                ];
-            }
-
-            return null;
+        if ($transaction->relationLoaded('orderReturn') && $transaction->orderReturn) {
+            return [
+                'type' => 'order_return',
+                'id' => $transaction->orderReturn->public_id,
+                'code' => $transaction->orderReturn->code,
+            ];
         }
+
+        return null;
     }
+}
