@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class InvoiceResource extends JsonResource {
     public function toArray(Request $request): array {
-        $settledAmount = $this->relationLoaded('payments') && $this->relationLoaded('returnTransactions')
+        $settledAmount = $this->relationLoaded('payments') && $this->relationLoaded('creditAllocations')
             ? $this->settledAmount()
             : null;
 
@@ -49,6 +49,7 @@ class InvoiceResource extends JsonResource {
             'paid_amount' => $confirmedPaidAmount,
             'return_credit_amount' => $returnCreditAmount,
             'settlement_discount_amount' => $settlementDiscountAmount,
+            'customer_credit_amount' => $this->relationLoaded('creditAllocations') ? $this->appliedCustomerCreditAmount() : null,
             'remaining_amount' => $settledAmount !== null
                 ? max(0, (float) $this->total_amount - $settledAmount)
                 : null,
