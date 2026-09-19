@@ -11,11 +11,15 @@ use App\Models\InventoryBatch;
 use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\OrderReturn;
+use App\Services\CustomerCreditService;
 use App\Services\CustomerTransactionService;
 use Illuminate\Support\Facades\DB;
 
 class CompleteOrderReturnAction {
-    public function __construct(protected CustomerTransactionService $customerTransactionService) {}
+    public function __construct(
+        protected CustomerTransactionService $customerTransactionService,
+        protected CustomerCreditService $customerCreditService,
+    ) {}
 
     public function execute(OrderReturn $orderReturn): OrderReturn {
         return DB::transaction(function () use ($orderReturn) {
@@ -83,7 +87,7 @@ class CompleteOrderReturnAction {
              */
             $invoiceRemainingBeforeReturn = $invoice->effectiveRemainingAmount();
             if ($invoiceRemainingBeforeReturn > 0) {
-                app(\App\Services\CustomerCreditService::class)->allocateSourceToInvoice(
+                $this->customerCreditService->allocateSourceToInvoice(
                     sourceTransaction: $creditTransaction,
                     invoice: $invoice,
                     requestedAmount: $returnAmount,
