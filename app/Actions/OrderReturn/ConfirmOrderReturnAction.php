@@ -32,7 +32,7 @@ class ConfirmOrderReturnAction {
                 $returnedFree=$previous->sum('free_quantity'); $returnedPaid=$previous->sum('quantity')-$returnedFree;
                 if($requestedPaid<0) throw new BusinessRuleException('تعداد رایگان مرجوعی نامعتبر است.');
                 if($requestedPaid>((int)$orderItem->quantity-$returnedPaid)) throw new BusinessRuleException('مقدار پولی قابل برگشت برای این آیتم کافی نیست.');
-                if($requestedFree>((int)$orderItem->offer_free_quantity-$returnedFree)) throw new BusinessRuleException('مقدار رایگان قابل برگشت برای این آیتم کافی نیست.');
+                if($requestedFree>($orderItem->effectiveFreeQuantity()-$returnedFree)) throw new BusinessRuleException('مقدار رایگان قابل برگشت برای این آیتم کافی نیست.');
             }
 
             foreach($orderReturn->items as $item){
