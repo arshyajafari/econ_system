@@ -24,7 +24,7 @@ class SyncOrderItemsAction {
             $discountValue = (float) ($itemData['discount_value'] ?? 0);
             $offerType = $itemData['offer_type'] ?? OrderItem::OFFER_TYPE_NONE;
             $offerBuy = (int) ($itemData['offer_buy_quantity'] ?? 0);
-            $offerFree = (int) ($itemData['offer_free_quantity'] ?? 0);
+            $offerFreePerCycle = (int) ($itemData['offer_free_quantity'] ?? 0);
 
             if ($quantity <= 0) throw new BusinessRuleException('تعداد خرید باید بیشتر از صفر باشد.');
             if ($unitPrice < 0) throw new BusinessRuleException('قیمت واحد نمی‌تواند منفی باشد.');
@@ -35,12 +35,11 @@ class SyncOrderItemsAction {
             if (!in_array($offerType, OrderItem::OFFER_TYPES, true)) throw new BusinessRuleException('نوع آفر آیتم نامعتبر است.');
 
             if ($offerType === OrderItem::OFFER_TYPE_NONE) {
-                $offerBuy = 0; $offerFree = 0;
+                $offerBuy = 0;
+                $offerFreePerCycle = 0;
             } else {
-                if ($offerBuy <= 0 || $offerFree <= 0) throw new BusinessRuleException('برای آفر خرید X، هدیه Y باید هر دو بیشتر از صفر باشند.');
+                if ($offerBuy <= 0 || $offerFreePerCycle <= 0) throw new BusinessRuleException('برای آفر خرید X، هدیه Y باید هر دو بیشتر از صفر باشند.');
                 if ($quantity < $offerBuy) throw new BusinessRuleException('تعداد خرید برای فعال شدن آفر کافی نیست.');
-                $cycles = intdiv($quantity, $offerBuy);
-                $offerFree = $cycles * $offerFree;
             }
 
             $subtotal = round($quantity * $unitPrice, 2);
@@ -59,7 +58,7 @@ class SyncOrderItemsAction {
                 'discount_amount' => $discountAmount,
                 'offer_type' => $offerType,
                 'offer_buy_quantity' => $offerBuy,
-                'offer_free_quantity' => $offerFree,
+                'offer_free_quantity' => $offerFreePerCycle,
                 'offer_title' => $itemData['offer_title'] ?? null,
             ]);
         }
