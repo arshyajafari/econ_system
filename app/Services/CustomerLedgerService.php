@@ -12,7 +12,7 @@ class CustomerLedgerService {
     public function build(int $customerId, ?string $from = null, ?string $to = null): array {
         $baseQuery = CustomerTransaction::query()->where('customer_id', $customerId);
 
-        $openingBalance = $this->calculateOpeningBalance($baseQuery, $from);
+        $openingBalance = $this->calculateOpeningBalance($baseQuery, $customerId, $from);
 
         $query = clone $baseQuery;
 
@@ -91,7 +91,7 @@ class CustomerLedgerService {
         ];
     }
 
-    protected function calculateOpeningBalance($baseQuery, ?string $from): float {
+    protected function calculateOpeningBalance($baseQuery, int $customerId, ?string $from): float {
         if (!$from) {
             return 0.0;
         }
@@ -109,7 +109,7 @@ class CustomerLedgerService {
             ->sum('amount');
 
         $allocated = CustomerCreditAllocation::query()
-            ->where('customer_id', $baseQuery->getModel()->customer_id ?? null)
+            ->where('customer_id', $customerId)
             ->where('allocated_at', '<', $fromDate)
             ->sum('amount');
 
