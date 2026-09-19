@@ -18,7 +18,11 @@ return new class extends Migration {
             $table->common();
 
             $table->index(['customer_id', 'allocated_at']);
-            $table->index(['source_transaction_id', 'invoice_id']);
+            // MySQL limits identifier names to 64 characters.
+            $table->index(
+                ['source_transaction_id', 'invoice_id'],
+                'cca_source_invoice_idx'
+            );
             $table->index('invoice_id');
         });
     }
