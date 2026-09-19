@@ -22,7 +22,7 @@ class OrderItemResource extends JsonResource
                 'sale_price' => $price?->sale_price,
             ] : null,
             'quantity' => $this->quantity,
-            'free_quantity' => $this->offer_free_quantity,
+            'free_quantity' => $this->effectiveFreeQuantity(),
             'fulfillment_quantity' => $this->fulfillmentQuantity(),
             'unit_price' => $this->unit_price,
             'gross_total_price' => round((float) $this->quantity * (float) $this->unit_price, 2),
