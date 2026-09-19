@@ -1,107 +1,79 @@
 <?php
 
-    namespace App\Actions\OrderReturn;
+namespace App\Actions\OrderReturn;
 
-    use App\Enums\OrderReturnStatus;
-    use App\Enums\OrderStatus;
-    use App\Exceptions\BusinessRuleException;
-    use App\Models\Order;
-    use App\Models\OrderReturn;
-    use App\Models\User;
-    use App\Services\CodeGeneratorService;
-    use Illuminate\Support\Facades\DB;
+use App\Enums\OrderReturnStatus;
+use App\Enums\OrderStatus;
+use App\Exceptions\BusinessRuleException;
+use App\Models\Order;
+use App\Models\OrderReturn;
+use App\Models\User;
+use App\Services\CodeGeneratorService;
+use Illuminate\Support\Facades\DB;
 
-    class CreateOrderReturnAction {
-        public function __construct(protected CodeGeneratorService $codeGenerator) {
-        }
+class CreateOrderReturnAction {
+    public function __construct(protected CodeGeneratorService $codeGenerator) {}
 
-        public function execute(array $data, User $user): OrderReturn {
-            return DB::transaction(function () use ($data, $user) {
-                $employee = $user->employee;
+    public function execute(array $data, User $user): OrderReturn {
+        return DB::transaction(function () use ($data, $user) {
+            $employee = $user->employee;
+            if (!$employee) throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
+            if (empty($data['items'])) throw new BusinessRuleException('مرجوعی باید حداقل یک آیتم داشته باشد.');
 
-                if (!$employee) {
-                    throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
-                }
+            $order = Order::query()->where('public_id',$data['order_id'])->lockForUpdate()->with(['items','returns.items'])->firstOrFail();
+            if (!$user->hasRole('admin') && $order->sales_employee_id !== $employee->id) throw new BusinessRuleException('فقط سفارش‌های ثبت‌شده توسط خودتان قابل مرجوعی هستند.');
+            if ($order->status !== OrderStatus::COMPLETED) throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل برگشت است.');
 
-                if (empty($data['items'])) {
-                    throw new BusinessRuleException('مرجوعی باید حداقل یک آیتم داشته باشد.');
-                }
+            $requestedQuantities = collect($data['items'])->groupBy('order_item_id')->map(fn($items)=>[
+                'quantity'=>$items->sum(fn($item)=>(int)$item['quantity']),
+                'free_quantity'=>$items->sum(fn($item)=>min((int)$item['quantity'],(int)($item['free_quantity']??0))),
+            ]);
 
-                $order = Order::query()->where('public_id', $data['order_id'])->lockForUpdate()->with([
-                    'items',
-                    'returns.items',
-                ])->firstOrFail();
+            foreach ($requestedQuantities as $orderItemPublicId=>$requested) {
+                $orderItem = $order->items->firstWhere('public_id',$orderItemPublicId);
+                if (!$orderItem) throw new BusinessRuleException('آیتم انتخاب‌شده متعلق به این سفارش نیست.');
 
-                if (!$user->hasRole('admin') && $order->sales_employee_id !== $employee->id) {
-                    throw new BusinessRuleException('فقط سفارش‌های ثبت‌شده توسط خودتان قابل مرجوعی هستند.');
-                }
+                $requestedTotal=(int)$requested['quantity'];
+                $requestedFree=(int)$requested['free_quantity'];
+                $requestedPaid=$requestedTotal-$requestedFree;
+                if ($requestedPaid<0) throw new BusinessRuleException('تعداد رایگان مرجوعی نمی‌تواند از کل تعداد مرجوعی بیشتر باشد.');
 
-                if ($order->status !== OrderStatus::COMPLETED) {
-                    throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل برگشت است.');
-                }
+                $previous=$order->returns->reject(fn($return)=>in_array($return->status,[OrderReturnStatus::DRAFT,OrderReturnStatus::CANCELLED],true))
+                    ->flatMap(fn($return)=>$return->items)->where('order_item_id',$orderItem->id);
+                $returnedTotal=$previous->sum('quantity');
+                $returnedFree=$previous->sum('free_quantity');
+                $returnedPaid=$returnedTotal-$returnedFree;
 
-                /*
-                 * Aggregate requested quantities first.
-                 *
-                 * This prevents the same OrderItem from appearing
-                 * multiple times in the same return and bypassing
-                 * the returnable-quantity limit.
-                 */
-                $requestedQuantities = collect($data['items'])->groupBy('order_item_id')
-                    ->map(fn($items) => $items->sum(fn($item) => (int)$item['quantity']));
+                if ($requestedPaid > ((int)$orderItem->quantity-$returnedPaid)) throw new BusinessRuleException('مقدار پولی قابل برگشت برای این آیتم کافی نیست.');
+                if ($requestedFree > ((int)$orderItem->offer_free_quantity-$returnedFree)) throw new BusinessRuleException('مقدار رایگان قابل برگشت برای این آیتم کافی نیست.');
+            }
 
-                foreach ($requestedQuantities as $orderItemPublicId => $quantity) {
-                    if ($quantity <= 0) {
-                        throw new BusinessRuleException('مقدار برگشتی باید بیشتر از صفر باشد.');
-                    }
+            $orderReturn=OrderReturn::create([
+                'code'=>$this->codeGenerator->generate(OrderReturn::class),
+                'order_id'=>$order->id,
+                'customer_id'=>$order->customer_id,
+                'employee_id'=>$employee->id,
+                'status'=>OrderReturnStatus::DRAFT,
+                'description'=>$data['description']??null,
+            ]);
 
-                    $orderItem = $order->items->firstWhere('public_id', $orderItemPublicId);
-
-                    if (!$orderItem) {
-                        throw new BusinessRuleException('آیتم انتخاب‌شده متعلق به این سفارش نیست.');
-                    }
-
-                    $alreadyReturned = $order->returns->reject(fn($return) => $return->status === OrderReturnStatus::DRAFT || $return->status === OrderReturnStatus::CANCELLED)
-                        ->flatMap(fn($return) => $return->items)->where('order_item_id', $orderItem->id)
-                        ->sum('quantity');
-
-                    $returnableQuantity = (int)$orderItem->quantity - (int)$alreadyReturned;
-
-                    if ($quantity > $returnableQuantity) {
-                        throw new BusinessRuleException('مقدار برگشتی بیشتر از مقدار قابل برگشت است.');
-                    }
-                }
-
-                $code = $this->codeGenerator->generate(OrderReturn::class);
-
-                $orderReturn = OrderReturn::create([
-                    'code' => $code,
-                    'order_id' => $order->id,
-                    'customer_id' => $order->customer_id,
-                    'employee_id' => $employee->id,
-                    'status' => OrderReturnStatus::DRAFT,
-                    'description' => $data['description'] ?? null,
+            foreach($data['items'] as $itemData){
+                $orderItem=$order->items->firstWhere('public_id',$itemData['order_item_id']);
+                $quantity=(int)$itemData['quantity'];
+                $freeQuantity=min($quantity,(int)($itemData['free_quantity']??0));
+                $paidQuantity=$quantity-$freeQuantity;
+                $orderReturn->items()->create([
+                    'order_item_id'=>$orderItem->id,
+                    'product_id'=>$orderItem->product_id,
+                    'quantity'=>$quantity,
+                    'free_quantity'=>$freeQuantity,
+                    'unit_price'=>(float)$orderItem->unit_price,
+                    'total_price'=>round($paidQuantity*(float)$orderItem->unit_price,2),
+                    'description'=>$itemData['description']??null,
                 ]);
+            }
 
-                foreach ($data['items'] as $itemData) {
-                    $orderItem = $order->items->firstWhere('public_id', $itemData['order_item_id']);
-
-                    $orderReturn->items()->create([
-                        'order_item_id' => $orderItem->id,
-                        'product_id' => $orderItem->product_id,
-                        'quantity' => (int)$itemData['quantity'],
-                        'unit_price' => (float)$orderItem->unit_price,
-                        'total_price' => (int)$itemData['quantity'] * (float)$orderItem->unit_price,
-                        'description' => $itemData['description'] ?? null,
-                    ]);
-                }
-
-                return $orderReturn->fresh([
-                    'customer',
-                    'employee',
-                    'items.product',
-                    'items.orderItem',
-                ]);
-            });
-        }
+            return $orderReturn->fresh(['customer','employee','items.product','items.orderItem']);
+        });
     }
+}
