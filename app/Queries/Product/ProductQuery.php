@@ -9,7 +9,10 @@
 
     class ProductQuery extends BaseQuery {
         protected function initialize(): void {
-            $this->query = Product::query()->with(Product::DEFAULT_RELATIONS);
+            $this->query = Product::query()
+                ->with(Product::DEFAULT_RELATIONS)
+                ->withSum('inventoryBatches', 'quantity')
+                ->withSum('inventoryBatches', 'reserved_quantity');
         }
 
         public function apply(array $filters): static {
