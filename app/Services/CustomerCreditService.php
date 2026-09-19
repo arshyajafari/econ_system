@@ -11,30 +11,12 @@ use Illuminate\Support\Collection;
 
 class CustomerCreditService {
     public function availableAmount(int $customerId): float {
-        $returnCredits = (float) CustomerTransaction::query()
-            ->where('customer_id', $customerId)
-            ->where('type', CustomerTransactionType::CREDIT)
-            ->whereNotNull('order_return_id')
-            ->sum('amount');
-
-        $paymentOverpayments = (float) CustomerTransaction::query()
-            ->where('customer_id', $customerId)
-            ->where('type', CustomerTransactionType::CREDIT)
-            ->whereNotNull('payment_id')
-            ->whereHas('payment', fn ($query) => $query->where('status', 'confirmed'))
-            ->get()
-            ->groupBy('invoice_id')
-            ->sum(function (Collection $transactions): float {
-                $paymentCredit = (float) $transactions->sum('amount');
-                $invoice = $transactions->first()?->payment?->invoice;
-                return $invoice ? max(0, round($paymentCredit - (float) $invoice->total_amount, 2)) : 0;
-            });
-
+        $available = $this->creditSources($customerId)->sum('available');
         $allocated = (float) CustomerCreditAllocation::query()
             ->where('customer_id', $customerId)
             ->sum('amount');
 
-        return max(0, round($returnCredits + $paymentOverpayments - $allocated, 2));
+        return max(0, round($available - $allocated, 2));
     }
 
     public function allocateToInvoice(int $customerId, Invoice $invoice, float $requestedAmount, ?string $description = null): float {
@@ -58,18 +40,16 @@ class CustomerCreditService {
 
         $remainingToAllocate = $amountToAllocate;
 
-        $sources = $this->creditSources($customerId);
-
-        foreach ($sources as $source) {
+        foreach ($this->creditSources($customerId) as $source) {
             if ($remainingToAllocate <= 0) {
                 break;
             }
 
             $alreadyAllocated = (float) CustomerCreditAllocation::query()
-                ->where('source_transaction_id', $source->id)
+                ->where('source_transaction_id', $source['transaction']->id)
                 ->sum('amount');
 
-            $sourceAvailable = max(0, round((float) $source->amount - $alreadyAllocated, 2));
+            $sourceAvailable = max(0, round((float) $source['available'] - $alreadyAllocated, 2));
             if ($sourceAvailable <= 0) {
                 continue;
             }
@@ -78,7 +58,7 @@ class CustomerCreditService {
 
             CustomerCreditAllocation::create([
                 'customer_id' => $customerId,
-                'source_transaction_id' => $source->id,
+                'source_transaction_id' => $source['transaction']->id,
                 'invoice_id' => $invoice->id,
                 'amount' => $allocationAmount,
                 'allocated_at' => now(),
@@ -97,8 +77,14 @@ class CustomerCreditService {
             ->sum('amount');
     }
 
+    /**
+     * Returns credit sources with the portion of each source that can still
+     * be used as customer credit. Return credits are fully available until
+     * allocated. Payment credits only become reusable when the confirmed
+     * payments on their invoice exceed that invoice's total.
+     */
     protected function creditSources(int $customerId): Collection {
-        return CustomerTransaction::query()
+        $transactions = CustomerTransaction::query()
             ->with(['payment.invoice'])
             ->where('customer_id', $customerId)
             ->where('type', CustomerTransactionType::CREDIT)
@@ -108,18 +94,44 @@ class CustomerCreditService {
             })
             ->orderBy('transaction_at')
             ->orderBy('id')
-            ->get()
-            ->filter(function (CustomerTransaction $transaction): bool {
-                if ($transaction->order_return_id) {
-                    return true;
-                }
+            ->get();
 
-                if (!$transaction->payment) {
-                    return false;
-                }
+        $paymentGroups = $transactions
+            ->filter(fn (CustomerTransaction $transaction) => $transaction->payment?->status?->value === 'confirmed')
+            ->groupBy(fn (CustomerTransaction $transaction) => $transaction->payment?->invoice_id);
 
-                return $transaction->payment->status?->value === 'confirmed';
-            })
-            ->values();
+        $paymentAvailableByTransaction = [];
+
+        foreach ($paymentGroups as $invoiceId => $group) {
+            $invoice = $group->first()?->payment?->invoice;
+            if (!$invoice) {
+                continue;
+            }
+
+            $invoiceTotal = (float) $invoice->total_amount;
+            $cumulative = 0.0;
+            $overpaymentRemaining = 0.0;
+
+            foreach ($group->sortBy(fn ($transaction) => [$transaction->transaction_at?->timestamp ?? 0, $transaction->id]) as $transaction) {
+                $before = $cumulative;
+                $cumulative += (float) $transaction->amount;
+                $overpaymentBefore = max(0, round($before - $invoiceTotal, 2));
+                $overpaymentAfter = max(0, round($cumulative - $invoiceTotal, 2));
+                $availableForThisTransaction = max(0, round($overpaymentAfter - $overpaymentBefore, 2));
+                $paymentAvailableByTransaction[$transaction->id] = $availableForThisTransaction;
+                $overpaymentRemaining = $overpaymentAfter;
+            }
+        }
+
+        return $transactions->map(function (CustomerTransaction $transaction) use ($paymentAvailableByTransaction) {
+            $available = $transaction->order_return_id
+                ? (float) $transaction->amount
+                : (float) ($paymentAvailableByTransaction[$transaction->id] ?? 0);
+
+            return [
+                'transaction' => $transaction,
+                'available' => max(0, round($available, 2)),
+            ];
+        })->filter(fn (array $source) => $source['available'] > 0)->values();
     }
 }
