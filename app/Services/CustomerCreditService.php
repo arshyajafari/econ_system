@@ -41,30 +41,72 @@ class CustomerCreditService {
                 break;
             }
 
-            $alreadyAllocated = (float) CustomerCreditAllocation::query()
-                ->where('source_transaction_id', $source['transaction']->id)
-                ->sum('amount');
-
-            $sourceAvailable = max(0, round((float) $source['available'] - $alreadyAllocated, 2));
-            if ($sourceAvailable <= 0) {
-                continue;
-            }
-
-            $allocationAmount = min($sourceAvailable, $remainingToAllocate);
-
-            CustomerCreditAllocation::create([
-                'customer_id' => $customerId,
-                'source_transaction_id' => $source['transaction']->id,
-                'invoice_id' => $invoice->id,
-                'amount' => $allocationAmount,
-                'allocated_at' => now(),
-                'description' => $description ?? "استفاده از اعتبار مشتری برای فاکتور {$invoice->code}",
-            ]);
-
-            $remainingToAllocate = round($remainingToAllocate - $allocationAmount, 2);
+            $remainingToAllocate -= $this->createAllocation(
+                sourceTransaction: $source['transaction'],
+                invoice: $invoice,
+                amount: min($source['available'], $remainingToAllocate),
+                description: $description,
+            );
         }
 
         return round($amountToAllocate - $remainingToAllocate, 2);
+    }
+
+    /**
+     * Applies a specific credit source to its originating invoice first.
+     * This is important for returns: a return against an outstanding invoice
+     * immediately reduces that invoice's customer-payable balance.
+     */
+    public function allocateSourceToInvoice(
+        CustomerTransaction $sourceTransaction,
+        Invoice $invoice,
+        float $requestedAmount,
+        ?string $description = null,
+    ): float {
+        $requestedAmount = round($requestedAmount, 2);
+
+        if ($requestedAmount <= 0 || (int) $invoice->customer_id !== (int) $sourceTransaction->customer_id) {
+            return 0.0;
+        }
+
+        $alreadyAllocated = (float) CustomerCreditAllocation::query()
+            ->where('source_transaction_id', $sourceTransaction->id)
+            ->sum('amount');
+
+        $sourceAvailable = max(0, round((float) $sourceTransaction->amount - $alreadyAllocated, 2));
+        $invoiceRemaining = $invoice->effectiveRemainingAmount();
+        $amount = min($requestedAmount, $sourceAvailable, $invoiceRemaining);
+
+        return $this->createAllocation(
+            sourceTransaction: $sourceTransaction,
+            invoice: $invoice,
+            amount: $amount,
+            description: $description,
+        );
+    }
+
+    protected function createAllocation(
+        CustomerTransaction $sourceTransaction,
+        Invoice $invoice,
+        float $amount,
+        ?string $description = null,
+    ): float {
+        $amount = round($amount, 2);
+
+        if ($amount <= 0) {
+            return 0.0;
+        }
+
+        CustomerCreditAllocation::create([
+            'customer_id' => $invoice->customer_id,
+            'source_transaction_id' => $sourceTransaction->id,
+            'invoice_id' => $invoice->id,
+            'amount' => $amount,
+            'allocated_at' => now(),
+            'description' => $description ?? "استفاده از اعتبار مشتری برای فاکتور {$invoice->code}",
+        ]);
+
+        return $amount;
     }
 
     public function invoiceAppliedAmount(Invoice $invoice): float {
