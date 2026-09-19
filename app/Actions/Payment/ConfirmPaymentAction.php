@@ -41,24 +41,68 @@ class ConfirmPaymentAction {
 
             $customer = Customer::query()->lockForUpdate()->findOrFail($payment->customer_id);
 
-            $remainingBeforePayment = round(
-                $invoice->effectiveRemainingAmount(includePending: true)
-                + (float) $payment->amount
-                + (float) $payment->settlement_discount_amount,
-                2,
+            $paymentAmount = (float) $payment->amount;
+            $discountAmount = (float) $payment->settlement_discount_amount;
+
+            /*
+             * The current payment is already pending in $invoice->payments.
+             * Therefore effectiveRemainingAmount(includePending: true) already
+             * subtracts this payment. Adding the current payment back to that
+             * value would produce an incorrect remaining amount.
+             *
+             * Calculate the balance immediately before this payment using:
+             *   invoice total
+             *   - confirmed payments
+             *   - customer credit already allocated to this invoice
+             *   - other pending payments
+             *
+             * Return transactions are deliberately not subtracted here.
+             * A return creates customer credit and that credit is allocated
+             * explicitly below to this invoice.
+             */
+            $otherPendingAmount = (float) $invoice->payments
+                ->where('status', PaymentStatus::PENDING)
+                ->reject(fn ($item) => (int) $item->id === (int) $payment->id)
+                ->sum(fn ($item) => (float) $item->amount + (float) $item->settlement_discount_amount);
+
+            $remainingBeforePayment = max(
+                0,
+                round(
+                    (float) $invoice->total_amount
+                    - $invoice->settledAmount()
+                    - $otherPendingAmount,
+                    2,
+                ),
             );
 
             if ($remainingBeforePayment <= 0) {
                 throw new BusinessRuleException('این فاکتور قبلاً با پرداخت‌ها یا اعتبار مشتری تسویه شده است.');
             }
 
-            $paymentAmount = (float) $payment->amount;
-            $discountAmount = (float) $payment->settlement_discount_amount;
+            if ($paymentAmount <= 0) {
+                throw new BusinessRuleException('مبلغ پرداخت باید بیشتر از صفر باشد.');
+            }
+
+            if ($discountAmount < 0) {
+                throw new BusinessRuleException('مبلغ تخفیف تسویه نمی‌تواند منفی باشد.');
+            }
 
             if ($paymentAmount + $discountAmount > $remainingBeforePayment) {
                 throw new BusinessRuleException('مبلغ پرداخت و تخفیف تسویه بیشتر از مانده فاکتور است.');
             }
 
+            /*
+             * Example:
+             * invoice = 1000
+             * return credit = 200
+             * payment = 800
+             *
+             * creditNeeded = 1000 - 800 = 200
+             * -> allocate 200 credit to this invoice
+             * -> confirm 800 payment
+             * -> settled amount = 200 credit + 800 payment = 1000
+             * -> remaining invoice = 0
+             */
             $availableCredit = $this->customerCreditService->availableAmount($customer->id);
             $creditNeeded = max(
                 0,
