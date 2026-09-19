@@ -16,6 +16,7 @@ return new class extends Migration {
                 ->orderBy('ct.id')
                 ->select([
                     'ct.id as source_transaction_id',
+                    'ct.id',
                     'ct.customer_id',
                     'ct.amount as source_amount',
                     'ct.transaction_at',
