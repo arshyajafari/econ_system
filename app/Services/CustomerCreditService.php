@@ -12,11 +12,7 @@ use Illuminate\Support\Collection;
 class CustomerCreditService {
     public function availableAmount(int $customerId): float {
         $available = $this->creditSources($customerId)->sum('available');
-        $allocated = (float) CustomerCreditAllocation::query()
-            ->where('customer_id', $customerId)
-            ->sum('amount');
-
-        return max(0, round($available - $allocated, 2));
+        return max(0, round($available, 2));
     }
 
     public function allocateToInvoice(int $customerId, Invoice $invoice, float $requestedAmount, ?string $description = null): float {
@@ -89,7 +85,7 @@ class CustomerCreditService {
             ->where('customer_id', $customerId)
             ->where('type', CustomerTransactionType::CREDIT)
             ->where(function ($query) {
-                $query->whereNotNull('order_return_id')
+                $query->whereHas('orderReturn', fn ($return) => $return->where('status', \App\Enums\OrderReturnStatus::COMPLETED))
                     ->orWhereNotNull('payment_id');
             })
             ->orderBy('transaction_at')
@@ -110,8 +106,6 @@ class CustomerCreditService {
 
             $invoiceTotal = (float) $invoice->total_amount;
             $cumulative = 0.0;
-            $overpaymentRemaining = 0.0;
-
             foreach ($group->sortBy(fn ($transaction) => [$transaction->transaction_at?->timestamp ?? 0, $transaction->id]) as $transaction) {
                 $before = $cumulative;
                 $cumulative += (float) $transaction->amount;
@@ -119,7 +113,6 @@ class CustomerCreditService {
                 $overpaymentAfter = max(0, round($cumulative - $invoiceTotal, 2));
                 $availableForThisTransaction = max(0, round($overpaymentAfter - $overpaymentBefore, 2));
                 $paymentAvailableByTransaction[$transaction->id] = $availableForThisTransaction;
-                $overpaymentRemaining = $overpaymentAfter;
             }
         }
 
