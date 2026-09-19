@@ -47,9 +47,9 @@ class CustomerLedgerService {
 
         $transactions = $transactions
             ->concat($allocations)
-            ->sortBy([
-                ['transaction_at', 'asc'],
-                ['id', 'asc'],
+            ->sortBy(fn (CustomerTransaction $transaction) => [
+                $transaction->transaction_at?->timestamp ?? 0,
+                $transaction->id,
             ])
             ->values();
 
