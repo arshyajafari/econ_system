@@ -10,6 +10,9 @@ class ProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $totalQuantity = (int) ($this->inventory_batches_sum_quantity ?? 0);
+        $reservedQuantity = (int) ($this->inventory_batches_sum_reserved_quantity ?? 0);
+
         return [
             'id' => $this->public_id,
             'code' => $this->code,
@@ -20,6 +23,7 @@ class ProductResource extends JsonResource
                 'effective_from' => $this->currentPrice->effective_from?->toISOString(),
                 'effective_to' => $this->currentPrice->effective_to?->toISOString(),
             ]),
+            'available_quantity' => max(0, $totalQuantity - $reservedQuantity),
             'image' => $this->image && !filter_var($this->image, FILTER_VALIDATE_URL)
                 ? Storage::disk('public')->url($this->image)
                 : $this->image,
