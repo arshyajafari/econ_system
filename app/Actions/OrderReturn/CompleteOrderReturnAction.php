@@ -44,7 +44,6 @@ class CompleteOrderReturnAction {
             }
 
             $returnAmount=$orderReturn->items->sum(fn($item)=>(float)$item->total_price);
-            if($returnAmount<=0) throw new BusinessRuleException('مبلغ مرجوعی باید بیشتر از صفر باشد.');
 
             $invoiceSubtotal=(float)$invoice->subtotal;
             $invoiceTotal=(float)$invoice->total_amount;
@@ -59,7 +58,13 @@ class CompleteOrderReturnAction {
             if($remainingReturnCredit<=0) throw new BusinessRuleException('مبلغ قابل اعتبار برای این مرجوعی باقی نمانده است.');
 
             $returnAmount=min($calculatedReturnAmount,$remainingReturnCredit);
-            if($returnAmount<=0) throw new BusinessRuleException('مبلغ اعتبار مرجوعی باید بیشتر از صفر باشد.');
+            if($returnAmount<=0) {
+                $completedAt=now();
+                $orderReturn->status=OrderReturnStatus::COMPLETED;
+                $orderReturn->completed_at=$completedAt;
+                $orderReturn->save();
+                return $orderReturn->fresh(['order','customer','employee','items.product','items.orderItem','items.allocations.inventoryBatch.product']);
+            }
 
             $completedAt=now();
             $this->customerTransactionService->credit(customerId:$orderReturn->customer_id,amount:$returnAmount,source:$orderReturn,description:"مرجوعی سفارش {$orderReturn->code}",transactionAt:$completedAt);
