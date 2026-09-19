@@ -104,9 +104,10 @@ class Invoice extends BaseModel {
     }
 
     /**
-     * Effective invoice settlement is based only on confirmed payments and
-     * completed return credits. Pending payments are used only when deciding
-     * whether a new payment may be recorded.
+     * Effective invoice settlement is based on confirmed payments and
+     * customer credit that has explicitly been allocated to this invoice.
+     * A return creates customer credit; it does not silently settle the
+     * original invoice.
      */
     public function confirmedPaidAmount(): float {
         return $this->relationLoaded('payments')
