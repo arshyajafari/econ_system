@@ -103,12 +103,9 @@ class InvoiceQuery extends BaseQuery
                     WHERE payments.invoice_id = invoices.id
                       AND payments.status IN (?, ?))
                 -
-                (SELECT COALESCE(SUM(customer_transactions.amount), 0)
-                    FROM customer_transactions
-                    INNER JOIN order_returns ON order_returns.id = customer_transactions.order_return_id
-                    WHERE order_returns.order_id = invoices.order_id
-                      AND order_returns.status = ?
-                      AND customer_transactions.type = 'credit')
+                (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                    FROM customer_credit_allocations
+                    WHERE customer_credit_allocations.invoice_id = invoices.id)
              ) {$operator} 0",
             [
                 PaymentStatus::CONFIRMED->value,
