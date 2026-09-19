@@ -50,7 +50,7 @@ class CreateInvoiceAction {
                     'order_item_id'=>$orderItem->id,
                     'product_id'=>$orderItem->product_id,
                     'quantity'=>$orderItem->quantity,
-                    'free_quantity'=>$orderItem->offer_free_quantity,
+                    'free_quantity'=>$orderItem->effectiveFreeQuantity(),
                     'unit_price'=>$orderItem->unit_price,
                     'total_price'=>$orderItem->total_price,
                     'description'=>$orderItem->offer_title ?: $orderItem->description,
