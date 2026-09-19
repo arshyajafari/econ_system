@@ -52,18 +52,22 @@ class UpdatePaymentAction {
                 ->where('id', '!=', $payment->id)
                 ->sum(fn ($item) => (float) $item->amount + (float) $item->settlement_discount_amount);
 
-            $returnCredit = $invoice->completedReturnCreditAmount();
+            $appliedCustomerCredit = $invoice->appliedCustomerCreditAmount();
 
             $remainingAmount = max(
                 0,
                 (float) $invoice->total_amount
                     - (float) $confirmedAmount
                     - (float) $otherPendingAmount
-                    - (float) $returnCredit,
+                    - (float) $appliedCustomerCredit,
             );
 
             if ($discountAmount > $remainingAmount) {
                 throw new BusinessRuleException('تخفیف تسویه نمی‌تواند بیشتر از مانده فاکتور باشد.');
+            }
+
+            if ($amount + $discountAmount > $remainingAmount) {
+                throw new BusinessRuleException('مبلغ پرداخت و تخفیف تسویه بیشتر از مانده فاکتور است.');
             }
 
             if (array_key_exists('method', $data)) {
