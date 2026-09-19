@@ -5,13 +5,18 @@ namespace App\Actions\Payment;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
+use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\CustomerCreditService;
 use App\Services\CustomerTransactionService;
 use Illuminate\Support\Facades\DB;
 
 class ConfirmPaymentAction {
-    public function __construct(protected CustomerTransactionService $customerTransactionService) {
+    public function __construct(
+        protected CustomerTransactionService $customerTransactionService,
+        protected CustomerCreditService $customerCreditService,
+    ) {
     }
 
     public function execute(Payment $payment): Payment {
@@ -23,7 +28,7 @@ class ConfirmPaymentAction {
             }
 
             $invoice = Invoice::query()->lockForUpdate()
-                ->with(['payments', 'returnTransactions.orderReturn'])
+                ->with(['payments', 'creditAllocations', 'returnTransactions.orderReturn'])
                 ->findOrFail($payment->invoice_id);
 
             if ($invoice->status !== InvoiceStatus::ISSUED) {
@@ -34,23 +39,47 @@ class ConfirmPaymentAction {
                 throw new BusinessRuleException('مشتری پرداخت با مشتری فاکتور مطابقت ندارد.');
             }
 
-            $remainingAmount = $invoice->effectiveRemainingAmount();
+            $customer = Customer::query()->lockForUpdate()->findOrFail($payment->customer_id);
 
-            if ($remainingAmount <= 0) {
-                throw new BusinessRuleException('این فاکتور قبلاً با پرداخت‌ها یا اعتبار مرجوعی تسویه شده است.');
+            $remainingBeforePayment = round(
+                $invoice->effectiveRemainingAmount(includePending: true)
+                + (float) $payment->amount
+                + (float) $payment->settlement_discount_amount,
+                2,
+            );
+
+            if ($remainingBeforePayment <= 0) {
+                throw new BusinessRuleException('این فاکتور قبلاً با پرداخت‌ها یا اعتبار مشتری تسویه شده است.');
             }
 
-            if ((float) $payment->settlement_discount_amount > $remainingAmount) {
-                throw new BusinessRuleException('تخفیف تسویه بیشتر از مانده فاکتور است.');
+            $paymentAmount = (float) $payment->amount;
+            $discountAmount = (float) $payment->settlement_discount_amount;
+
+            if ($paymentAmount + $discountAmount > $remainingBeforePayment) {
+                throw new BusinessRuleException('مبلغ پرداخت و تخفیف تسویه بیشتر از مانده فاکتور است.');
+            }
+
+            $availableCredit = $this->customerCreditService->availableAmount($customer->id);
+            $creditNeeded = max(
+                0,
+                round($remainingBeforePayment - $paymentAmount - $discountAmount, 2),
+            );
+
+            if ($creditNeeded > 0 && $availableCredit > 0) {
+                $this->customerCreditService->allocateToInvoice(
+                    customerId: $customer->id,
+                    invoice: $invoice,
+                    requestedAmount: min($creditNeeded, $availableCredit),
+                    description: "استفاده از اعتبار مشتری برای تسویه فاکتور {$invoice->code}",
+                );
             }
 
             $payment->status = PaymentStatus::CONFIRMED;
             $payment->save();
 
-            $customerCredit = (float) $payment->amount
-                + (float) $payment->settlement_discount_amount;
+            $customerCredit = $paymentAmount + $discountAmount;
 
-            $description = $payment->settlement_discount_amount > 0
+            $description = $discountAmount > 0
                 ? ($payment->description
                     ? "{$payment->description} - شامل تخفیف تسویه"
                     : "تأیید پرداخت {$payment->reference_number} - شامل تخفیف تسویه")
