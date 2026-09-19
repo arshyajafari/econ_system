@@ -26,6 +26,7 @@ class Invoice extends BaseModel {
         'items.product',
         'payments',
         'returnTransactions.orderReturn',
+        'creditAllocations',
     ];
 
     public const SEARCHABLE = [
@@ -87,6 +88,10 @@ class Invoice extends BaseModel {
         return $this->hasMany(Payment::class);
     }
 
+    public function creditAllocations(): HasMany {
+        return $this->hasMany(CustomerCreditAllocation::class);
+    }
+
     public function returnTransactions(): HasManyThrough {
         return $this->hasManyThrough(
             CustomerTransaction::class,
@@ -128,8 +133,14 @@ class Invoice extends BaseModel {
             : 0.0;
     }
 
+    public function appliedCustomerCreditAmount(): float {
+        return $this->relationLoaded('creditAllocations')
+            ? (float) $this->creditAllocations->sum('amount')
+            : (float) $this->creditAllocations()->sum('amount');
+    }
+
     public function settledAmount(): float {
-        return $this->confirmedPaidAmount() + $this->completedReturnCreditAmount();
+        return $this->confirmedPaidAmount() + $this->appliedCustomerCreditAmount();
     }
 
     public function effectiveRemainingAmount(bool $includePending = false): float {
