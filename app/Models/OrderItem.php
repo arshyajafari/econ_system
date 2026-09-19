@@ -54,12 +54,26 @@ class OrderItem extends BaseModel
         return 0.0;
     }
 
+    /**
+     * Number of free units granted by the configured offer rule.
+     * offer_free_quantity is the Y in "buy X, get Y", not the materialized total.
+     */
+    public function effectiveFreeQuantity(): int {
+        if ($this->offer_type !== self::OFFER_TYPE_BUY_X_GET_Y) return 0;
+        $buy = (int) $this->offer_buy_quantity;
+        $freePerCycle = (int) $this->offer_free_quantity;
+        if ($buy <= 0 || $freePerCycle <= 0 || (int) $this->quantity < $buy) return 0;
+        return intdiv((int) $this->quantity, $buy) * $freePerCycle;
+    }
+
     public function fulfillmentQuantity(): int {
-        return (int) $this->quantity + (int) $this->offer_free_quantity;
+        return (int) $this->quantity + $this->effectiveFreeQuantity();
     }
 
     public function isOfferValid(): bool {
         if ($this->offer_type !== self::OFFER_TYPE_BUY_X_GET_Y) return true;
-        return (int) $this->offer_buy_quantity > 0 && (int) $this->offer_free_quantity > 0;
+        return (int) $this->offer_buy_quantity > 0
+            && (int) $this->offer_free_quantity > 0
+            && (int) $this->quantity >= (int) $this->offer_buy_quantity;
     }
 }
