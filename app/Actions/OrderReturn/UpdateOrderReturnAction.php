@@ -26,9 +26,10 @@ class UpdateOrderReturnAction {
                 $previous=$order->returns->where('id','!=',$orderReturn->id)->reject(fn($return)=>in_array($return->status,[OrderReturnStatus::DRAFT,OrderReturnStatus::CANCELLED],true))->flatMap(fn($return)=>$return->items)->where('order_item_id',$orderItem->id);
                 $returnedFree=$previous->sum('free_quantity');
                 $returnedPaid=$previous->sum('quantity')-$returnedFree;
+                $availableFree=$orderItem->effectiveFreeQuantity()-$returnedFree;
                 if($quantity<=0) throw new BusinessRuleException('مقدار برگشتی باید بیشتر از صفر باشد.');
                 if($requestedPaid>((int)$orderItem->quantity-$returnedPaid)) throw new BusinessRuleException('مقدار پولی قابل برگشت برای این آیتم کافی نیست.');
-                if($freeQuantity>((int)$orderItem->offer_free_quantity-$returnedFree)) throw new BusinessRuleException('مقدار رایگان قابل برگشت برای این آیتم کافی نیست.');
+                if($freeQuantity>$availableFree) throw new BusinessRuleException('مقدار رایگان قابل برگشت برای این آیتم کافی نیست.');
 
                 $orderReturn->items()->create([
                     'order_item_id'=>$orderItem->id,'product_id'=>$orderItem->product_id,'quantity'=>$quantity,'free_quantity'=>$freeQuantity,
