@@ -43,9 +43,10 @@ class CreateOrderReturnAction {
                 $returnedTotal=$previous->sum('quantity');
                 $returnedFree=$previous->sum('free_quantity');
                 $returnedPaid=$returnedTotal-$returnedFree;
+                $availableFree=$orderItem->effectiveFreeQuantity()-$returnedFree;
 
                 if ($requestedPaid > ((int)$orderItem->quantity-$returnedPaid)) throw new BusinessRuleException('مقدار پولی قابل برگشت برای این آیتم کافی نیست.');
-                if ($requestedFree > ((int)$orderItem->offer_free_quantity-$returnedFree)) throw new BusinessRuleException('مقدار رایگان قابل برگشت برای این آیتم کافی نیست.');
+                if ($requestedFree > $availableFree) throw new BusinessRuleException('مقدار رایگان قابل برگشت برای این آیتم کافی نیست.');
             }
 
             $orderReturn=OrderReturn::create([
