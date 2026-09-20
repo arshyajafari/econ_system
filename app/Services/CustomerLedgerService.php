@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\CustomerTransactionType;
-use App\Models\CustomerCreditAllocation;
 use App\Models\CustomerTransaction;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -29,29 +28,6 @@ class CustomerLedgerService {
             ->orderBy('transaction_at')
             ->orderBy('id')
             ->get();
-
-        $allocationsQuery = CustomerCreditAllocation::query()
-            ->where('customer_id', $customerId)
-            ->with('invoice');
-
-        if ($from) {
-            $allocationsQuery->where('allocated_at', '>=', CarbonImmutable::parse($from)->startOfDay());
-        }
-
-        if ($to) {
-            $allocationsQuery->where('allocated_at', '<=', CarbonImmutable::parse($to)->endOfDay());
-        }
-
-        $allocations = $allocationsQuery->orderBy('allocated_at')->orderBy('id')->get()
-            ->map(fn (CustomerCreditAllocation $allocation) => $this->allocationTransaction($allocation));
-
-        $transactions = $transactions
-            ->concat($allocations)
-            ->sortBy(fn (CustomerTransaction $transaction) => [
-                $transaction->transaction_at?->timestamp ?? 0,
-                $transaction->id,
-            ])
-            ->values();
 
         $balance = $openingBalance;
         $totalDebit = 0.0;
@@ -108,27 +84,7 @@ class CustomerLedgerService {
             ->where('transaction_at', '<', $fromDate)
             ->sum('amount');
 
-        $allocated = CustomerCreditAllocation::query()
-            ->where('customer_id', $customerId)
-            ->where('allocated_at', '<', $fromDate)
-            ->sum('amount');
-
-        return (float) $debit - (float) $credit + (float) $allocated;
-    }
-
-    protected function allocationTransaction(CustomerCreditAllocation $allocation): CustomerTransaction {
-        $transaction = new CustomerTransaction();
-        $transaction->exists = true;
-        $transaction->id = -1 * (int) $allocation->id;
-        $transaction->public_id = "credit-allocation-{$allocation->id}";
-        $transaction->customer_id = $allocation->customer_id;
-        $transaction->invoice_id = $allocation->invoice_id;
-        $transaction->type = CustomerTransactionType::DEBIT;
-        $transaction->amount = $allocation->amount;
-        $transaction->transaction_at = $allocation->allocated_at;
-        $transaction->description = $allocation->description;
-        $transaction->setRelation('invoice', $allocation->invoice);
-        return $transaction;
+        return (float) $debit - (float) $credit;
     }
 
     protected function sourceData(CustomerTransaction $transaction): ?array {
