@@ -29,6 +29,10 @@ class UpdateDeliveryAction
                 'recipient_phone' => $data['recipient_phone'] ?? $customer?->phone_number,
                 'address' => $data['address'] ?? $defaultAddress?->address,
                 'description' => $data['description'] ?? null,
+                'meta' => array_merge($delivery->meta ?? [], array_filter([
+                    'province' => $data['province'] ?? null,
+                    'city' => $data['city'] ?? null,
+                ], static fn ($value) => $value !== null && $value !== '')),
             ]);
 
             return $delivery->fresh(Delivery::DEFAULT_RELATIONS);
