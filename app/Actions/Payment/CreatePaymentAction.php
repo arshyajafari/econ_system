@@ -49,9 +49,9 @@ class CreatePaymentAction {
                 throw new BusinessRuleException('تخفیف تسویه نمی‌تواند بیشتر از مانده فاکتور باشد.');
             }
 
-            if ($amount + $discountAmount > $remainingAmount) {
-                throw new BusinessRuleException('مبلغ پرداخت و تخفیف تسویه بیشتر از مانده فاکتور است.');
-            }
+            // A customer may intentionally overpay. The invoice is settled
+            // up to its remaining balance and the excess becomes reusable
+            // customer credit after confirmation.
 
             $meta = [];
 
