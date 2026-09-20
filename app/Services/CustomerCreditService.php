@@ -52,11 +52,6 @@ class CustomerCreditService {
         return round($amountToAllocate - $remainingToAllocate, 2);
     }
 
-    /**
-     * Applies a specific credit source to its originating invoice first.
-     * This is important for returns: a return against an outstanding invoice
-     * immediately reduces that invoice's customer-payable balance.
-     */
     public function allocateSourceToInvoice(
         CustomerTransaction $sourceTransaction,
         Invoice $invoice,
@@ -115,15 +110,9 @@ class CustomerCreditService {
             ->sum('amount');
     }
 
-    /**
-     * Returns credit sources with the portion of each source that can still
-     * be used as customer credit. Return credits are fully available until
-     * allocated. Payment credits only become reusable when the confirmed
-     * payments on their invoice exceed that invoice's total.
-     */
     protected function creditSources(int $customerId): Collection {
         $transactions = CustomerTransaction::query()
-            ->with(['payment.invoice'])
+            ->with(['payment.invoice', 'creditAllocations'])
             ->where('customer_id', $customerId)
             ->where('type', CustomerTransactionType::CREDIT)
             ->where(function ($query) {
@@ -148,24 +137,32 @@ class CustomerCreditService {
 
             $invoiceTotal = (float) $invoice->total_amount;
             $cumulative = 0.0;
+
             foreach ($group->sortBy(fn ($transaction) => [$transaction->transaction_at?->timestamp ?? 0, $transaction->id]) as $transaction) {
                 $before = $cumulative;
                 $cumulative += (float) $transaction->amount;
                 $overpaymentBefore = max(0, round($before - $invoiceTotal, 2));
                 $overpaymentAfter = max(0, round($cumulative - $invoiceTotal, 2));
                 $availableForThisTransaction = max(0, round($overpaymentAfter - $overpaymentBefore, 2));
-                $paymentAvailableByTransaction[$transaction->id] = $availableForThisTransaction;
+                $allocated = (float) $transaction->creditAllocations->sum('amount');
+                $paymentAvailableByTransaction[$transaction->id] = max(
+                    0,
+                    round($availableForThisTransaction - $allocated, 2),
+                );
             }
         }
 
         return $transactions->map(function (CustomerTransaction $transaction) use ($paymentAvailableByTransaction) {
+            $allocated = (float) $transaction->creditAllocations->sum('amount');
+            $sourceAmount = (float) $transaction->amount;
+
             $available = $transaction->order_return_id
-                ? (float) $transaction->amount
+                ? max(0, round($sourceAmount - $allocated, 2))
                 : (float) ($paymentAvailableByTransaction[$transaction->id] ?? 0);
 
             return [
                 'transaction' => $transaction,
-                'available' => max(0, round($available, 2)),
+                'available' => $available,
             ];
         })->filter(fn (array $source) => $source['available'] > 0)->values();
     }
