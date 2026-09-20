@@ -5,13 +5,12 @@ namespace App\Services;
 use App\Enums\CustomerTransactionType;
 use App\Models\CustomerTransaction;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Collection;
 
 class CustomerLedgerService {
     public function build(int $customerId, ?string $from = null, ?string $to = null): array {
         $baseQuery = CustomerTransaction::query()->where('customer_id', $customerId);
 
-        $openingBalance = $this->calculateOpeningBalance($baseQuery, $customerId, $from);
+        $openingBalance = $this->calculateOpeningBalance($baseQuery, $from);
 
         $query = clone $baseQuery;
 
@@ -67,7 +66,7 @@ class CustomerLedgerService {
         ];
     }
 
-    protected function calculateOpeningBalance($baseQuery, int $customerId, ?string $from): float {
+    protected function calculateOpeningBalance($baseQuery, ?string $from): float {
         if (!$from) {
             return 0.0;
         }
