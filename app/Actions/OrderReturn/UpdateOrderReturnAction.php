@@ -7,36 +7,89 @@ use App\Exceptions\BusinessRuleException;
 use App\Models\OrderReturn;
 use Illuminate\Support\Facades\DB;
 
-class UpdateOrderReturnAction {
-    public function execute(OrderReturn $orderReturn, array $data): OrderReturn {
-        return DB::transaction(function () use ($orderReturn,$data) {
-            $orderReturn=OrderReturn::query()->lockForUpdate()->with(['items','order.items','order.returns.items'])->findOrFail($orderReturn->id);
-            if($orderReturn->status!==OrderReturnStatus::DRAFT) throw new BusinessRuleException('فقط برگشت در وضعیت draft قابل ویرایش است.');
+class UpdateOrderReturnAction
+{
+    public function execute(OrderReturn $orderReturn, array $data): OrderReturn
+    {
+        return DB::transaction(function () use ($orderReturn, $data) {
+            $orderReturn = OrderReturn::query()
+                ->lockForUpdate()
+                ->with(['items', 'order.items', 'order.returns.items'])
+                ->findOrFail($orderReturn->id);
 
-            $order=$orderReturn->order;
-            $orderReturn->update(['description'=>$data['description']??null]);
+            if ($orderReturn->status !== OrderReturnStatus::DRAFT) {
+                throw new BusinessRuleException('فقط برگشت در وضعیت draft قابل ویرایش است.');
+            }
+
+            $order = $orderReturn->order;
+
+            $manualReturnAmount = isset($data['return_amount'])
+                ? round((float) $data['return_amount'], 2)
+                : null;
+
+            $meta = $orderReturn->meta ?? [];
+            if ($manualReturnAmount !== null) {
+                $meta['return_amount'] = $manualReturnAmount;
+            } else {
+                unset($meta['return_amount']);
+            }
+
+            $orderReturn->update([
+                'description' => $data['description'] ?? null,
+                'meta' => $meta ?: null,
+            ]);
+
             $orderReturn->items()->delete();
 
-            foreach($data['items'] as $itemData){
-                $orderItem=$order->items->firstWhere('public_id',$itemData['order_item_id']);
-                if(!$orderItem) throw new BusinessRuleException('آیتم انتخاب‌شده متعلق به این سفارش نیست.');
-                $quantity=(int)$itemData['quantity'];
-                $freeQuantity=min($quantity,(int)($itemData['free_quantity']??0));
-                $requestedPaid=$quantity-$freeQuantity;
-                $previous=$order->returns->where('id','!=',$orderReturn->id)->reject(fn($return)=>in_array($return->status,[OrderReturnStatus::DRAFT,OrderReturnStatus::CANCELLED],true))->flatMap(fn($return)=>$return->items)->where('order_item_id',$orderItem->id);
-                $returnedFree=$previous->sum('free_quantity');
-                $returnedPaid=$previous->sum('quantity')-$returnedFree;
-                $availableFree=$orderItem->effectiveFreeQuantity()-$returnedFree;
-                if($quantity<=0) throw new BusinessRuleException('مقدار برگشتی باید بیشتر از صفر باشد.');
-                if($requestedPaid>((int)$orderItem->quantity-$returnedPaid)) throw new BusinessRuleException('مقدار پولی قابل برگشت برای این آیتم کافی نیست.');
-                if($freeQuantity>$availableFree) throw new BusinessRuleException('مقدار رایگان قابل برگشت برای این آیتم کافی نیست.');
+            foreach ($data['items'] as $itemData) {
+                $orderItem = $order->items->firstWhere('public_id', $itemData['order_item_id']);
+
+                if (!$orderItem) {
+                    throw new BusinessRuleException('آیتم انتخاب‌شده متعلق به این سفارش نیست.');
+                }
+
+                $quantity = (int) $itemData['quantity'];
+                $freeQuantity = min($quantity, (int) ($itemData['free_quantity'] ?? 0));
+                $requestedPaid = $quantity - $freeQuantity;
+
+                $previous = $order->returns
+                    ->where('id', '!=', $orderReturn->id)
+                    ->reject(fn ($return) => in_array(
+                        $return->status,
+                        [OrderReturnStatus::DRAFT, OrderReturnStatus::CANCELLED],
+                        true,
+                    ))
+                    ->flatMap(fn ($return) => $return->items)
+                    ->where('order_item_id', $orderItem->id);
+
+                $returnedFree = $previous->sum('free_quantity');
+                $returnedPaid = $previous->sum('quantity') - $returnedFree;
+                $availableFree = $orderItem->effectiveFreeQuantity() - $returnedFree;
+
+                if ($quantity <= 0) {
+                    throw new BusinessRuleException('مقدار برگشتی باید بیشتر از صفر باشد.');
+                }
+
+                if ($requestedPaid > ((int) $orderItem->quantity - $returnedPaid)) {
+                    throw new BusinessRuleException('مقدار پولی قابل برگشت برای این آیتم کافی نیست.');
+                }
+
+                if ($freeQuantity > $availableFree) {
+                    throw new BusinessRuleException('مقدار رایگان قابل برگشت برای این آیتم کافی نیست.');
+                }
 
                 $orderReturn->items()->create([
-                    'order_item_id'=>$orderItem->id,'product_id'=>$orderItem->product_id,'quantity'=>$quantity,'free_quantity'=>$freeQuantity,
-                    'unit_price'=>$orderItem->unit_price,'total_price'=>round($requestedPaid*(float)$orderItem->unit_price,2),'description'=>$itemData['description']??null,
+                    'order_item_id' => $orderItem->id,
+                    'product_id' => $orderItem->product_id,
+                    'quantity' => $quantity,
+                    'free_quantity' => $freeQuantity,
+                    'unit_price' => $orderItem->unit_price,
+                    'total_price' => round($requestedPaid * (float) $orderItem->unit_price, 2),
+                    'description' => $itemData['description'] ?? null,
                 ]);
             }
-            return $orderReturn->fresh(['order','customer','employee','items.product']);
+
+            return $orderReturn->fresh(['order', 'customer', 'employee', 'items.product']);
         });
     }
 }
