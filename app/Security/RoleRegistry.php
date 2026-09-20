@@ -24,7 +24,7 @@ class RoleRegistry {
                 Permission::VISIT_VIEW->value, Permission::VISIT_CREATE->value, Permission::VISIT_UPDATE->value,
                 Permission::VISIT_COMPLETE->value, Permission::VISIT_CANCEL->value,
                 Permission::SAMPLE_VIEW->value, Permission::SAMPLE_CREATE->value, Permission::SAMPLE_UPDATE->value,
-                Permission::SAMPLE_DELETE->value, Permission::PRODUCT_VIEW->value,
+                Permission::PRODUCT_VIEW->value,
             ],
 
             Role::ACCOUNTANT->value => [
