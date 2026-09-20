@@ -59,14 +59,52 @@ class InvoiceQuery extends BaseQuery
     {
         if ($settled === null) return;
         $operator = $settled ? '>=' : '<';
-        $this->query->whereRaw("(SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0) FROM payments WHERE payments.invoice_id = invoices.id AND payments.status = ?) + (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0) FROM customer_credit_allocations WHERE customer_credit_allocations.invoice_id = invoices.id) {$operator} invoices.total_amount", [PaymentStatus::CONFIRMED->value]);
+
+        $this->query->whereRaw(
+            "(SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
+                FROM payments
+                WHERE payments.invoice_id = invoices.id
+                  AND payments.status = ?)
+             + (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                FROM customer_credit_allocations
+                WHERE customer_credit_allocations.invoice_id = invoices.id)
+             + (SELECT COALESCE(SUM(customer_transactions.amount), 0)
+                FROM customer_transactions
+                INNER JOIN order_returns ON order_returns.id = customer_transactions.order_return_id
+                WHERE order_returns.order_id = invoices.order_id
+                  AND order_returns.status = 'completed'
+                  AND order_returns.deleted_at IS NULL
+                  AND customer_transactions.type = 'credit'
+                  AND customer_transactions.deleted_at IS NULL) {$operator} invoices.total_amount",
+            [PaymentStatus::CONFIRMED->value],
+        );
     }
 
     protected function applyPayable(?bool $payable): void
     {
         if ($payable === null) return;
         $operator = $payable ? '>' : '<=';
-        $this->query->whereRaw("(invoices.total_amount - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0) FROM payments WHERE payments.invoice_id = invoices.id AND payments.status IN (?, ?)) - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0) FROM customer_credit_allocations WHERE customer_credit_allocations.invoice_id = invoices.id)) {$operator} 0", [PaymentStatus::CONFIRMED->value, PaymentStatus::PENDING->value]);
+
+        $this->query->whereRaw(
+            "(invoices.total_amount
+                - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
+                   FROM payments
+                   WHERE payments.invoice_id = invoices.id
+                     AND payments.status IN (?, ?))
+                - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                   FROM customer_credit_allocations
+                   WHERE customer_credit_allocations.invoice_id = invoices.id)
+                - (SELECT COALESCE(SUM(customer_transactions.amount), 0)
+                   FROM customer_transactions
+                   INNER JOIN order_returns ON order_returns.id = customer_transactions.order_return_id
+                   WHERE order_returns.order_id = invoices.order_id
+                     AND order_returns.status = 'completed'
+                     AND order_returns.deleted_at IS NULL
+                     AND customer_transactions.type = 'credit'
+                     AND customer_transactions.deleted_at IS NULL)
+            ) {$operator} 0",
+            [PaymentStatus::CONFIRMED->value, PaymentStatus::PENDING->value],
+        );
     }
 
     protected function applyDateRange(?string $from, ?string $to): void
