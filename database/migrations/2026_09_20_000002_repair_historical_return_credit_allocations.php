@@ -34,7 +34,7 @@ return new class extends Migration {
                     'i.code as invoice_code',
                     'orr.code as return_code',
                 ])
-                ->chunkById(100, function ($transactions) {
+                ->chunk(100, function ($transactions) {
                     foreach ($transactions as $transaction) {
                         $alreadyAllocatedFromSource = (float) DB::table('customer_credit_allocations')
                             ->where('source_transaction_id', $transaction->source_transaction_id)
