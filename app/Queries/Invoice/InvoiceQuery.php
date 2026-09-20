@@ -3,7 +3,6 @@
 namespace App\Queries\Invoice;
 
 use App\Enums\InvoiceStatus;
-use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Queries\BaseQuery;
