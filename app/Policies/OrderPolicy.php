@@ -9,7 +9,6 @@ class OrderPolicy
 {
     private function isAdmin(User $user): bool { return $user->hasRole('admin'); }
     private function isAccountant(User $user): bool { return $user->hasRole('accountant'); }
-    private function isAccountant(User $user): bool { return $user->hasRole('accountant'); }
 
     private function ownsOrder(User $user, Order $order): bool
     {
@@ -63,7 +62,7 @@ class OrderPolicy
 
     public function cancel(User $user, Order $order): bool
     {
-        return $this->isAdmin()
+        return $this->isAdmin($user)
             || ($this->isAccountant($user) && $user->can('orders.cancel'))
             || ($user->can('orders.cancel') && $this->ownsOrder($user, $order) && $this->editableBeforeAdminApproval($order));
     }
