@@ -64,7 +64,7 @@ class InvoiceQuery extends BaseQuery
             "(SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
                 FROM payments
                 WHERE payments.invoice_id = invoices.id
-                  AND payments.status = ?)
+                  AND payments.status = 'confirmed')
              + (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
                 FROM customer_credit_allocations
                 WHERE customer_credit_allocations.invoice_id = invoices.id)
@@ -74,7 +74,7 @@ class InvoiceQuery extends BaseQuery
                      - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
                         FROM payments
                         WHERE payments.invoice_id = invoices.id
-                          AND payments.status = ?)
+                          AND payments.status = 'confirmed')
                      - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
                         FROM customer_credit_allocations
                         WHERE customer_credit_allocations.invoice_id = invoices.id)
@@ -104,7 +104,7 @@ class InvoiceQuery extends BaseQuery
                      - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
                         FROM payments
                         WHERE payments.invoice_id = invoices.id
-                          AND payments.status = ?)
+                          AND payments.status = 'confirmed')
                      - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
                         FROM customer_credit_allocations
                         WHERE customer_credit_allocations.invoice_id = invoices.id)
@@ -114,7 +114,7 @@ class InvoiceQuery extends BaseQuery
                      - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
                         FROM payments
                         WHERE payments.invoice_id = invoices.id
-                          AND payments.status = ?)
+                          AND payments.status = 'confirmed')
                      - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
                         FROM customer_credit_allocations
                         WHERE customer_credit_allocations.invoice_id = invoices.id)
@@ -143,7 +143,7 @@ class InvoiceQuery extends BaseQuery
                  )
                END
              {$operator} invoices.total_amount",
-            [PaymentStatus::CONFIRMED->value],
+            [],
         );
     }
 
@@ -157,7 +157,7 @@ class InvoiceQuery extends BaseQuery
                 - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
                    FROM payments
                    WHERE payments.invoice_id = invoices.id
-                     AND payments.status IN (?, ?))
+                     AND payments.status IN ('confirmed', 'pending'))
                 - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
                    FROM customer_credit_allocations
                    WHERE customer_credit_allocations.invoice_id = invoices.id)
@@ -167,7 +167,7 @@ class InvoiceQuery extends BaseQuery
                         - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
                            FROM payments
                            WHERE payments.invoice_id = invoices.id
-                             AND payments.status IN (?, ?))
+                             AND payments.status IN ('confirmed', 'pending'))
                         - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
                            FROM customer_credit_allocations
                            WHERE customer_credit_allocations.invoice_id = invoices.id)
@@ -197,7 +197,7 @@ class InvoiceQuery extends BaseQuery
                         - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
                            FROM payments
                            WHERE payments.invoice_id = invoices.id
-                             AND payments.status IN (?, ?))
+                             AND payments.status IN ('confirmed', 'pending'))
                         - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
                            FROM customer_credit_allocations
                            WHERE customer_credit_allocations.invoice_id = invoices.id)
@@ -207,7 +207,7 @@ class InvoiceQuery extends BaseQuery
                         - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
                            FROM payments
                            WHERE payments.invoice_id = invoices.id
-                             AND payments.status IN (?, ?))
+                             AND payments.status IN ('confirmed', 'pending'))
                         - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
                            FROM customer_credit_allocations
                            WHERE customer_credit_allocations.invoice_id = invoices.id)
@@ -237,7 +237,7 @@ class InvoiceQuery extends BaseQuery
                   END
                 
             ) {$operator} 0",
-            [PaymentStatus::CONFIRMED->value, PaymentStatus::PENDING->value],
+            [],
         );
     }
 
