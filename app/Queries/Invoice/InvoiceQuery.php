@@ -75,7 +75,19 @@ class InvoiceQuery extends BaseQuery
                   AND order_returns.status = 'completed'
                   AND order_returns.deleted_at IS NULL
                   AND customer_transactions.type = 'credit'
-                  AND customer_transactions.deleted_at IS NULL) {$operator} invoices.total_amount",
+                  AND customer_transactions.deleted_at IS NULL)
+             - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                FROM customer_credit_allocations
+                INNER JOIN customer_transactions AS return_credit_sources
+                    ON return_credit_sources.id = customer_credit_allocations.source_transaction_id
+                INNER JOIN order_returns AS allocated_returns
+                    ON allocated_returns.id = return_credit_sources.order_return_id
+                WHERE allocated_returns.order_id = invoices.order_id
+                  AND allocated_returns.status = 'completed'
+                  AND allocated_returns.deleted_at IS NULL
+                  AND return_credit_sources.type = 'credit'
+                  AND return_credit_sources.deleted_at IS NULL)
+             {$operator} invoices.total_amount",
             [PaymentStatus::CONFIRMED->value],
         );
     }
@@ -102,6 +114,17 @@ class InvoiceQuery extends BaseQuery
                      AND order_returns.deleted_at IS NULL
                      AND customer_transactions.type = 'credit'
                      AND customer_transactions.deleted_at IS NULL)
+                + (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                   FROM customer_credit_allocations
+                   INNER JOIN customer_transactions AS return_credit_sources
+                       ON return_credit_sources.id = customer_credit_allocations.source_transaction_id
+                   INNER JOIN order_returns AS allocated_returns
+                       ON allocated_returns.id = return_credit_sources.order_return_id
+                   WHERE allocated_returns.order_id = invoices.order_id
+                     AND allocated_returns.status = 'completed'
+                     AND allocated_returns.deleted_at IS NULL
+                     AND return_credit_sources.type = 'credit'
+                     AND return_credit_sources.deleted_at IS NULL)
             ) {$operator} 0",
             [PaymentStatus::CONFIRMED->value, PaymentStatus::PENDING->value],
         );
