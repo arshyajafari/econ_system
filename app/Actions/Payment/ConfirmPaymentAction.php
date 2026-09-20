@@ -87,9 +87,9 @@ class ConfirmPaymentAction {
                 throw new BusinessRuleException('مبلغ تخفیف تسویه نمی‌تواند منفی باشد.');
             }
 
-            if ($paymentAmount + $discountAmount > $remainingBeforePayment) {
-                throw new BusinessRuleException('مبلغ پرداخت و تخفیف تسویه بیشتر از مانده فاکتور است.');
-            }
+            // A payment may exceed the invoice balance. The invoice is
+            // settled by the amount needed, while the excess remains as
+            // reusable customer credit on the payment transaction.
 
             /*
              * Example:
@@ -98,10 +98,14 @@ class ConfirmPaymentAction {
              * payment = 800
              *
              * creditNeeded = 1000 - 800 = 200
-             * -> allocate 200 credit to this invoice
+             * -> allocate 200 existing customer credit to this invoice
              * -> confirm 800 payment
              * -> settled amount = 200 credit + 800 payment = 1000
              * -> remaining invoice = 0
+             *
+             * If payment = 1200 on a 1000 invoice, creditNeeded = 0;
+             * the full 1200 payment is recorded and the extra 200 becomes
+             * reusable customer credit.
              */
             $availableCredit = $this->customerCreditService->availableAmount($customer->id);
             $creditNeeded = max(
