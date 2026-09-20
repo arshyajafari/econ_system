@@ -19,7 +19,7 @@ class InvoiceQuery extends BaseQuery
         $this->applyOrder($filters['order_id'] ?? null);
         $this->applyCustomer($filters['customer_id'] ?? null);
 
-        if ($user?->hasAnyRole(['admin', 'accountant'])) {
+        if ($user?->hasAnyRole(['admin', 'accountant', 'delivery operator'])) {
             $this->applyEmployee($filters['employee_id'] ?? null);
         } else {
             $employeeId = $user?->employee?->id;
