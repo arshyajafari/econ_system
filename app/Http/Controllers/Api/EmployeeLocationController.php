@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 
 class EmployeeLocationController extends Controller {
     public function store(StoreEmployeeLocationRequest $request): EmployeeLocationResource {
+        abort_unless(!$request->user()->hasRole('accountant'), 403, 'حسابدار نیازی به اشتراک موقعیت مکانی ندارد.');
         $employee = $request->user()->employee;
         abort_unless($employee && $employee->status->value === 'active', 422, 'کاربر به کارمند فعال متصل نیست.');
 
