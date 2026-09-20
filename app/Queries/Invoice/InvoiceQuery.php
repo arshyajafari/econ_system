@@ -19,15 +19,12 @@ class InvoiceQuery extends BaseQuery
         $this->applyOrder($filters['order_id'] ?? null);
         $this->applyCustomer($filters['customer_id'] ?? null);
 
-        if ($user?->hasRole('admin')) {
+        if ($user?->hasAnyRole(['admin', 'accountant'])) {
             $this->applyEmployee($filters['employee_id'] ?? null);
         } else {
             $employeeId = $user?->employee?->id;
-            if ($employeeId) {
-                $this->query->where('employee_id', $employeeId);
-            } else {
-                $this->query->whereRaw('1 = 0');
-            }
+            if ($employeeId) $this->query->where('employee_id', $employeeId);
+            else $this->query->whereRaw('1 = 0');
         }
 
         $this->applyStatus($filters['status'] ?? null);
@@ -61,57 +58,15 @@ class InvoiceQuery extends BaseQuery
     protected function applySettlement(?bool $settled): void
     {
         if ($settled === null) return;
-
         $operator = $settled ? '>=' : '<';
-
-        $this->query->whereRaw(
-            "(SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
-                FROM payments
-                WHERE payments.invoice_id = invoices.id
-                  AND payments.status = ?)
-             +
-             (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
-                FROM customer_credit_allocations
-                WHERE customer_credit_allocations.invoice_id = invoices.id)
-             {$operator} invoices.total_amount",
-            [
-                PaymentStatus::CONFIRMED->value,
-            ],
-        );
+        $this->query->whereRaw("(SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0) FROM payments WHERE payments.invoice_id = invoices.id AND payments.status = ?) + (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0) FROM customer_credit_allocations WHERE customer_credit_allocations.invoice_id = invoices.id) {$operator} invoices.total_amount", [PaymentStatus::CONFIRMED->value]);
     }
 
-    /**
-     * "Payable" is intentionally different from "unsettled".
-     *
-     * It represents whether another payment can still be entered. Pending
-     * payments reserve part of the invoice balance, so an invoice with a
-     * pending payment that covers its effective balance must not appear in
-     * the payment form even though it is not financially settled until the
-     * payment is confirmed.
-     */
     protected function applyPayable(?bool $payable): void
     {
         if ($payable === null) return;
-
         $operator = $payable ? '>' : '<=';
-
-        $this->query->whereRaw(
-            "(invoices.total_amount
-                -
-                (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
-                    FROM payments
-                    WHERE payments.invoice_id = invoices.id
-                      AND payments.status IN (?, ?))
-                -
-                (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
-                    FROM customer_credit_allocations
-                    WHERE customer_credit_allocations.invoice_id = invoices.id)
-             ) {$operator} 0",
-            [
-                PaymentStatus::CONFIRMED->value,
-                PaymentStatus::PENDING->value,
-            ],
-        );
+        $this->query->whereRaw("(invoices.total_amount - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0) FROM payments WHERE payments.invoice_id = invoices.id AND payments.status IN (?, ?)) - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0) FROM customer_credit_allocations WHERE customer_credit_allocations.invoice_id = invoices.id)) {$operator} 0", [PaymentStatus::CONFIRMED->value, PaymentStatus::PENDING->value]);
     }
 
     protected function applyDateRange(?string $from, ?string $to): void
