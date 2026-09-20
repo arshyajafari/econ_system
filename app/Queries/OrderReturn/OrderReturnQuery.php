@@ -33,7 +33,7 @@ class OrderReturnQuery extends BaseQuery
             $this->query->whereHas('customer', fn($query) => $query->where('public_id', $filters['customer_id']));
         }
 
-        if ($user?->hasRole('admin')) {
+        if ($user?->hasAnyRole(['admin', 'accountant'])) {
             if (!empty($filters['employee_id'])) {
                 $this->query->whereHas('employee', fn($query) => $query->where('public_id', $filters['employee_id']));
             }
