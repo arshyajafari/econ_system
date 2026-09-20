@@ -13,7 +13,6 @@ use App\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Invoice extends BaseModel {
@@ -103,12 +102,6 @@ class Invoice extends BaseModel {
         );
     }
 
-    /**
-     * Effective invoice settlement is based on confirmed payments and
-     * customer credit that has explicitly been allocated to this invoice.
-     * A return creates customer credit; it does not silently settle the
-     * original invoice.
-     */
     public function confirmedPaidAmount(): float {
         return $this->relationLoaded('payments')
             ? (float) $this->payments
@@ -134,14 +127,55 @@ class Invoice extends BaseModel {
             : 0.0;
     }
 
+    /**
+     * Return credit is normally allocated to its originating invoice when
+     * the return is completed. This method covers both that normal path and
+     * older data where the return credit exists but has no allocation yet.
+     */
+    public function unallocatedCompletedReturnCreditAmount(): float {
+        $returnCredit = $this->relationLoaded('returnTransactions')
+            ? $this->completedReturnCreditAmount()
+            : (float) $this->returnTransactions()
+                ->where('customer_transactions.type', CustomerTransactionType::CREDIT)
+                ->where('order_returns.status', OrderReturnStatus::COMPLETED)
+                ->sum('customer_transactions.amount');
+
+        if ($returnCredit <= 0) {
+            return 0.0;
+        }
+
+        $allocatedReturnCredit = (float) CustomerCreditAllocation::query()
+            ->whereHas('sourceTransaction', function ($query) {
+                $query
+                    ->whereNotNull('order_return_id')
+                    ->whereHas('orderReturn', fn ($return) => $return
+                        ->where('order_id', $this->order_id)
+                        ->where('status', OrderReturnStatus::COMPLETED));
+            })
+            ->sum('amount');
+
+        return max(0.0, round($returnCredit - $allocatedReturnCredit, 2));
+    }
+
     public function appliedCustomerCreditAmount(): float {
         return $this->relationLoaded('creditAllocations')
             ? (float) $this->creditAllocations->sum('amount')
             : (float) $this->creditAllocations()->sum('amount');
     }
 
+    /**
+     * Effective settlement:
+     *   confirmed payments
+     * + all explicit customer-credit allocations
+     * + completed return credit that has not been allocated yet.
+     *
+     * A return allocation is therefore counted exactly once: either through
+     * creditAllocations or as still-unallocated return credit.
+     */
     public function settledAmount(): float {
-        return $this->confirmedPaidAmount() + $this->appliedCustomerCreditAmount();
+        return $this->confirmedPaidAmount()
+            + $this->appliedCustomerCreditAmount()
+            + $this->unallocatedCompletedReturnCreditAmount();
     }
 
     public function effectiveRemainingAmount(bool $includePending = false): float {
