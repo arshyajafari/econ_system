@@ -154,7 +154,18 @@ class Invoice extends BaseModel {
             })
             ->sum('amount');
 
-        return max(0.0, round($returnCredit - $allocatedReturnCredit, 2));
+        $unallocated = max(0.0, round($returnCredit - $allocatedReturnCredit, 2));
+        $remainingBeforeUnallocatedReturn = max(
+            0.0,
+            round(
+                (float) $this->total_amount
+                - $this->confirmedPaidAmount()
+                - $this->appliedCustomerCreditAmount(),
+                2,
+            ),
+        );
+
+        return min($unallocated, $remainingBeforeUnallocatedReturn);
     }
 
     public function appliedCustomerCreditAmount(): float {
