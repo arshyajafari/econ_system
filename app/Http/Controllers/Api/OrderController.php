@@ -9,13 +9,13 @@ use App\Actions\Order\CreateOrderAction;
 use App\Actions\Order\SubmitOrderAction;
 use App\Actions\Order\UpdateOrderAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Order\OrderIndexRequest;
 use App\Http\Requests\Order\StoreOrderRequest;
 use App\Http\Requests\Order\UpdateOrderRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Queries\Order\OrderQuery;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
@@ -24,9 +24,11 @@ class OrderController extends Controller
         $this->authorizeModel(Order::class, 'order');
     }
 
-    public function index(Request $request, OrderQuery $query)
+    public function index(OrderIndexRequest $request, OrderQuery $query)
     {
-        $orders = $query->apply($request->all(), $request->user())->paginate($request->integer('per_page', 20));
+        $filters = $request->validated();
+        $orders = $query->apply($filters, $request->user())
+            ->paginate($request->integer('per_page', 20));
 
         return OrderResource::collection($orders);
     }
