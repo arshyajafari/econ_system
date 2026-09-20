@@ -28,8 +28,8 @@ class CreateDeliveryAction
                 ->firstOrFail();
 
             if ($order->status !== OrderStatus::PENDING) {
-                    throw new BusinessRuleException('فقط سفارش در انتظار تأیید قابل ثبت برای ارسال است.');
-                }
+                throw new BusinessRuleException('فقط سفارش در انتظار تأیید قابل ثبت برای ارسال است.');
+            }
 
             if ($order->delivery) {
                 throw new BusinessRuleException('برای این سفارش قبلاً ارسال ثبت شده است.');
@@ -47,6 +47,10 @@ class CreateDeliveryAction
                 'recipient_phone' => $data['recipient_phone'] ?? $customer?->phone_number,
                 'address' => $data['address'] ?? $defaultAddress?->address,
                 'description' => $data['description'] ?? null,
+                'meta' => array_filter([
+                    'province' => $data['province'] ?? null,
+                    'city' => $data['city'] ?? null,
+                ], static fn ($value) => $value !== null && $value !== ''),
             ]);
 
             return $delivery->fresh(Delivery::DEFAULT_RELATIONS);
