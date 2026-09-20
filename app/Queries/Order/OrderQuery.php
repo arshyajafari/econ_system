@@ -20,16 +20,12 @@ class OrderQuery extends BaseQuery
         $this->applySearch($filters['search'] ?? null, Order::SEARCHABLE);
         $this->applyCustomer($filters['customer_id'] ?? null);
 
-        if ($user?->hasRole('admin')) {
+        if ($user?->hasAnyRole(['admin', 'accountant'])) {
             $this->applySalesEmployee($filters['sales_employee_id'] ?? null);
         } else {
             $employeeId = $user?->employee?->id;
-
-            if ($employeeId) {
-                $this->query->where('sales_employee_id', $employeeId);
-            } else {
-                $this->query->whereRaw('1 = 0');
-            }
+            if ($employeeId) $this->query->where('sales_employee_id', $employeeId);
+            else $this->query->whereRaw('1 = 0');
         }
 
         $this->applyStatus($filters['status'] ?? null);
@@ -45,14 +41,12 @@ class OrderQuery extends BaseQuery
     protected function applyCustomer(?string $customerPublicId): void
     {
         if (!$customerPublicId) return;
-
         $this->query->whereHas('customer', fn($query) => $query->where('public_id', $customerPublicId));
     }
 
     protected function applySalesEmployee(?string $employeePublicId): void
     {
         if (!$employeePublicId) return;
-
         $this->query->whereHas('salesEmployee', fn($query) => $query->where('public_id', $employeePublicId));
     }
 
@@ -64,47 +58,23 @@ class OrderQuery extends BaseQuery
 
     protected function applyReturnable(?bool $returnable): void
     {
-        if ($returnable !== true) {
-            return;
-        }
-
+        if ($returnable !== true) return;
         $this->query->where('status', \App\Enums\OrderStatus::COMPLETED)
             ->whereHas('items', function ($query) {
-                $query->whereRaw(
-                    'order_items.quantity > (
-                        SELECT COALESCE(SUM(order_return_items.quantity), 0)
-                        FROM order_return_items
-                        INNER JOIN order_returns ON order_returns.id = order_return_items.order_return_id
-                        WHERE order_return_items.order_item_id = order_items.id
-                          AND order_returns.status NOT IN (?, ?)
-                          AND order_returns.deleted_at IS NULL
-                          AND order_return_items.deleted_at IS NULL
-                    )',
-                    ['draft', 'cancelled'],
-                );
+                $query->whereRaw('order_items.quantity > (SELECT COALESCE(SUM(order_return_items.quantity), 0) FROM order_return_items INNER JOIN order_returns ON order_returns.id = order_return_items.order_return_id WHERE order_return_items.order_item_id = order_items.id AND order_returns.status NOT IN (?, ?) AND order_returns.deleted_at IS NULL AND order_return_items.deleted_at IS NULL)', ['draft', 'cancelled']);
             });
     }
 
     protected function applyInvoiceable(?bool $invoiceable): void
     {
-        if ($invoiceable !== true) {
-            return;
-        }
-
-        $this->query
-            ->where('status', \App\Enums\OrderStatus::PENDING)
-            ->whereDoesntHave('invoice');
+        if ($invoiceable !== true) return;
+        $this->query->where('status', \App\Enums\OrderStatus::CONFIRMED)->whereDoesntHave('invoice');
     }
 
     protected function applyDeliverable(?bool $deliverable): void
     {
-        if ($deliverable !== true) {
-            return;
-        }
-
-        $this->query
-            ->where('status', \App\Enums\OrderStatus::PENDING)
-            ->whereDoesntHave('delivery');
+        if ($deliverable !== true) return;
+        $this->query->where('status', \App\Enums\OrderStatus::CONFIRMED)->whereDoesntHave('delivery');
     }
 
     protected function applyDateRange(?string $from, ?string $to): void
