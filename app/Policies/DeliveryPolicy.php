@@ -13,7 +13,7 @@ class DeliveryPolicy {
     public function viewAny(User $user): bool { return $this->isAdmin($user) || $this->isAccountant($user) || $this->isDeliveryOperator($user); }
     public function view(User $user, Delivery $delivery): bool { return $this->isAdmin($user) || $this->isAccountant($user) || $this->isDeliveryOperator($user); }
     public function create(User $user): bool { return $this->isAdmin($user) || $this->isDeliveryOperator($user); }
-    public function update(User $user, Delivery $delivery): bool { return $this->isAdmin($user) || $this->isDeliveryOperator($user); }
+    public function update(User $user, Delivery $delivery): bool { return $this->isAdmin($user); }
     public function prepare(User $user, Delivery $delivery): bool { return ($this->isAdmin($user) || $this->isDeliveryOperator($user)) && $user->can('deliveries.prepare'); }
     public function ship(User $user, Delivery $delivery): bool { return ($this->isAdmin($user) || $this->isDeliveryOperator($user)) && $user->can('deliveries.ship'); }
     public function complete(User $user, Delivery $delivery): bool { return ($this->isAdmin($user) || $this->isDeliveryOperator($user)) && $user->can('deliveries.complete'); }
