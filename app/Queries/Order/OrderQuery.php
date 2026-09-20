@@ -68,7 +68,13 @@ class OrderQuery extends BaseQuery
     protected function applyInvoiceable(?bool $invoiceable): void
     {
         if ($invoiceable !== true) return;
-        $this->query->where('status', \App\Enums\OrderStatus::CONFIRMED)->whereDoesntHave('invoice');
+
+        $this->query
+            ->whereIn('status', [
+                \App\Enums\OrderStatus::CONFIRMED,
+                \App\Enums\OrderStatus::COMPLETED,
+            ])
+            ->whereDoesntHave('invoice');
     }
 
     protected function applyDeliverable(?bool $deliverable): void
