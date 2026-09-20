@@ -68,25 +68,80 @@ class InvoiceQuery extends BaseQuery
              + (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
                 FROM customer_credit_allocations
                 WHERE customer_credit_allocations.invoice_id = invoices.id)
-             + (SELECT COALESCE(SUM(customer_transactions.amount), 0)
-                FROM customer_transactions
-                INNER JOIN order_returns ON order_returns.id = customer_transactions.order_return_id
-                WHERE order_returns.order_id = invoices.order_id
-                  AND order_returns.status = 'completed'
-                  AND order_returns.deleted_at IS NULL
-                  AND customer_transactions.type = 'credit'
-                  AND customer_transactions.deleted_at IS NULL)
-             - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
-                FROM customer_credit_allocations
-                INNER JOIN customer_transactions AS return_credit_sources
-                    ON return_credit_sources.id = customer_credit_allocations.source_transaction_id
-                INNER JOIN order_returns AS allocated_returns
-                    ON allocated_returns.id = return_credit_sources.order_return_id
-                WHERE allocated_returns.order_id = invoices.order_id
-                  AND allocated_returns.status = 'completed'
-                  AND allocated_returns.deleted_at IS NULL
-                  AND return_credit_sources.type = 'credit'
-                  AND return_credit_sources.deleted_at IS NULL)
+             + CASE
+                 WHEN (
+                     invoices.total_amount
+                     - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
+                        FROM payments
+                        WHERE payments.invoice_id = invoices.id
+                          AND payments.status = ?)
+                     - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                        FROM customer_credit_allocations
+                        WHERE customer_credit_allocations.invoice_id = invoices.id)
+                 ) <= 0 THEN 0
+                 WHEN (
+                     (SELECT COALESCE(SUM(customer_transactions.amount), 0)
+                      FROM customer_transactions
+                      INNER JOIN order_returns ON order_returns.id = customer_transactions.order_return_id
+                      WHERE order_returns.order_id = invoices.order_id
+                        AND order_returns.status = 'completed'
+                        AND order_returns.deleted_at IS NULL
+                        AND customer_transactions.type = 'credit'
+                        AND customer_transactions.deleted_at IS NULL)
+                     - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                        FROM customer_credit_allocations
+                        INNER JOIN customer_transactions AS return_credit_sources
+                            ON return_credit_sources.id = customer_credit_allocations.source_transaction_id
+                        INNER JOIN order_returns AS allocated_returns
+                            ON allocated_returns.id = return_credit_sources.order_return_id
+                        WHERE allocated_returns.order_id = invoices.order_id
+                          AND allocated_returns.status = 'completed'
+                          AND allocated_returns.deleted_at IS NULL
+                          AND return_credit_sources.type = 'credit'
+                          AND return_credit_sources.deleted_at IS NULL)
+                 ) > (
+                     invoices.total_amount
+                     - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
+                        FROM payments
+                        WHERE payments.invoice_id = invoices.id
+                          AND payments.status = ?)
+                     - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                        FROM customer_credit_allocations
+                        WHERE customer_credit_allocations.invoice_id = invoices.id)
+                 )
+                 THEN (
+                     invoices.total_amount
+                     - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
+                        FROM payments
+                        WHERE payments.invoice_id = invoices.id
+                          AND payments.status = ?)
+                     - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                        FROM customer_credit_allocations
+                        WHERE customer_credit_allocations.invoice_id = invoices.id)
+                 )
+                 ELSE GREATEST(
+                     0,
+                     (SELECT COALESCE(SUM(customer_transactions.amount), 0)
+                      FROM customer_transactions
+                      INNER JOIN order_returns ON order_returns.id = customer_transactions.order_return_id
+                      WHERE order_returns.order_id = invoices.order_id
+                        AND order_returns.status = 'completed'
+                        AND order_returns.deleted_at IS NULL
+                        AND customer_transactions.type = 'credit'
+                        AND customer_transactions.deleted_at IS NULL)
+                     - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                        FROM customer_credit_allocations
+                        INNER JOIN customer_transactions AS return_credit_sources
+                            ON return_credit_sources.id = customer_credit_allocations.source_transaction_id
+                        INNER JOIN order_returns AS allocated_returns
+                            ON allocated_returns.id = return_credit_sources.order_return_id
+                        WHERE allocated_returns.order_id = invoices.order_id
+                          AND allocated_returns.status = 'completed'
+                          AND allocated_returns.deleted_at IS NULL
+                          AND return_credit_sources.type = 'credit'
+                          AND return_credit_sources.deleted_at IS NULL)
+                 )
+               END
              {$operator} invoices.total_amount",
             [PaymentStatus::CONFIRMED->value],
         );
@@ -106,25 +161,81 @@ class InvoiceQuery extends BaseQuery
                 - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
                    FROM customer_credit_allocations
                    WHERE customer_credit_allocations.invoice_id = invoices.id)
-                - (SELECT COALESCE(SUM(customer_transactions.amount), 0)
-                   FROM customer_transactions
-                   INNER JOIN order_returns ON order_returns.id = customer_transactions.order_return_id
-                   WHERE order_returns.order_id = invoices.order_id
-                     AND order_returns.status = 'completed'
-                     AND order_returns.deleted_at IS NULL
-                     AND customer_transactions.type = 'credit'
-                     AND customer_transactions.deleted_at IS NULL)
-                + (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
-                   FROM customer_credit_allocations
-                   INNER JOIN customer_transactions AS return_credit_sources
-                       ON return_credit_sources.id = customer_credit_allocations.source_transaction_id
-                   INNER JOIN order_returns AS allocated_returns
-                       ON allocated_returns.id = return_credit_sources.order_return_id
-                   WHERE allocated_returns.order_id = invoices.order_id
-                     AND allocated_returns.status = 'completed'
-                     AND allocated_returns.deleted_at IS NULL
-                     AND return_credit_sources.type = 'credit'
-                     AND return_credit_sources.deleted_at IS NULL)
+                - CASE
+                    WHEN (
+                        invoices.total_amount
+                        - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
+                           FROM payments
+                           WHERE payments.invoice_id = invoices.id
+                             AND payments.status IN (?, ?))
+                        - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                           FROM customer_credit_allocations
+                           WHERE customer_credit_allocations.invoice_id = invoices.id)
+                    ) <= 0 THEN 0
+                    WHEN (
+                        (SELECT COALESCE(SUM(customer_transactions.amount), 0)
+                         FROM customer_transactions
+                         INNER JOIN order_returns ON order_returns.id = customer_transactions.order_return_id
+                         WHERE order_returns.order_id = invoices.order_id
+                           AND order_returns.status = 'completed'
+                           AND order_returns.deleted_at IS NULL
+                           AND customer_transactions.type = 'credit'
+                           AND customer_transactions.deleted_at IS NULL)
+                        - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                           FROM customer_credit_allocations
+                           INNER JOIN customer_transactions AS return_credit_sources
+                               ON return_credit_sources.id = customer_credit_allocations.source_transaction_id
+                           INNER JOIN order_returns AS allocated_returns
+                               ON allocated_returns.id = return_credit_sources.order_return_id
+                           WHERE allocated_returns.order_id = invoices.order_id
+                             AND allocated_returns.status = 'completed'
+                             AND allocated_returns.deleted_at IS NULL
+                             AND return_credit_sources.type = 'credit'
+                             AND return_credit_sources.deleted_at IS NULL)
+                    ) > (
+                        invoices.total_amount
+                        - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
+                           FROM payments
+                           WHERE payments.invoice_id = invoices.id
+                             AND payments.status IN (?, ?))
+                        - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                           FROM customer_credit_allocations
+                           WHERE customer_credit_allocations.invoice_id = invoices.id)
+                    )
+                    THEN (
+                        invoices.total_amount
+                        - (SELECT COALESCE(SUM(payments.amount + payments.settlement_discount_amount), 0)
+                           FROM payments
+                           WHERE payments.invoice_id = invoices.id
+                             AND payments.status IN (?, ?))
+                        - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                           FROM customer_credit_allocations
+                           WHERE customer_credit_allocations.invoice_id = invoices.id)
+                    )
+                    ELSE GREATEST(
+                        0,
+                        (SELECT COALESCE(SUM(customer_transactions.amount), 0)
+                         FROM customer_transactions
+                         INNER JOIN order_returns ON order_returns.id = customer_transactions.order_return_id
+                         WHERE order_returns.order_id = invoices.order_id
+                           AND order_returns.status = 'completed'
+                           AND order_returns.deleted_at IS NULL
+                           AND customer_transactions.type = 'credit'
+                           AND customer_transactions.deleted_at IS NULL)
+                        - (SELECT COALESCE(SUM(customer_credit_allocations.amount), 0)
+                           FROM customer_credit_allocations
+                           INNER JOIN customer_transactions AS return_credit_sources
+                               ON return_credit_sources.id = customer_credit_allocations.source_transaction_id
+                           INNER JOIN order_returns AS allocated_returns
+                               ON allocated_returns.id = return_credit_sources.order_return_id
+                           WHERE allocated_returns.order_id = invoices.order_id
+                             AND allocated_returns.status = 'completed'
+                             AND allocated_returns.deleted_at IS NULL
+                             AND return_credit_sources.type = 'credit'
+                             AND return_credit_sources.deleted_at IS NULL)
+                    )
+                  END
+                
             ) {$operator} 0",
             [PaymentStatus::CONFIRMED->value, PaymentStatus::PENDING->value],
         );
