@@ -9,6 +9,7 @@ class OrderReturnPolicy
 {
     private function isAdmin(User $user): bool { return $user->hasRole('admin'); }
     private function isAccountant(User $user): bool { return $user->hasRole('accountant'); }
+    private function isAccountant(User $user): bool { return $user->hasRole('accountant'); }
 
     private function ownsReturn(User $user, OrderReturn $orderReturn): bool
     {
