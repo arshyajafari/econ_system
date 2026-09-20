@@ -25,7 +25,6 @@ return new class extends Migration {
                 ->orderBy('ct.transaction_at')
                 ->orderBy('ct.id')
                 ->select([
-                    'ct.id as chunk_id',
                     'ct.id as source_transaction_id',
                     'ct.customer_id',
                     'ct.amount as source_amount',
@@ -110,7 +109,7 @@ return new class extends Migration {
                             'updated_at' => now(),
                         ]);
                     }
-                }, 'chunk_id', 'chunk_id');
+                });
         });
     }
 
