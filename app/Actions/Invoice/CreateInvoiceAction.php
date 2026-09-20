@@ -16,7 +16,7 @@ class CreateInvoiceAction {
     public function execute(Order $order): Invoice {
         return DB::transaction(function () use ($order) {
             $order = Order::query()->lockForUpdate()->with(['customer','items'])->findOrFail($order->id);
-            if ($order->status !== OrderStatus::CONFIRMED) throw new BusinessRuleException('فقط سفارش تأییدشده توسط مدیر قابل ایجاد فاکتور است.');
+            if (!in_array($order->status, [OrderStatus::CONFIRMED, OrderStatus::COMPLETED], true)) throw new BusinessRuleException('فقط سفارش تأییدشده یا تکمیل‌شده قابل ایجاد فاکتور است.');
             if ($order->invoice()->exists()) throw new BusinessRuleException('برای این سفارش قبلاً فاکتور ایجاد شده است.');
             if ($order->items->isEmpty()) throw new BusinessRuleException('سفارش بدون آیتم قابل ایجاد فاکتور نیست.');
 
