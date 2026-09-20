@@ -10,7 +10,6 @@ class InvoicePolicy
     private function isAdmin(User $user): bool { return $user->hasRole('admin'); }
     private function isAccountant(User $user): bool { return $user->hasRole('accountant'); }
     private function isDeliveryOperator(User $user): bool { return $user->hasRole('delivery operator'); }
-    private function isAccountant(User $user): bool { return $user->hasRole('accountant'); }
     private function ownsInvoice(User $user, Invoice $invoice): bool { return $user->employee?->is($invoice->employee) ?? false; }
 
     public function viewAny(User $user): bool { return $this->isAdmin($user) || $this->isAccountant($user) || $this->isDeliveryOperator($user) || $user->can('invoices.view'); }
