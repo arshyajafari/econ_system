@@ -4,6 +4,11 @@
     use Illuminate\Support\Facades\Route;
 
     Route::prefix('deliveries')->name('deliveries.')->group(function () {
+        Route::get('/available-orders', [
+            DeliveryController::class,
+            'availableOrders'
+        ])->name('available-orders');
+
         Route::get('/', [
             DeliveryController::class,
             'index'
