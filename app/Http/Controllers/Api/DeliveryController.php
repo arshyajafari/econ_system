@@ -33,7 +33,7 @@
             return DeliveryResource::collection($deliveries);
         }
 
-        public function availableOrders(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection {
+        public function availableInvoices(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection {
             $this->authorize('create', Delivery::class);
 
             // Delivery is created from the order, but operationally it must be
