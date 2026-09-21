@@ -2,9 +2,11 @@
 
 namespace App\Actions\Payment;
 
+use App\Enums\DeliveryStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
+use App\Models\Delivery;
 use App\Models\Invoice;
 use App\Models\Payment;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +27,17 @@ class UpdatePaymentAction {
 
             if ($invoice->status !== InvoiceStatus::ISSUED) {
                 throw new BusinessRuleException('فقط فاکتور صادرشده قابل ویرایش پرداخت است.');
+            }
+
+            // Editing a pending payment is still a payment operation. It is
+            // therefore subject to the same shipped-delivery rule as creation.
+            $delivery = Delivery::query()
+                ->lockForUpdate()
+                ->where('order_id', $invoice->order_id)
+                ->first();
+
+            if (!$delivery || !in_array($delivery->status, [DeliveryStatus::SHIPPED, DeliveryStatus::DELIVERED], true)) {
+                throw new BusinessRuleException('تا زمانی که ارسال فاکتور انجام نشده باشد، ویرایش پرداخت مجاز نیست.');
             }
 
             $amount = array_key_exists('amount', $data)

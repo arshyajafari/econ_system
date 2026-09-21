@@ -2,10 +2,12 @@
 
 namespace App\Actions\Payment;
 
+use App\Enums\DeliveryStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Customer;
+use App\Models\Delivery;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\CustomerCreditService;
@@ -33,6 +35,18 @@ class ConfirmPaymentAction {
 
             if ($invoice->status !== InvoiceStatus::ISSUED) {
                 throw new BusinessRuleException('فقط فاکتور صادرشده قابل تأیید پرداخت است.');
+            }
+
+            // A pending payment must not be confirmed before the invoice's
+            // delivery has been shipped. Lock the delivery row to serialize
+            // this check with the ship transition.
+            $delivery = Delivery::query()
+                ->lockForUpdate()
+                ->where('order_id', $invoice->order_id)
+                ->first();
+
+            if (!$delivery || !in_array($delivery->status, [DeliveryStatus::SHIPPED, DeliveryStatus::DELIVERED], true)) {
+                throw new BusinessRuleException('تا زمانی که ارسال فاکتور انجام نشده باشد، تأیید پرداخت مجاز نیست.');
             }
 
             if ((int) $payment->customer_id !== (int) $invoice->customer_id) {
