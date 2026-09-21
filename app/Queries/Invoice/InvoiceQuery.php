@@ -149,6 +149,15 @@ class InvoiceQuery extends BaseQuery
     protected function applyPayable(?bool $payable): void
     {
         if ($payable === null) return;
+
+        // A payable invoice must already have a delivery that has left the
+        // warehouse. Delivered is included because it is a later valid state.
+        if ($payable) {
+            $this->query->whereHas('order.delivery', function ($query) {
+                $query->whereIn('status', ['shipped', 'delivered']);
+            });
+        }
+
         $operator = $payable ? '>' : '<=';
 
         $this->query->whereRaw(
