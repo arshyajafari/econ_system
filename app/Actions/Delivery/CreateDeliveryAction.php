@@ -27,8 +27,8 @@ class CreateDeliveryAction
                 ->where('public_id', $data['order_id'])
                 ->firstOrFail();
 
-            if ($order->status !== OrderStatus::PENDING) {
-                throw new BusinessRuleException('فقط سفارش در انتظار تأیید قابل ثبت برای ارسال است.');
+            if ($order->status !== OrderStatus::CONFIRMED) {
+                throw new BusinessRuleException('فقط سفارش تأییدشده قابل ثبت برای ارسال است.');
             }
 
             if ($order->delivery) {
