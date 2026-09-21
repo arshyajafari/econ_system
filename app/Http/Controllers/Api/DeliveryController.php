@@ -43,7 +43,7 @@
                 ->where('status', InvoiceStatus::ISSUED)
                 ->whereHas('order', function ($query) {
                     $query
-                        ->where('status', OrderStatus::CONFIRMED)
+                        ->whereIn('status', [OrderStatus::CONFIRMED, OrderStatus::COMPLETED])
                         ->whereDoesntHave('delivery');
                 })
                 ->orderByDesc('issued_at')
