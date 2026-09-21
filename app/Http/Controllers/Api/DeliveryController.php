@@ -15,6 +15,8 @@
     use App\Http\Resources\DeliveryResource;
     use App\Http\Resources\OrderResource;
     use App\Models\Order;
+    use App\Models\Invoice;
+    use App\Enums\InvoiceStatus;
     use App\Enums\OrderStatus;
     use App\Models\Delivery;
     use App\Queries\Delivery\DeliveryQuery;
@@ -34,15 +36,23 @@
         public function availableOrders(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection {
             $this->authorize('create', Delivery::class);
 
-            $orders = Order::query()
-                ->with(['customer'])
-                ->where('status', OrderStatus::CONFIRMED)
-                ->whereDoesntHave('delivery')
-                ->orderByDesc('ordered_at')
+            // Delivery is created from the order, but operationally it must be
+            // selected from an issued invoice. This keeps the UI aligned with
+            // the actual invoicing workflow and prevents draft/cancelled invoices
+            // from appearing as deliverable documents.
+            $invoices = Invoice::query()
+                ->with(['order', 'customer'])
+                ->where('status', InvoiceStatus::ISSUED)
+                ->whereHas('order', function ($query) {
+                    $query
+                        ->where('status', OrderStatus::CONFIRMED)
+                        ->whereDoesntHave('delivery');
+                })
+                ->orderByDesc('issued_at')
                 ->orderByDesc('created_at')
                 ->get();
 
-            return OrderResource::collection($orders);
+            return \App\Http\Resources\InvoiceResource::collection($invoices);
         }
 
         public function store(StoreDeliveryRequest $request, CreateDeliveryAction $action): JsonResponse {
