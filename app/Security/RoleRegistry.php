@@ -19,12 +19,15 @@ class RoleRegistry {
             ],
 
             Role::SCIENTIFIC_VISITOR->value => [
-                Permission::DOCTOR_VIEW->value, Permission::DOCTOR_CREATE->value, Permission::DOCTOR_UPDATE->value,
-                Permission::DOCTOR_RESTORE->value, Permission::DOCTOR_CHANGE_STATUS->value,
-                Permission::VISIT_VIEW->value, Permission::VISIT_CREATE->value, Permission::VISIT_UPDATE->value,
-                Permission::VISIT_COMPLETE->value, Permission::VISIT_CANCEL->value,
-                Permission::SAMPLE_VIEW->value, Permission::SAMPLE_CREATE->value, Permission::SAMPLE_UPDATE->value,
+                Permission::DOCTOR_VIEW->value,
                 Permission::PRODUCT_VIEW->value,
+                Permission::ORDER_VIEW->value, Permission::ORDER_CREATE->value,
+                Permission::ORDER_UPDATE->value, Permission::ORDER_SUBMIT->value,
+                Permission::VISIT_VIEW->value, Permission::VISIT_CREATE->value,
+                Permission::VISIT_UPDATE->value, Permission::VISIT_COMPLETE->value,
+                Permission::VISIT_CANCEL->value,
+                Permission::SAMPLE_VIEW->value, Permission::SAMPLE_CREATE->value,
+                Permission::SAMPLE_UPDATE->value,
             ],
 
             Role::ACCOUNTANT->value => [
