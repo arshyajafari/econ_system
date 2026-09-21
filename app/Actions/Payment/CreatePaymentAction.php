@@ -2,9 +2,11 @@
 
 namespace App\Actions\Payment;
 
+use App\Enums\DeliveryStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
+use App\Models\Delivery;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
@@ -27,6 +29,18 @@ class CreatePaymentAction {
 
             if ($invoice->status !== InvoiceStatus::ISSUED) {
                 throw new BusinessRuleException('فقط فاکتور صادرشده قابل پرداخت است.');
+            }
+
+            // Payment is allowed only after the delivery has actually been shipped.
+            // Lock the delivery row so a concurrent shipment transition cannot
+            // race this business-rule check.
+            $delivery = Delivery::query()
+                ->lockForUpdate()
+                ->where('order_id', $invoice->order_id)
+                ->first();
+
+            if (!$delivery || !in_array($delivery->status, [DeliveryStatus::SHIPPED, DeliveryStatus::DELIVERED], true)) {
+                throw new BusinessRuleException('تا زمانی که ارسال فاکتور انجام نشده باشد، ثبت پرداخت مجاز نیست.');
             }
 
             $remainingAmount = $invoice->effectiveRemainingAmount(includePending: true);
