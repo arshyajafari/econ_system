@@ -51,7 +51,7 @@ class Payment extends BaseModel {
         'method' => PaymentMethod::class,
         'amount' => 'decimal:2',
         'settlement_discount_amount' => 'decimal:2',
-        'payment_date' => 'date',
+        'payment_date' => 'datetime',
         'meta' => 'array',
     ];
 
