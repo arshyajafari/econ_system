@@ -34,7 +34,8 @@ class OrderPolicy
 
     public function create(User $user): bool
     {
-        return $this->isAdmin($user) || ($user->hasRole('sales visitor') && $user->can('orders.create'));
+        return $this->isAdmin($user)
+            || ($user->hasAnyRole(['sales visitor', 'scientific visitor']) && $user->can('orders.create'));
     }
 
     public function update(User $user, Order $order): bool
