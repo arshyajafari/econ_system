@@ -13,8 +13,6 @@
     use App\Http\Requests\Delivery\StoreDeliveryRequest;
     use App\Http\Requests\Delivery\UpdateDeliveryRequest;
     use App\Http\Resources\DeliveryResource;
-    use App\Http\Resources\OrderResource;
-    use App\Models\Order;
     use App\Models\Invoice;
     use App\Enums\InvoiceStatus;
     use App\Enums\OrderStatus;
