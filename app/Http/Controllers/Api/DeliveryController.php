@@ -13,6 +13,9 @@
     use App\Http\Requests\Delivery\StoreDeliveryRequest;
     use App\Http\Requests\Delivery\UpdateDeliveryRequest;
     use App\Http\Resources\DeliveryResource;
+    use App\Http\Resources\OrderResource;
+    use App\Models\Order;
+    use App\Enums\OrderStatus;
     use App\Models\Delivery;
     use App\Queries\Delivery\DeliveryQuery;
     use Illuminate\Http\JsonResponse;
@@ -26,6 +29,20 @@
             $deliveries = $query->apply($request->validated())->paginate($request->integer('per_page', 20));
 
             return DeliveryResource::collection($deliveries);
+        }
+
+        public function availableOrders(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection {
+            $this->authorize('create', Delivery::class);
+
+            $orders = Order::query()
+                ->with(['customer'])
+                ->where('status', OrderStatus::CONFIRMED)
+                ->whereDoesntHave('delivery')
+                ->orderByDesc('ordered_at')
+                ->orderByDesc('created_at')
+                ->get();
+
+            return OrderResource::collection($orders);
         }
 
         public function store(StoreDeliveryRequest $request, CreateDeliveryAction $action): JsonResponse {
