@@ -32,7 +32,7 @@ class PaymentResource extends JsonResource {
             'amount' => $this->amount,
             'settlement_discount_amount' => $this->settlement_discount_amount,
             'reference_number' => $this->reference_number,
-            'payment_date' => $this->payment_date?->toDateString(),
+            'payment_date' => $this->payment_date?->toISOString(),
             'description' => $this->description,
             'receipt_image_url' => $receiptPath ? Storage::disk('public')->url($receiptPath) : null,
             'created_at' => $this->created_at?->toISOString(),
