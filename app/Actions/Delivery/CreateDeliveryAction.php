@@ -27,8 +27,8 @@ class CreateDeliveryAction
                 ->where('public_id', $data['order_id'])
                 ->firstOrFail();
 
-            if ($order->status !== OrderStatus::CONFIRMED) {
-                throw new BusinessRuleException('فقط سفارش تأییدشده قابل ثبت برای ارسال است.');
+            if (!in_array($order->status, [OrderStatus::CONFIRMED, OrderStatus::COMPLETED], true)) {
+                throw new BusinessRuleException('فقط سفارش تأییدشده یا تکمیل‌شده قابل ثبت برای ارسال است.');
             }
 
             if ($order->delivery) {
