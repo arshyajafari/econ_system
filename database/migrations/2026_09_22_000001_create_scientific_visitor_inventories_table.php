@@ -19,9 +19,9 @@ return new class extends Migration {
             $table->audit();
             $table->common();
 
-            $table->unique(['employee_id', 'product_id']);
-            $table->index('employee_id');
-            $table->index('product_id');
+            $table->unique(['employee_id', 'product_id'], 'sci_visitor_product_unique');
+            $table->index('employee_id', 'sci_visitor_employee_idx');
+            $table->index('product_id', 'sci_visitor_product_idx');
         });
     }
 
