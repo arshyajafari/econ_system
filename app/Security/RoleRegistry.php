@@ -40,15 +40,18 @@ class RoleRegistry {
                 Permission::DELIVERY_VIEW->value,
             ],
 
+            // Settlement operator manages payment intake/confirmation/cancellation
+            // but is intentionally not allowed to edit/delete payment records.
             Role::SETTLEMENT_OPERATOR->value => [
                 Permission::CUSTOMER_VIEW->value,
                 Permission::ORDER_RETURN_VIEW->value,
                 Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value,
-                Permission::PAYMENT_UPDATE->value, Permission::PAYMENT_CONFIRM->value,
-                Permission::PAYMENT_CANCEL->value,
+                Permission::PAYMENT_CONFIRM->value, Permission::PAYMENT_CANCEL->value,
                 Permission::DELIVERY_VIEW->value,
             ],
 
+            // Delivery operator can view payments/returns/customer accounts and
+            // operate deliveries, but has no order/invoice/payment-edit access.
             Role::DELIVERY_OPERATOR->value => [
                 Permission::CUSTOMER_VIEW->value,
                 Permission::ORDER_RETURN_VIEW->value,
