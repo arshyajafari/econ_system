@@ -2,7 +2,7 @@
 
 use App\Enums\Permission;
 use App\Enums\Role;
-use App\Security\PermissionRegistrar;
+use Spatie\Permission\PermissionRegistrar;
 use Illuminate\Database\Migrations\Migration;
 use Spatie\Permission\Models\Role as SpatieRole;
 
