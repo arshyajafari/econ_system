@@ -11,7 +11,7 @@ class StoreScientificVisitorInventoryRequest extends CrudRequest
         return [
             'employee_id' => ['required', 'string', 'exists:employees,public_id'],
             'inventory_batch_id' => ['required', 'string', 'exists:inventory_batches,public_id'],
-            'quantity' => ['required', 'integer', 'min:1'],
+            'quantity' => ['required', 'integer', 'min:1', 'max:1000000'],
             'description' => ['nullable', 'string'],
         ];
     }
