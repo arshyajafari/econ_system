@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\EmployeeActivityType;
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Notification\StoreSystemMessageRequest;
@@ -11,7 +12,6 @@ use App\Notifications\SystemMessageNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Notifications\DatabaseNotification;
-use Spatie\Permission\Models\Role as SpatieRole;
 
 class NotificationController extends Controller {
     public function index(Request $request) {
@@ -54,15 +54,16 @@ class NotificationController extends Controller {
             ])
             ->values();
 
-        $roles = SpatieRole::query()
-            ->where('guard_name', 'web')
-            ->orderBy('name')
-            ->pluck('name')
+        $positions = collect(EmployeeActivityType::cases())
+            ->map(fn (EmployeeActivityType $position) => [
+                'value' => $position->value,
+                'label' => $position->label(),
+            ])
             ->values();
 
         return response()->json([
             'users' => $users,
-            'roles' => $roles,
+            'positions' => $positions,
         ]);
     }
 
@@ -106,9 +107,11 @@ class NotificationController extends Controller {
         $users = match ($data['target_type']) {
             'all' => User::active()->get(),
             'users' => User::active()->whereIn('public_id', $data['user_ids'])->get(),
-            'roles' => User::active()->whereHas('roles', function ($query) use ($data) {
-                $query->whereIn('name', $data['role_names'])->where('guard_name', 'web');
-            })->get(),
+            'positions' => User::active()
+                ->whereHas('employee', function ($query) use ($data) {
+                    $query->whereIn('activity_type', $data['position_types']);
+                })
+                ->get(),
         };
 
         if ($users->isEmpty()) {

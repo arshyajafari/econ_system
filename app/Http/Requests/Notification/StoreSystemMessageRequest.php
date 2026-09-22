@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Notification;
 
+use App\Enums\EmployeeActivityType;
 use App\Enums\Role;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -13,11 +14,11 @@ class StoreSystemMessageRequest extends FormRequest {
 
     public function rules(): array {
         return [
-            'target_type' => ['required', Rule::in(['all', 'users', 'roles'])],
+            'target_type' => ['required', Rule::in(['all', 'users', 'positions'])],
             'user_ids' => ['nullable', 'array', 'required_if:target_type,users', 'min:1'],
             'user_ids.*' => ['string', 'exists:users,public_id'],
-            'role_names' => ['nullable', 'array', 'required_if:target_type,roles', 'min:1'],
-            'role_names.*' => ['string', 'max:100'],
+            'position_types' => ['nullable', 'array', 'required_if:target_type,positions', 'min:1'],
+            'position_types.*' => ['string', Rule::enum(EmployeeActivityType::class)],
             'title' => ['required', 'string', 'max:120'],
             'body' => ['required', 'string', 'max:5000'],
             'priority' => ['required', Rule::in(['low', 'normal', 'high', 'urgent'])],
