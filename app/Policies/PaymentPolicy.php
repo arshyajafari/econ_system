@@ -9,6 +9,7 @@ use App\Models\User;
 class PaymentPolicy
 {
     private function isAdmin(User $user): bool { return $user->hasRole('admin'); }
+    private function isAccountant(User $user): bool { return $user->hasRole('accountant'); }
 
     public function viewAny(User $user): bool
     {
@@ -30,7 +31,7 @@ class PaymentPolicy
     public function update(User $user, Payment $payment): bool
     {
         // Editing payment records remains restricted to admin/accountant.
-        return $this->isAdmin($user)
+        return ($this->isAdmin($user) || $this->isAccountant($user))
             && $payment->status === PaymentStatus::PENDING;
     }
 
@@ -51,7 +52,7 @@ class PaymentPolicy
         // Deletion remains restricted to administrators; the accountant
         // role can retain the permission for broader accounting workflows
         // through its dedicated policy/controller rules if introduced later.
-        return $this->isAdmin($user)
+        return ($this->isAdmin($user) || $this->isAccountant($user))
             && $payment->status === PaymentStatus::PENDING;
     }
 }
