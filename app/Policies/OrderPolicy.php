@@ -22,6 +22,10 @@ class OrderPolicy
 
     public function viewAny(User $user): bool
     {
+        if ($user->hasRole('scientific visitor')) {
+            return false;
+        }
+
         return $this->isAdmin($user)
             || $this->isAccountant($user)
             || $user->can('orders.view');
@@ -29,6 +33,10 @@ class OrderPolicy
 
     public function view(User $user, Order $order): bool
     {
+        if ($user->hasRole('scientific visitor')) {
+            return false;
+        }
+
         return $this->isAdmin($user)
             || $this->isAccountant($user)
             || ($user->can('orders.view') && $this->ownsOrder($user, $order));
