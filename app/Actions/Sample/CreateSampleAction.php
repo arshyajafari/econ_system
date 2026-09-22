@@ -53,6 +53,10 @@ class CreateSampleAction
             $product = Product::query()->where('public_id', $data['product_id'])->firstOrFail();
             $quantity = (int) $data['quantity'];
 
+            if ($quantity <= 0) {
+                throw new BusinessRuleException('تعداد نمونه باید بیشتر از صفر باشد.');
+            }
+
             if ($user->hasRole('scientific visitor')) {
                 $inventory = ScientificVisitorInventory::query()
                     ->where('employee_id', $employee->id)
