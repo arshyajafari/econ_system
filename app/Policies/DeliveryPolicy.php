@@ -24,8 +24,12 @@ class DeliveryPolicy {
         return $this->viewAny($user);
     }
 
-    public function create(User $user): bool { return $this->isAdmin($user); }
-    public function update(User $user, Delivery $delivery): bool { return $this->isAdmin($user); }
+    public function create(User $user): bool {
+        return $this->isAdmin($user) || ($this->isDeliveryOperator($user) && $user->can('deliveries.create'));
+    }
+    public function update(User $user, Delivery $delivery): bool {
+        return $this->isAdmin($user) || ($this->isDeliveryOperator($user) && $user->can('deliveries.update'));
+    }
 
     public function prepare(User $user, Delivery $delivery): bool
     {
