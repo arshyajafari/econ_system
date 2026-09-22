@@ -54,9 +54,10 @@ class RoleRegistry {
             // operate deliveries, but has no order/invoice/payment-edit access.
             Role::DELIVERY_OPERATOR->value => [
                 Permission::CUSTOMER_VIEW->value,
-                Permission::ORDER_RETURN_VIEW->value,
+                Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value, Permission::ORDER_RETURN_UPDATE->value,
+                Permission::ORDER_RETURN_SUBMIT->value, Permission::ORDER_RETURN_CANCEL->value,
                 Permission::PAYMENT_VIEW->value,
-                Permission::DELIVERY_VIEW->value,
+                Permission::DELIVERY_VIEW->value, Permission::DELIVERY_CREATE->value, Permission::DELIVERY_UPDATE->value,
                 Permission::DELIVERY_PREPARE->value, Permission::DELIVERY_SHIP->value,
                 Permission::DELIVERY_COMPLETE->value, Permission::DELIVERY_CANCEL->value,
             ],

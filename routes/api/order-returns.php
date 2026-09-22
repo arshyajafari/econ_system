@@ -4,7 +4,12 @@
     use Illuminate\Support\Facades\Route;
 
     Route::prefix('order-returns')->name('order-returns.')->group(function () {
-        Route::get('/', [
+                Route::get('/returnable-orders', [
+            OrderReturnController::class,
+            'returnableOrders',
+        ])->name('returnable-orders');
+
+Route::get('/', [
             OrderReturnController::class,
             'index'
         ])->name('index');

@@ -13,9 +13,8 @@
     use App\Http\Requests\Delivery\StoreDeliveryRequest;
     use App\Http\Requests\Delivery\UpdateDeliveryRequest;
     use App\Http\Resources\DeliveryResource;
-    use App\Models\Invoice;
-    use App\Enums\InvoiceStatus;
-    use App\Enums\OrderStatus;
+        use App\Models\Order;
+        use App\Enums\OrderStatus;
     use App\Models\Delivery;
     use App\Queries\Delivery\DeliveryQuery;
     use Illuminate\Http\JsonResponse;
@@ -31,26 +30,17 @@
             return DeliveryResource::collection($deliveries);
         }
 
-        public function availableInvoices(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection {
+        public function availableOrders(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection {
             $this->authorize('create', Delivery::class);
 
-            // Delivery is created from the order, but operationally it must be
-            // selected from an issued invoice. This keeps the UI aligned with
-            // the actual invoicing workflow and prevents draft/cancelled invoices
-            // from appearing as deliverable documents.
-            $invoices = Invoice::query()
-                ->with(['order', 'customer'])
-                ->where('status', InvoiceStatus::ISSUED)
-                ->whereHas('order', function ($query) {
-                    $query
-                        ->whereIn('status', [OrderStatus::CONFIRMED, OrderStatus::COMPLETED])
-                        ->whereDoesntHave('delivery');
-                })
-                ->orderByDesc('issued_at')
+            $orders = Order::query()
+                ->with(['customer'])
+                ->whereIn('status', [OrderStatus::CONFIRMED, OrderStatus::COMPLETED])
+                ->whereDoesntHave('delivery')
                 ->orderByDesc('created_at')
                 ->get();
 
-            return \App\Http\Resources\InvoiceResource::collection($invoices);
+            return \App\Http\Resources\DeliveryOrderSourceResource::collection($orders);
         }
 
         public function store(StoreDeliveryRequest $request, CreateDeliveryAction $action): JsonResponse {
