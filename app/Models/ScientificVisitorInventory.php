@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\HasAudit;
+use App\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ScientificVisitorInventory extends BaseModel
 {
-    use SoftDeletes;
+    use HasPublicId, SoftDeletes, HasAudit;
 
     public const DEFAULT_RELATIONS = ['employee', 'product.currentPrice'];
 
