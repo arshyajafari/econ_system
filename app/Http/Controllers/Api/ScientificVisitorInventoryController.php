@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Actions\ScientificVisitorInventory\CreateScientificVisitorInventoryAction;
 use App\Actions\ScientificVisitorInventory\ListScientificVisitorInventoryAction;
+use App\Actions\ScientificVisitorInventory\UpdateScientificVisitorInventoryAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ScientificVisitorInventory\ScientificVisitorInventoryIndexRequest;
 use App\Http\Requests\ScientificVisitorInventory\StoreScientificVisitorInventoryRequest;
+use App\Http\Requests\ScientificVisitorInventory\UpdateScientificVisitorInventoryRequest;
 use App\Http\Resources\ScientificVisitorInventoryResource;
 use App\Models\ScientificVisitorInventory;
 use Illuminate\Http\JsonResponse;
@@ -35,5 +37,17 @@ class ScientificVisitorInventoryController extends Controller
         return response()->json(new ScientificVisitorInventoryResource(
             $action->execute($request->validated())
         ), 201);
+    }
+
+    public function update(
+        UpdateScientificVisitorInventoryRequest $request,
+        ScientificVisitorInventory $scientificVisitorInventory,
+        UpdateScientificVisitorInventoryAction $action
+    ): ScientificVisitorInventoryResource {
+        $this->authorize('update', $scientificVisitorInventory);
+
+        return new ScientificVisitorInventoryResource(
+            $action->execute($scientificVisitorInventory, $request->validated())
+        );
     }
 }
