@@ -9,7 +9,7 @@ use App\Traits\HasAudit;
 
 class ScientificVisitorInventory extends BaseModel
 {
-    use \App\Traits\HasPublicId, \App\Traits\HasAudit, SoftDeletes;
+    use HasPublicId, HasAudit, SoftDeletes;
 
     public const DEFAULT_RELATIONS = ['employee', 'product.currentPrice'];
 
