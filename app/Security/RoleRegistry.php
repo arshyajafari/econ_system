@@ -44,8 +44,7 @@ class RoleRegistry {
             // but is intentionally not allowed to edit/delete payment records.
             Role::SETTLEMENT_OPERATOR->value => [
                 Permission::CUSTOMER_VIEW->value,
-                Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value, Permission::ORDER_RETURN_UPDATE->value,
-                Permission::ORDER_RETURN_SUBMIT->value, Permission::ORDER_RETURN_CANCEL->value,
+                Permission::ORDER_RETURN_VIEW->value,
                 Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value,
                 Permission::PAYMENT_CONFIRM->value, Permission::PAYMENT_CANCEL->value,
                 Permission::DELIVERY_VIEW->value,
@@ -55,7 +54,8 @@ class RoleRegistry {
             // operate deliveries, but has no order/invoice/payment-edit access.
             Role::DELIVERY_OPERATOR->value => [
                 Permission::CUSTOMER_VIEW->value,
-                Permission::ORDER_RETURN_VIEW->value,
+                Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value, Permission::ORDER_RETURN_UPDATE->value,
+                Permission::ORDER_RETURN_SUBMIT->value, Permission::ORDER_RETURN_CANCEL->value,
                 Permission::PAYMENT_VIEW->value,
                 Permission::DELIVERY_VIEW->value, Permission::DELIVERY_CREATE->value, Permission::DELIVERY_UPDATE->value,
                 Permission::DELIVERY_PREPARE->value, Permission::DELIVERY_SHIP->value,
