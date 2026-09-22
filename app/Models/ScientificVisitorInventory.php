@@ -5,9 +5,7 @@ namespace App\Models;
 use App\Traits\HasAudit;
 use App\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\HasPublicId;
-use App\Traits\HasAudit;
+use Illuminate\Database\Eloquent\SoftDeletes; 
 
 class ScientificVisitorInventory extends BaseModel
 {
