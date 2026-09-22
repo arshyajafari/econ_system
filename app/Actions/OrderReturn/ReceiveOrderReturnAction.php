@@ -16,7 +16,7 @@ class ReceiveOrderReturnAction {
             if ($return->delivered_at !== null) {
                 return $return->fresh(OrderReturn::DEFAULT_RELATIONS);
             }
-            $return->delivered_at = now();
+            $return->markAsReceived();
             $return->save();
             return $return->fresh(OrderReturn::DEFAULT_RELATIONS);
         });
