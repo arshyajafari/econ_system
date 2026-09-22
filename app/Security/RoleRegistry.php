@@ -41,16 +41,21 @@ class RoleRegistry {
             ],
 
             Role::SETTLEMENT_OPERATOR->value => [
-                Permission::CUSTOMER_VIEW->value, Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value,
-                Permission::PAYMENT_UPDATE->value, Permission::PAYMENT_CONFIRM->value, Permission::PAYMENT_CANCEL->value,
+                Permission::CUSTOMER_VIEW->value,
                 Permission::ORDER_RETURN_VIEW->value,
+                Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value,
+                Permission::PAYMENT_UPDATE->value, Permission::PAYMENT_CONFIRM->value,
+                Permission::PAYMENT_CANCEL->value,
+                Permission::DELIVERY_VIEW->value,
             ],
 
             Role::DELIVERY_OPERATOR->value => [
-                Permission::INVOICE_VIEW->value,
-                Permission::DELIVERY_VIEW->value, Permission::DELIVERY_CREATE->value, Permission::DELIVERY_UPDATE->value,
-                Permission::DELIVERY_PREPARE->value, Permission::DELIVERY_SHIP->value, Permission::DELIVERY_COMPLETE->value,
-                Permission::DELIVERY_CANCEL->value,
+                Permission::CUSTOMER_VIEW->value,
+                Permission::ORDER_RETURN_VIEW->value,
+                Permission::PAYMENT_VIEW->value,
+                Permission::DELIVERY_VIEW->value,
+                Permission::DELIVERY_PREPARE->value, Permission::DELIVERY_SHIP->value,
+                Permission::DELIVERY_COMPLETE->value, Permission::DELIVERY_CANCEL->value,
             ],
         ];
     }
