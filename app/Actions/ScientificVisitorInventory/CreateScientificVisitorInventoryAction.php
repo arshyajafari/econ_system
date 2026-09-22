@@ -67,7 +67,7 @@ class CreateScientificVisitorInventoryAction
                 'type' => InventoryMovementType::OUT,
                 'quantity' => $quantity,
                 'reason' => 'scientific_visitor_transfer',
-                'description' => $data['description'] ?? "تحویل به ویزیتور علمی {$employee->full_name}",
+                'description' => $data['description'] ?? "تحویل به ویزیتور علمی {$employee->fullName}",
                 'moved_at' => now(),
             ]);
 
