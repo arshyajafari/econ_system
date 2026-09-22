@@ -127,25 +127,16 @@ class ConfirmPaymentAction {
                 round($remainingBeforePayment - $paymentAmount - $discountAmount, 2),
             );
 
-            if ($creditNeeded > 0) {
-                if ($availableCredit < $creditNeeded) {
-                    throw new BusinessRuleException(
-                        'اعتبار مشتری برای تسویه کامل این فاکتور کافی نیست. مبلغ پرداخت را اصلاح کنید.',
-                    );
-                }
-
-                $allocatedCredit = $this->customerCreditService->allocateToInvoice(
+            if ($creditNeeded > 0 && $availableCredit > 0) {
+                // Existing customer credit is an optional settlement source.
+                // A partial payment must remain valid when available credit is
+                // insufficient to close the entire remaining balance.
+                $this->customerCreditService->allocateToInvoice(
                     customerId: $customer->id,
                     invoice: $invoice,
-                    requestedAmount: $creditNeeded,
+                    requestedAmount: min($creditNeeded, $availableCredit),
                     description: "استفاده از اعتبار مشتری برای تسویه فاکتور {$invoice->code}",
                 );
-
-                if (round($allocatedCredit, 2) !== round($creditNeeded, 2)) {
-                    throw new BusinessRuleException(
-                        'استفاده از اعتبار مشتری برای تسویه فاکتور کامل انجام نشد؛ پرداخت تأیید نشد.',
-                    );
-                }
             }
 
             $payment->status = PaymentStatus::CONFIRMED;
