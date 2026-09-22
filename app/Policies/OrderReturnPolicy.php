@@ -68,7 +68,7 @@ class OrderReturnPolicy
 
     public function allocate(User $user, OrderReturn $orderReturn): bool
     {
-        return $this->isAdmin() || $this->isAccountant($user) || ($user->can('order_returns.allocate') && $this->ownsReturn($user, $orderReturn));
+        return $this->isAdmin($user) || $this->isAccountant($user) || ($user->can('order_returns.allocate') && $this->ownsReturn($user, $orderReturn));
     }
 
     public function export(User $user): bool
