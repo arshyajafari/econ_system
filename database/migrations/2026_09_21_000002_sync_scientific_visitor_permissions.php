@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 return new class extends Migration
 {
@@ -36,6 +37,8 @@ return new class extends Migration
                 ->whereIn('name', $permissions)
                 ->get()
         );
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     public function down(): void
