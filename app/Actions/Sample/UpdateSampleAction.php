@@ -14,13 +14,16 @@ class UpdateSampleAction
     public function execute(Sample $sample, array $data, User $user): Sample
     {
         return DB::transaction(function () use ($sample, $data, $user) {
-            $sample = Sample::query()->lockForUpdate()->with(['visit', 'product'])->findOrFail($sample->id);
+            $sample = Sample::query()
+                ->lockForUpdate()
+                ->with(['visit.employee.user', 'product'])
+                ->findOrFail($sample->id);
 
             if (!$sample->visit) {
                 throw new BusinessRuleException('بازدید مربوط به نمونه پیدا نشد.');
             }
 
-            if ((int) $sample->visit->employee_id !== (int) $user->employee?->id && $user->hasRole('scientific visitor')) {
+            if ($user->hasRole('scientific visitor') && (int) $sample->visit->employee_id !== (int) $user->employee?->id) {
                 throw new BusinessRuleException('این نمونه متعلق به کارمند فعلی نیست.');
             }
 
@@ -33,12 +36,19 @@ class UpdateSampleAction
                 throw new BusinessRuleException('تعداد نمونه باید بیشتر از صفر باشد.');
             }
 
-            if ($user->hasRole('scientific visitor')) {
+            $owner = $sample->visit->employee;
+            $ownerIsScientificVisitor = $owner?->user?->hasRole('scientific visitor') ?? false;
+
+            if ($ownerIsScientificVisitor) {
                 $inventory = ScientificVisitorInventory::query()
-                    ->where('employee_id', $user->employee?->id)
+                    ->where('employee_id', $owner->id)
                     ->where('product_id', $sample->product_id)
                     ->lockForUpdate()
-                    ->firstOrFail();
+                    ->first();
+
+                if (!$inventory || $inventory->used_quantity < $sample->quantity) {
+                    throw new BusinessRuleException('موجودی ثبت‌شده این ویزیتور با سابقه نمونه سازگار نیست.');
+                }
 
                 $availableAfterRestoring = $inventory->available_quantity + $sample->quantity;
                 if ($availableAfterRestoring < $quantity) {
