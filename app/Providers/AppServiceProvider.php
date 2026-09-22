@@ -5,8 +5,8 @@
     use App\Contracts\CodeGeneratorInterface;
     use App\Services\CodeGeneratorService;
     use Illuminate\Http\Resources\Json\JsonResource;
-use App\Models\ScientificVisitorInventory;
-use App\Policies\ScientificVisitorInventoryPolicy;
+    use App\Models\ScientificVisitorInventory;
+    use App\Policies\ScientificVisitorInventoryPolicy;
     use Illuminate\Support\ServiceProvider;
 
     class AppServiceProvider extends ServiceProvider {
