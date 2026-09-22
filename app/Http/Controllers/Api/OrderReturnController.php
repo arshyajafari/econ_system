@@ -17,6 +17,8 @@ use App\Http\Requests\OrderReturn\UpdateOrderReturnRequest;
 use App\Http\Resources\OrderReturnItemResource;
 use App\Http\Resources\OrderReturnResource;
 use App\Models\OrderReturn;
+use App\Models\Order;
+use App\Enums\OrderStatus;
 use App\Models\OrderReturnItem;
 use App\Queries\OrderReturn\OrderReturnQuery;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +34,34 @@ class OrderReturnController extends Controller
     {
         $returns = $query->apply($request->validated(), $request->user())->paginate($request->integer('per_page', 20));
         return OrderReturnResource::collection($returns);
+    }
+
+    public function returnableOrders(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    {
+        $this->authorize('create', OrderReturn::class);
+
+        $orders = Order::query()
+            ->with(['customer', 'items.product'])
+            ->where('status', OrderStatus::COMPLETED)
+            ->whereHas('items', function ($query) {
+                $query->whereRaw(
+                    'order_items.quantity > (
+                        SELECT COALESCE(SUM(order_return_items.quantity), 0)
+                        FROM order_return_items
+                        INNER JOIN order_returns ON order_returns.id = order_return_items.order_return_id
+                        WHERE order_return_items.order_item_id = order_items.id
+                          AND order_returns.status NOT IN (?, ?)
+                          AND order_returns.deleted_at IS NULL
+                          AND order_return_items.deleted_at IS NULL
+                    )',
+                    ['draft', 'cancelled'],
+                );
+            })
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+
+        return \App\Http\Resources\OrderResource::collection($orders);
     }
 
     public function store(StoreOrderReturnRequest $request, CreateOrderReturnAction $action): JsonResponse
