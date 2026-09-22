@@ -6,6 +6,7 @@ use App\Enums\VisitStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Product;
 use App\Models\Sample;
+use App\Models\ScientificVisitorInventory;
 use App\Models\User;
 use App\Models\Visit;
 use Illuminate\Support\Facades\DB;
@@ -34,8 +35,6 @@ class CreateSampleAction
                 throw new BusinessRuleException('برای بازدید لغوشده نمی‌توان نمونه ثبت کرد.');
             }
 
-            // Samples are part of the visit workflow and may be registered
-            // while the visit is still a draft. Cancelled visits are blocked above.
             if (!empty($data['client_operation_id'])) {
                 $existingSample = Sample::query()
                     ->with(Sample::DEFAULT_RELATIONS)
@@ -52,12 +51,28 @@ class CreateSampleAction
             }
 
             $product = Product::query()->where('public_id', $data['product_id'])->firstOrFail();
+            $quantity = (int) $data['quantity'];
+
+            if ($user->hasRole('scientific visitor')) {
+                $inventory = ScientificVisitorInventory::query()
+                    ->where('employee_id', $employee->id)
+                    ->where('product_id', $product->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$inventory || $inventory->available_quantity < $quantity) {
+                    throw new BusinessRuleException('موجودی این محصول برای ثبت نمونه کافی نیست.');
+                }
+
+                $inventory->used_quantity += $quantity;
+                $inventory->save();
+            }
 
             $sample = Sample::create([
                 'client_operation_id' => $data['client_operation_id'] ?? null,
                 'visit_id' => $visit->id,
                 'product_id' => $product->id,
-                'quantity' => (int) $data['quantity'],
+                'quantity' => $quantity,
                 'description' => $data['description'] ?? null,
             ]);
 
