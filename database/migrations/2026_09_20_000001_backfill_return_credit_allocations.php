@@ -85,7 +85,7 @@ return new class extends Migration {
                             'updated_at' => now(),
                         ]);
                     }
-                }, 'chunk_id', 'chunk_id');
+                });
         });
     }
 
