@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\OrderReturnController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('order-returns')->name('order-returns.')->group(function () {
+    Route::get('/returnable-orders/{order}', [OrderReturnController::class, 'returnableOrder'])->name('returnable-orders.show');
     Route::get('/returnable-orders', [OrderReturnController::class, 'returnableOrders'])->name('returnable-orders');
     Route::get('/', [OrderReturnController::class, 'index'])->name('index');
     Route::post('/', [OrderReturnController::class, 'store'])->name('store');
