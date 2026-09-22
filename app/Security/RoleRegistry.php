@@ -20,9 +20,6 @@ class RoleRegistry {
 
             Role::SCIENTIFIC_VISITOR->value => [
                 Permission::DOCTOR_VIEW->value,
-                Permission::PRODUCT_VIEW->value,
-                Permission::ORDER_VIEW->value, Permission::ORDER_CREATE->value,
-                Permission::ORDER_UPDATE->value, Permission::ORDER_SUBMIT->value,
                 Permission::VISIT_VIEW->value, Permission::VISIT_CREATE->value,
                 Permission::VISIT_UPDATE->value, Permission::VISIT_COMPLETE->value,
                 Permission::VISIT_CANCEL->value,
