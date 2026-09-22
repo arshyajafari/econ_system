@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasAudit;
+use App\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Traits\HasAudit;
 use App\Traits\HasPublicId;
