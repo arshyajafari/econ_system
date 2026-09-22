@@ -9,7 +9,6 @@ class OrderPolicy
 {
     private function isAdmin(User $user): bool { return $user->hasRole('admin'); }
     private function isAccountant(User $user): bool { return $user->hasRole('accountant'); }
-    private function isScientificVisitor(User $user): bool { return $user->hasRole('scientific visitor'); }
 
     private function ownsOrder(User $user, Order $order): bool
     {
@@ -25,7 +24,6 @@ class OrderPolicy
     {
         return $this->isAdmin($user)
             || $this->isAccountant($user)
-            || $this->isScientificVisitor($user)
             || $user->can('orders.view');
     }
 
@@ -39,7 +37,7 @@ class OrderPolicy
     public function create(User $user): bool
     {
         return $this->isAdmin($user)
-            || ($user->hasAnyRole(['sales visitor', 'scientific visitor']) && $user->can('orders.create'));
+            || ($user->hasRole('sales visitor') && $user->can('orders.create'));
     }
 
     public function update(User $user, Order $order): bool
