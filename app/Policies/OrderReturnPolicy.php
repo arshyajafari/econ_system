@@ -36,7 +36,7 @@ class OrderReturnPolicy {
             || ($user->can('order_returns.cancel') && $this->ownsReturn($user, $orderReturn) && $this->editableBeforeAdminApproval($orderReturn));
     }
     public function receive(User $user, OrderReturn $orderReturn): bool {
-        return $this->isAdmin() || ($this->isDeliveryOperator($user) && $user->can('order_returns.view'));
+        return $this->isAdmin($user) || ($this->isDeliveryOperator($user) && $user->can('order_returns.view'));
     }
     public function allocate(User $user, OrderReturn $orderReturn): bool { return $this->isAdmin($user) || $this->isAccountant($user) || ($user->can('order_returns.allocate') && $this->ownsReturn($user, $orderReturn)); }
     public function export(User $user): bool { return $this->isAdmin($user) || $user->can('order_returns.export'); }
