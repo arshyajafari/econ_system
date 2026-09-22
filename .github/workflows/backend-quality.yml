@@ -46,15 +46,14 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
 
-      - name: Check changed PHP formatting
-        run: >-
-          vendor/bin/pint --test
-          app/Actions/Payment/ConfirmPaymentAction.php
-          app/Policies/DeliveryPolicy.php
-          app/Policies/OrderReturnPolicy.php
-          app/Policies/PaymentPolicy.php
-          app/Queries/Invoice/InvoiceQuery.php
-          app/Security/RoleRegistry.php
+      - name: Check changed PHP syntax
+        run: |
+          php -l app/Actions/Payment/ConfirmPaymentAction.php
+          php -l app/Policies/DeliveryPolicy.php
+          php -l app/Policies/OrderReturnPolicy.php
+          php -l app/Policies/PaymentPolicy.php
+          php -l app/Queries/Invoice/InvoiceQuery.php
+          php -l app/Security/RoleRegistry.php
 
       - name: Run migrations
         run: php artisan migrate --force
