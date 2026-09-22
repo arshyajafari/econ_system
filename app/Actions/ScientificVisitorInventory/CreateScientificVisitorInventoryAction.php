@@ -25,8 +25,11 @@ class CreateScientificVisitorInventoryAction
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $quantity = (int) $data['quantity'];
+            if ($batch->is_expired) {
+                throw new BusinessRuleException('تحویل محصول منقضی‌شده به ویزیتور علمی مجاز نیست.');
+            }
 
+            $quantity = (int) $data['quantity'];
             if ($quantity <= 0) {
                 throw new BusinessRuleException('تعداد تحویلی باید بیشتر از صفر باشد.');
             }
