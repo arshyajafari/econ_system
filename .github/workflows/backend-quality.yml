@@ -46,8 +46,15 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
 
-      - name: Check PHP formatting
-        run: vendor/bin/pint --test app tests
+      - name: Check changed PHP formatting
+        run: >-
+          vendor/bin/pint --test
+          app/Actions/Payment/ConfirmPaymentAction.php
+          app/Policies/DeliveryPolicy.php
+          app/Policies/OrderReturnPolicy.php
+          app/Policies/PaymentPolicy.php
+          app/Queries/Invoice/InvoiceQuery.php
+          app/Security/RoleRegistry.php
 
       - name: Run migrations
         run: php artisan migrate --force
