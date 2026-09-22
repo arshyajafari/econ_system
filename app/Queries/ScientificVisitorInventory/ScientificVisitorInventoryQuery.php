@@ -27,7 +27,7 @@ class ScientificVisitorInventoryQuery extends BaseQuery
             $this->query->whereHas('product', fn ($q) => $q->where('public_id', $filters['product_id']));
         }
 
-        if (($filters['available_only'] ?? false) === true) {
+        if (filter_var($filters['available_only'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
             $this->query->whereColumn('received_quantity', '>', 'used_quantity');
         }
 
