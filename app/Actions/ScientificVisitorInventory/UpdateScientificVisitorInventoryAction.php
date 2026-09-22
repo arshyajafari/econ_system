@@ -16,6 +16,7 @@ class UpdateScientificVisitorInventoryAction
     {
         return DB::transaction(function () use ($inventory, $data) {
             $inventory = ScientificVisitorInventory::query()
+                ->with('employee')
                 ->lockForUpdate()
                 ->findOrFail($inventory->id);
 
