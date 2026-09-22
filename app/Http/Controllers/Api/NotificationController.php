@@ -12,7 +12,6 @@ use App\Notifications\SystemMessageNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Notifications\DatabaseNotification;
-use Spatie\Permission\Models\Role as SpatieRole;
 
 class NotificationController extends Controller {
     public function index(Request $request) {
