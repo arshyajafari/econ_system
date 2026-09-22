@@ -42,6 +42,19 @@ class OrderReturnController extends Controller {
         return OrderResource::collection($orders);
     }
 
+    public function returnableOrder(Order $order): OrderResource {
+        $this->authorize('create', OrderReturn::class);
+
+        $hasReturnableItems = $order->items()
+            ->whereRaw('order_items.quantity > (SELECT COALESCE(SUM(order_return_items.quantity), 0) FROM order_return_items INNER JOIN order_returns ON order_returns.id = order_return_items.order_return_id WHERE order_return_items.order_item_id = order_items.id AND order_returns.status NOT IN (?, ?) AND order_returns.deleted_at IS NULL AND order_return_items.deleted_at IS NULL)', ['draft', 'cancelled'])
+            ->exists();
+
+        abort_unless($order->status === OrderStatus::COMPLETED && $hasReturnableItems, 404, 'این سفارش قابل ثبت مرجوعی نیست.');
+
+        $order->load(['customer', 'items.product']);
+        return new OrderResource($order);
+    }
+
     public function store(StoreOrderReturnRequest $request, CreateOrderReturnAction $action): JsonResponse {
         $this->authorize('create', OrderReturn::class);
         return response()->json(new OrderReturnResource($action->execute($request->validated(), $request->user())), 201);
