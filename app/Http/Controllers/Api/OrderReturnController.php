@@ -42,8 +42,10 @@ class OrderReturnController extends Controller {
         return OrderResource::collection($orders);
     }
 
-    public function returnableOrder(Order $order): OrderResource {
+    public function returnableOrder(string $order): OrderResource {
         $this->authorize('create', OrderReturn::class);
+
+        $order = Order::query()->where('public_id', $order)->firstOrFail();
 
         $hasReturnableItems = $order->items()
             ->whereRaw('order_items.quantity > (SELECT COALESCE(SUM(order_return_items.quantity), 0) FROM order_return_items INNER JOIN order_returns ON order_returns.id = order_return_items.order_return_id WHERE order_return_items.order_item_id = order_items.id AND order_returns.status NOT IN (?, ?) AND order_returns.deleted_at IS NULL AND order_return_items.deleted_at IS NULL)', ['draft', 'cancelled'])
