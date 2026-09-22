@@ -48,7 +48,9 @@ class OrderReturnQuery extends BaseQuery
         }
 
         $this->applyStatus($filters['status'] ?? null);
-        $this->applyReturnableOrder();
+        // The register is intentionally a complete audit list for admin,
+        // accountant and operational roles; returnability is checked by the
+        // dedicated creation source endpoint instead.
         $this->applyDateRange($filters['completed_from'] ?? null, $filters['completed_to'] ?? null);
         $this->applySort($filters['sort'] ?? null, OrderReturn::SORTABLE, 'created_at');
 
