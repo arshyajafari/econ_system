@@ -36,4 +36,14 @@ class ScientificVisitorInventoryPolicy
     {
         return $this->isManager($user);
     }
+
+    public function update(User $user, ScientificVisitorInventory $inventory): bool
+    {
+        return false;
+    }
+
+    public function delete(User $user, ScientificVisitorInventory $inventory): bool
+    {
+        return false;
+    }
 }
