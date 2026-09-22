@@ -39,7 +39,7 @@ class ScientificVisitorInventoryPolicy
 
     public function update(User $user, ScientificVisitorInventory $inventory): bool
     {
-        return false;
+        return $this->isManager($user);
     }
 
     public function delete(User $user, ScientificVisitorInventory $inventory): bool
