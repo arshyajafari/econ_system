@@ -4,10 +4,10 @@
     use Illuminate\Support\Facades\Route;
 
     Route::prefix('deliveries')->name('deliveries.')->group(function () {
-        Route::get('/available-invoices', [
+        Route::get('/available-orders', [
             DeliveryController::class,
-            'availableInvoices'
-        ])->name('available-invoices');
+            'availableOrders'
+        ])->name('available-orders');
 
         Route::get('/', [
             DeliveryController::class,
