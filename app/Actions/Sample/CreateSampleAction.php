@@ -34,10 +34,8 @@ class CreateSampleAction
                 throw new BusinessRuleException('برای بازدید لغوشده نمی‌توان نمونه ثبت کرد.');
             }
 
-            if ($visit->status !== VisitStatus::COMPLETED) {
-                throw new BusinessRuleException('فقط برای بازدید تکمیل‌شده می‌توان نمونه ثبت کرد.');
-            }
-
+            // Samples are part of the visit workflow and may be registered
+            // while the visit is still a draft. Cancelled visits are blocked above.
             if (!empty($data['client_operation_id'])) {
                 $existingSample = Sample::query()
                     ->with(Sample::DEFAULT_RELATIONS)
