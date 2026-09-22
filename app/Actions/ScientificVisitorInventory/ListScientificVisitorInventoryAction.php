@@ -10,11 +10,20 @@ class ListScientificVisitorInventoryAction
 {
     public function execute(array $filters, User $user): LengthAwarePaginator
     {
-        if ($user->hasRole('scientific visitor') && !$user->employee?->id) {
-            return ScientificVisitorInventoryQuery::make()->apply($filters, -1)->paginate($filters['per_page'] ?? 50);
+        $isScientificVisitor = $user->hasRole('scientific visitor');
+
+        if ($isScientificVisitor) {
+            // This is a server-side business rule, not a UI filter.
+            $filters['available_only'] = true;
         }
 
-        $employeeId = $user->hasRole('scientific visitor') ? $user->employee?->id : null;
+        if ($isScientificVisitor && !$user->employee?->id) {
+            return ScientificVisitorInventoryQuery::make()
+                ->apply($filters, -1)
+                ->paginate($filters['per_page'] ?? 50);
+        }
+
+        $employeeId = $isScientificVisitor ? $user->employee?->id : null;
 
         return ScientificVisitorInventoryQuery::make()
             ->apply($filters, $employeeId)
