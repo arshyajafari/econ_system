@@ -4,8 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Concerns\HasPublicId;
-use App\Models\Concerns\HasAudit;
+use App\Traits\HasPublicId;
+use App\Traits\HasAudit;
 
 class ScientificVisitorInventory extends BaseModel
 {
