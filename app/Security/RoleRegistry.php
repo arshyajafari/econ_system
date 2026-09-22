@@ -37,11 +37,9 @@ class RoleRegistry {
                 Permission::INVOICE_UPDATE->value, Permission::INVOICE_ISSUE->value, Permission::INVOICE_CANCEL->value,
                 Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value, Permission::PAYMENT_UPDATE->value,
                 Permission::PAYMENT_CONFIRM->value, Permission::PAYMENT_CANCEL->value, Permission::PAYMENT_DELETE->value,
-                Permission::DELIVERY_VIEW->value,
+                Permission::DELIVERY_VIEW->value, Permission::DELIVERY_PREPARE->value, Permission::DELIVERY_SHIP->value,
             ],
 
-            // Settlement operator manages payment intake/confirmation/cancellation
-            // but is intentionally not allowed to edit/delete payment records.
             Role::SETTLEMENT_OPERATOR->value => [
                 Permission::CUSTOMER_VIEW->value,
                 Permission::ORDER_RETURN_VIEW->value,
@@ -50,16 +48,14 @@ class RoleRegistry {
                 Permission::DELIVERY_VIEW->value,
             ],
 
-            // Delivery operator can view payments/returns/customer accounts and
-            // operate deliveries, but has no order/invoice/payment-edit access.
+            // Delivery operator registers/edits deliveries and confirms the physical hand-off only.
+            // Preparation and shipment are approved by admin/accountant.
             Role::DELIVERY_OPERATOR->value => [
-                Permission::CUSTOMER_VIEW->value,
-                Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value, Permission::ORDER_RETURN_UPDATE->value,
-                Permission::ORDER_RETURN_SUBMIT->value, Permission::ORDER_RETURN_CANCEL->value,
-                Permission::PAYMENT_VIEW->value,
+                Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value,
+                Permission::ORDER_RETURN_UPDATE->value, Permission::ORDER_RETURN_SUBMIT->value,
+                Permission::ORDER_RETURN_CANCEL->value,
                 Permission::DELIVERY_VIEW->value, Permission::DELIVERY_CREATE->value, Permission::DELIVERY_UPDATE->value,
-                Permission::DELIVERY_PREPARE->value, Permission::DELIVERY_SHIP->value,
-                Permission::DELIVERY_COMPLETE->value, Permission::DELIVERY_CANCEL->value,
+                Permission::DELIVERY_COMPLETE->value,
             ],
         ];
     }
