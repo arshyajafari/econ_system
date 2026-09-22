@@ -60,7 +60,7 @@ class CreateScientificVisitorInventoryAction
             $inventory->description = $data['description'] ?? $inventory->description;
             $inventory->save();
 
-            $batch->quantity -= $quantity;
+            $batch->reserved_quantity = $batch->reserved_quantity + $quantity;
             $batch->save();
 
             InventoryMovement::create([
