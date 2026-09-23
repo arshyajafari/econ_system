@@ -15,9 +15,12 @@ class OrderReturnPolicy {
     public function viewAny(User $user): bool { return $this->isAdmin($user) || $this->isAccountant($user) || $user->can('order_returns.view'); }
 
     public function view(User $user, OrderReturn $orderReturn): bool {
+        if ($user->hasRole('sales visitor')) {
+            return $this->ownsReturn($user, $orderReturn);
+        }
+
         return $this->isAdmin($user)
             || $this->isAccountant($user)
-            || ($user->hasRole('sales visitor') && $this->ownsReturn($user, $orderReturn))
             || ($user->hasRole('delivery operator') && $user->can('order_returns.view'))
             || $user->can('order_returns.view');
     }
