@@ -15,6 +15,10 @@ class InvoicePolicy
     public function view(User $user, Invoice $invoice): bool { return $this->isAdmin($user) || $this->isAccountant($user) || ($user->can('invoices.view') && $this->ownsInvoice($user, $invoice)); }
     public function create(User $user): bool { return $this->isAdmin($user) || ($this->isAccountant($user) && $user->can('invoices.create')); }
     public function update(User $user, Invoice $invoice): bool { return $this->isAdmin($user) || ($this->isAccountant($user) && $user->can('invoices.update')); }
-    public function issue(User $user, Invoice $invoice): bool { return $this->isAdmin($user) || ($this->isAccountant($user) && $user->can('invoices.issue')); }
+
+    // Issuing an invoice is a final approval step and therefore remains
+    // administrator-only even though accountants can prepare/edit drafts.
+    public function issue(User $user, Invoice $invoice): bool { return $this->isAdmin($user); }
+
     public function cancel(User $user, Invoice $invoice): bool { return $this->isAdmin($user) || ($this->isAccountant($user) && $user->can('invoices.cancel')); }
 }
