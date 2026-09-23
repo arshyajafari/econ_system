@@ -14,15 +14,35 @@ use App\Http\Requests\Invoice\UpdateInvoiceRequest;
 use App\Http\Resources\InvoiceResource;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Models\Payment;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class InvoiceController extends Controller
 {
-    public function __construct() { $this->authorizeModel(Invoice::class, 'invoice'); }
+    public function __construct() {}
 
     public function index(InvoiceIndexRequest $request, ListInvoicesAction $action): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', Invoice::class);
         return InvoiceResource::collection($action->execute($request->validated(), $request->user()));
+    }
+
+    /**
+     * Returns only invoices that the payment form is allowed to use.
+     * Settlement operators need this narrow read path without receiving
+     * general invoice access.
+     */
+    public function payableForPayment(InvoiceIndexRequest $request, ListInvoicesAction $action): AnonymousResourceCollection
+    {
+        $this->authorize('viewAny', Payment::class);
+
+        $filters = array_merge($request->validated(), [
+            'status' => 'issued',
+            'settled' => false,
+            'payable' => true,
+        ]);
+
+        return InvoiceResource::collection($action->execute($filters, $request->user()));
     }
 
     public function show(Invoice $invoice, ShowInvoiceAction $action): InvoiceResource
