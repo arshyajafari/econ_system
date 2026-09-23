@@ -37,7 +37,7 @@ class PaymentPolicy
 
     public function confirm(User $user, Payment $payment): bool
     {
-        return ($this->isAdmin($user) || $user->can('payments.confirm'))
+        return $this->isAdmin($user)
             && $payment->status === PaymentStatus::PENDING;
     }
 
