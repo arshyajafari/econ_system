@@ -27,22 +27,27 @@ class RoleRegistry {
                 Permission::SAMPLE_UPDATE->value,
             ],
 
-            // Accountants can inspect the complete operational workspace and
-            // perform accounting/operational edits, but final approvals remain
-            // exclusively with the administrator.
+            // Accountants may view, create and edit operational records.
+            // Final approval/completion and deletion remain administrator-only.
             Role::ACCOUNTANT->value => array_values(array_unique([
                 ...array_values(array_filter(
                     PermissionRegistry::names(),
-                    static fn (string $permission): bool => str_ends_with($permission, '.view'),
+                    static fn (string $permission): bool =>
+                        str_ends_with($permission, '.view')
+                        || str_ends_with($permission, '.create')
+                        || str_ends_with($permission, '.update')
+                        || str_ends_with($permission, '.cancel')
+                        || str_ends_with($permission, '.export'),
                 )),
                 Permission::CUSTOMER_VIEW->value,
-                Permission::ORDER_VIEW->value, Permission::ORDER_UPDATE->value, Permission::ORDER_CANCEL->value,
+                Permission::ORDER_VIEW->value, Permission::ORDER_CREATE->value,
+                Permission::ORDER_UPDATE->value, Permission::ORDER_CANCEL->value,
                 Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value,
                 Permission::ORDER_RETURN_UPDATE->value, Permission::ORDER_RETURN_CANCEL->value,
                 Permission::INVOICE_VIEW->value, Permission::INVOICE_CREATE->value,
                 Permission::INVOICE_UPDATE->value, Permission::INVOICE_CANCEL->value,
-                Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value, Permission::PAYMENT_UPDATE->value,
-                Permission::PAYMENT_CANCEL->value, Permission::PAYMENT_DELETE->value,
+                Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value,
+                Permission::PAYMENT_UPDATE->value, Permission::PAYMENT_CANCEL->value,
                 Permission::DELIVERY_VIEW->value,
             ])),
 
