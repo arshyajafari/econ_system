@@ -26,12 +26,7 @@ class CreateOrderReturnAction {
             if (!$canCreateForAnyCompletedOrder) {
                 $isOwnOrder = $order->sales_employee_id === $employee->id;
 
-                if ($user->hasRole('sales visitor')) {
-                    $hasOwnInvoice = $order->invoice()->where('employee_id', $employee->id)->exists();
-                    if (!$isOwnOrder || !$hasOwnInvoice) {
-                        throw new BusinessRuleException('فقط سفارش‌های دارای فاکتور ثبت‌شده توسط خودتان قابل مرجوعی هستند.');
-                    }
-                } elseif (!$isOwnOrder) {
+                if (!$isOwnOrder) {
                     throw new BusinessRuleException('فقط سفارش‌های ثبت‌شده توسط خودتان قابل مرجوعی هستند.');
                 }
             }
