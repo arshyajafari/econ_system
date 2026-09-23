@@ -42,17 +42,15 @@ class OrderReturnController extends Controller {
                 $query->whereRaw('order_items.quantity > (SELECT COALESCE(SUM(order_return_items.quantity), 0) FROM order_return_items INNER JOIN order_returns ON order_returns.id = order_return_items.order_return_id WHERE order_return_items.order_item_id = order_items.id AND order_returns.status NOT IN (?, ?) AND order_returns.deleted_at IS NULL AND order_return_items.deleted_at IS NULL)', ['draft', 'cancelled']);
             });
 
-        // A sales visitor may only see completed orders that have an invoice
-        // registered for that same sales employee. Admin/accountant/delivery
-        // roles keep the existing cross-employee visibility.
+        // A sales visitor may only see orders registered by that same sales employee.
+        // Invoice ownership, delivery responsibility, admin/accountant access, etc.
+        // must not affect this rule.
         if ($user?->hasRole('sales visitor')) {
             $employeeId = $user->employee?->id;
             if (!$employeeId) {
                 $orders->whereRaw('1 = 0');
             } else {
-                $orders
-                    ->whereHas('invoice', fn ($query) => $query->where('employee_id', $employeeId))
-                    ->where('sales_employee_id', $employeeId);
+                $orders->where('sales_employee_id', $employeeId);
             }
         }
 
@@ -71,8 +69,7 @@ class OrderReturnController extends Controller {
             $employeeId = $user->employee?->id;
             abort_unless(
                 $employeeId
-                && $order->sales_employee_id === $employeeId
-                && $order->invoice()->where('employee_id', $employeeId)->exists(),
+                && $order->sales_employee_id === $employeeId,
                 404,
                 'این سفارش برای ثبت مرجوعی در دسترس شما نیست.',
             );
