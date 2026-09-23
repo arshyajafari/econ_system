@@ -27,18 +27,24 @@ class RoleRegistry {
                 Permission::SAMPLE_UPDATE->value,
             ],
 
-            Role::ACCOUNTANT->value => [
+            // Accountants can inspect the complete operational workspace and
+            // perform accounting/operational edits, but final approvals remain
+            // exclusively with the administrator.
+            Role::ACCOUNTANT->value => array_values(array_unique([
+                ...array_values(array_filter(
+                    PermissionRegistry::names(),
+                    static fn (string $permission): bool => str_ends_with($permission, '.view'),
+                )),
                 Permission::CUSTOMER_VIEW->value,
                 Permission::ORDER_VIEW->value, Permission::ORDER_UPDATE->value, Permission::ORDER_CANCEL->value,
                 Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value,
-                Permission::ORDER_RETURN_UPDATE->value, Permission::ORDER_RETURN_CONFIRM->value,
-                Permission::ORDER_RETURN_COMPLETE->value, Permission::ORDER_RETURN_CANCEL->value,
+                Permission::ORDER_RETURN_UPDATE->value, Permission::ORDER_RETURN_CANCEL->value,
                 Permission::INVOICE_VIEW->value, Permission::INVOICE_CREATE->value,
-                Permission::INVOICE_UPDATE->value, Permission::INVOICE_ISSUE->value, Permission::INVOICE_CANCEL->value,
+                Permission::INVOICE_UPDATE->value, Permission::INVOICE_CANCEL->value,
                 Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value, Permission::PAYMENT_UPDATE->value,
-                Permission::PAYMENT_CONFIRM->value, Permission::PAYMENT_CANCEL->value, Permission::PAYMENT_DELETE->value,
-                Permission::DELIVERY_VIEW->value, Permission::DELIVERY_PREPARE->value, Permission::DELIVERY_SHIP->value,
-            ],
+                Permission::PAYMENT_CANCEL->value, Permission::PAYMENT_DELETE->value,
+                Permission::DELIVERY_VIEW->value,
+            ])),
 
             Role::SETTLEMENT_OPERATOR->value => [
                 Permission::CUSTOMER_VIEW->value,
@@ -48,8 +54,6 @@ class RoleRegistry {
                 Permission::DELIVERY_VIEW->value,
             ],
 
-            // Delivery operator registers/edits deliveries and confirms the physical hand-off only.
-            // Preparation and shipment are approved by admin/accountant.
             Role::DELIVERY_OPERATOR->value => [
                 Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value,
                 Permission::ORDER_RETURN_UPDATE->value, Permission::ORDER_RETURN_SUBMIT->value,
