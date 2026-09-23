@@ -18,7 +18,11 @@ class InvoiceQuery extends BaseQuery
         $this->applyOrder($filters['order_id'] ?? null);
         $this->applyCustomer($filters['customer_id'] ?? null);
 
-        if ($user?->hasAnyRole(['admin', 'accountant'])) {
+        // The dedicated payment-invoice endpoint authorizes the caller with
+        // payments.view. Settlement operators must therefore be able to select
+        // payable invoices created by other employees as well; otherwise the
+        // customer can be selected while their invoice is silently filtered out.
+        if ($user?->hasAnyRole(['admin', 'accountant', 'settlement operator'])) {
             $this->applyEmployee($filters['employee_id'] ?? null);
         } else {
             $employeeId = $user?->employee?->id;
