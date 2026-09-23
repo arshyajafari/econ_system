@@ -23,8 +23,17 @@ class CreateOrderReturnAction {
             $order = Order::query()->where('public_id', $data['order_id'])->lockForUpdate()->with(['items', 'returns.items'])->firstOrFail();
 
             $canCreateForAnyCompletedOrder = $user->hasAnyRole(['admin', 'accountant', 'delivery operator']);
-            if (!$canCreateForAnyCompletedOrder && $order->sales_employee_id !== $employee->id) {
-                throw new BusinessRuleException('فقط سفارش‌های ثبت‌شده توسط خودتان قابل مرجوعی هستند.');
+            if (!$canCreateForAnyCompletedOrder) {
+                $isOwnOrder = $order->sales_employee_id === $employee->id;
+
+                if ($user->hasRole('sales visitor')) {
+                    $hasOwnInvoice = $order->invoice()->where('employee_id', $employee->id)->exists();
+                    if (!$isOwnOrder || !$hasOwnInvoice) {
+                        throw new BusinessRuleException('فقط سفارش‌های دارای فاکتور ثبت‌شده توسط خودتان قابل مرجوعی هستند.');
+                    }
+                } elseif (!$isOwnOrder) {
+                    throw new BusinessRuleException('فقط سفارش‌های ثبت‌شده توسط خودتان قابل مرجوعی هستند.');
+                }
             }
 
             if ($order->status !== OrderStatus::COMPLETED) throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل برگشت است.');
