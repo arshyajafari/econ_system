@@ -13,7 +13,14 @@ class OrderReturnPolicy {
     private function editableBeforeAdminApproval(OrderReturn $orderReturn): bool { return in_array($orderReturn->status->value, ['draft', 'pending'], true); }
 
     public function viewAny(User $user): bool { return $this->isAdmin($user) || $this->isAccountant($user) || $user->can('order_returns.view'); }
-    public function view(User $user, OrderReturn $orderReturn): bool { return $this->viewAny($user); }
+
+    public function view(User $user, OrderReturn $orderReturn): bool {
+        return $this->isAdmin($user)
+            || $this->isAccountant($user)
+            || ($user->hasRole('sales visitor') && $this->ownsReturn($user, $orderReturn))
+            || ($user->hasRole('delivery operator') && $user->can('order_returns.view'))
+            || $user->can('order_returns.view');
+    }
 
     public function create(User $user): bool {
         return $this->isAdmin($user) || ($this->isDeliveryOperator($user) && $user->can('order_returns.create')) || $user->can('order_returns.create');
