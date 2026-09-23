@@ -96,8 +96,8 @@ class NotificationController extends Controller
                             ['users']
                         )
                         ->whereRaw(
-                            "CAST(JSON_UNQUOTE(JSON_EXTRACT(data, '$.recipient_user_id')) AS UNSIGNED) = ?",
-                            [(int) $user->getKey()]
+                            "JSON_CONTAINS(JSON_EXTRACT(data, '$.target_values'), JSON_QUOTE(?))",
+                            [$user->getAttribute('public_id')]
                         );
                 })
                 ->orWhere(function ($query) use ($activityType): void {
@@ -113,7 +113,7 @@ class NotificationController extends Controller
                             ['positions']
                         )
                         ->whereRaw(
-                            "JSON_UNQUOTE(JSON_EXTRACT(data, '$.recipient_activity_type')) = ?",
+                            "JSON_CONTAINS(JSON_EXTRACT(data, '$.target_values'), JSON_QUOTE(?))",
                             [$activityType]
                         );
                 });

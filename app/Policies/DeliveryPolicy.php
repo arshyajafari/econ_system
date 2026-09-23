@@ -24,20 +24,22 @@ class DeliveryPolicy {
         return $this->isAdmin($user) || ($this->isDeliveryOperator($user) && $user->can('deliveries.update'));
     }
 
+    // Preparation and shipment are approval gates. Only admin may approve them.
     public function prepare(User $user, Delivery $delivery): bool {
-        return ($this->isAdmin($user) || $this->isAccountant()) && $user->can('deliveries.prepare');
+        return $this->isAdmin($user) && $user->can('deliveries.prepare');
     }
 
     public function ship(User $user, Delivery $delivery): bool {
-        return ($this->isAdmin($user) || $this->isAccountant()) && $user->can('deliveries.ship');
+        return $this->isAdmin($user) && $user->can('deliveries.ship');
     }
 
+    // Physical hand-off can still be registered by the delivery operator.
     public function complete(User $user, Delivery $delivery): bool {
         return ($this->isAdmin($user) || $this->isDeliveryOperator($user)) && $user->can('deliveries.complete');
     }
 
     public function cancel(User $user, Delivery $delivery): bool {
-        return ($this->isAdmin($user) || $this->isAccountant()) && $user->can('deliveries.cancel');
+        return ($this->isAdmin($user) || $this->isAccountant($user)) && $user->can('deliveries.cancel');
     }
 
     public function export(User $user): bool {
