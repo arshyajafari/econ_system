@@ -21,14 +21,18 @@ class NotificationController extends Controller
         $perPage = min(max($request->integer('per_page', 20), 1), 50);
 
         return SystemNotificationResource::collection(
-            $request->user()->notifications()->latest()->paginate($perPage)
+            $this->visibleNotifications($request->user())
+                ->latest()
+                ->paginate($perPage)
         );
     }
 
     public function unreadCount(Request $request)
     {
         return response()->json([
-            'count' => $request->user()->unreadNotifications()->count(),
+            'count' => $this->visibleNotifications($request->user())
+                ->whereNull('read_at')
+                ->count(),
         ]);
     }
 
@@ -42,9 +46,49 @@ class NotificationController extends Controller
 
     public function markAllRead(Request $request)
     {
-        $request->user()->unreadNotifications()->update(['read_at' => now()]);
+        $this->visibleNotifications($request->user())
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Return only notifications that are actually addressed to the
+     * authenticated user.
+     *
+     * Notifications are stored as individual database rows, so the
+     * notifiable user is already a strong boundary. The explicit recipient
+     * metadata is an additional defense-in-depth check that prevents a
+     * targeted message from becoming visible if recipient rows were ever
+     * created too broadly.
+     */
+    private function visibleNotifications(User $user)
+    {
+        $query = $user->notifications();
+
+        return $query->where(function ($query) use ($user): void {
+            $query
+                ->where('data->target_type', 'all')
+                ->orWhere(function ($query) use ($user): void {
+                    $query
+                        ->where('data->target_type', 'users')
+                        ->where('data->recipient_user_id', (string) $user->getKey());
+                })
+                ->orWhere(function ($query) use ($user): void {
+                    $activityType = $user->employee?->activity_type?->value;
+
+                    if ($activityType === null) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    $query
+                        ->where('data->target_type', 'positions')
+                        ->where('data->recipient_activity_type', $activityType);
+                });
+        });
     }
 
     public function recipients(Request $request)
