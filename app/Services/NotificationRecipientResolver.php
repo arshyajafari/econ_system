@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\EmployeeActivityType;
+use App\Enums\EmployeeStatus;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -39,7 +40,7 @@ class NotificationRecipientResolver
                 ->whereHas('employee', function ($query) use ($positionTypes): void {
                     $query
                         ->whereIn('activity_type', array_values(array_unique($positionTypes)))
-                        ->where('status', 'active');
+                        ->where('status', EmployeeStatus::ACTIVE->value);
                 })
                 ->get(),
 
