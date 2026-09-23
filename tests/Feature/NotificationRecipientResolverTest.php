@@ -80,6 +80,66 @@ class NotificationRecipientResolverTest extends TestCase
         );
     }
 
+
+
+    public function test_targeted_notification_is_not_visible_to_another_user_even_if_a_row_exists_for_them(): void
+    {
+        $targetUser = $this->createUserWithEmployee(EmployeeActivityType::DELIVERY_OPERATOR);
+        $otherUser = $this->createUserWithEmployee(EmployeeActivityType::ACCOUNTANT);
+
+        $notification = new SystemMessageNotification(
+            title: 'Targeted',
+            body: 'Only the delivery operator should see this.',
+            priority: 'normal',
+            senderId: $targetUser->id,
+            messageId: 'targeted-user-message',
+            targetType: 'users',
+            targetValues: [$targetUser->public_id],
+        );
+
+        $targetUser->notify($notification);
+        $otherUser->notify($notification);
+
+        $this->actingAs($targetUser)
+            ->getJson('/api/v1/notifications')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->actingAs($otherUser)
+            ->getJson('/api/v1/notifications')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_position_notification_is_not_visible_to_a_different_position(): void
+    {
+        $deliveryUser = $this->createUserWithEmployee(EmployeeActivityType::DELIVERY_OPERATOR);
+        $accountantUser = $this->createUserWithEmployee(EmployeeActivityType::ACCOUNTANT);
+
+        $notification = new SystemMessageNotification(
+            title: 'Position targeted',
+            body: 'Only delivery operators should see this.',
+            priority: 'normal',
+            senderId: $deliveryUser->id,
+            messageId: 'targeted-position-message',
+            targetType: 'positions',
+            targetValues: [EmployeeActivityType::DELIVERY_OPERATOR->value],
+        );
+
+        $deliveryUser->notify($notification);
+        $accountantUser->notify($notification);
+
+        $this->actingAs($deliveryUser)
+            ->getJson('/api/v1/notifications')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->actingAs($accountantUser)
+            ->getJson('/api/v1/notifications')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
     private function createUserWithEmployee(EmployeeActivityType $activityType): User
     {
         $employee = Employee::create([
