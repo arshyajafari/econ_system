@@ -3,6 +3,7 @@
 namespace App\Actions\Payment;
 
 use App\Enums\DeliveryStatus;
+use Carbon\Carbon;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
@@ -83,12 +84,27 @@ class CreatePaymentAction {
                 'amount' => $amount,
                 'settlement_discount_amount' => $discountAmount,
                 'reference_number' => $data['reference_number'] ?? null,
-                'payment_date' => $data['payment_date'],
+                'payment_date' => $this->normalizePaymentDate($data['payment_date']),
                 'description' => $data['description'] ?? null,
                 'meta' => $meta ?: null,
             ]);
 
             return $payment->fresh(Payment::DEFAULT_RELATIONS);
         });
+    }
+
+    private function normalizePaymentDate(string $paymentDate): Carbon
+    {
+        $date = Carbon::parse($paymentDate);
+
+        // The payment form sends a calendar date. When no time is supplied,
+        // preserve that selected date but record the actual registration time
+        // instead of defaulting to 00:00:00.
+        if (preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', trim($paymentDate)) === 1) {
+            $now = now();
+            $date->setTime($now->hour, $now->minute, $now->second);
+        }
+
+        return $date;
     }
 }
