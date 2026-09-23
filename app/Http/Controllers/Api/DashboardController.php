@@ -13,10 +13,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        abort_unless(
-            $user->hasAnyRole(['admin', 'accountant']) && $user->can('dashboard.view'),
-            403,
-        );
+        abort_unless($user->hasAnyRole(['admin', 'accountant']), 403);
 
         return new DashboardResource($action->execute());
     }
