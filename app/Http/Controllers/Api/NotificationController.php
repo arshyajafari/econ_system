@@ -38,7 +38,9 @@ class NotificationController extends Controller
 
     public function markRead(Request $request, string $notification)
     {
-        $model = $request->user()->notifications()->whereKey($notification)->firstOrFail();
+        $model = $this->visibleNotifications($request->user())
+            ->whereKey($notification)
+            ->firstOrFail();
         $model->markAsRead();
 
         return SystemNotificationResource::make($model->fresh());
@@ -65,19 +67,40 @@ class NotificationController extends Controller
      */
     private function visibleNotifications(User $user)
     {
+        /*
+         * The notifications migration stores data as TEXT, not JSON.
+         * Use explicit MySQL JSON functions instead of Laravel JSON-column
+         * syntax so the query matches the actual schema.
+         *
+         * The notification relation already scopes rows to the authenticated
+         * user's notifiable id. Target metadata is a second security boundary.
+         * Rows without target_type are legacy notifications and remain visible
+         * to their owner.
+         */
         $query = $user->notifications();
+        $activityType = $user->employee?->activity_type?->value;
 
-        return $query->where(function ($query) use ($user): void {
+        return $query->where(function ($query) use ($user, $activityType): void {
             $query
-                ->where('data->target_type', 'all')
+                ->whereRaw(
+                    "JSON_UNQUOTE(JSON_EXTRACT(data, '$.target_type')) IS NULL"
+                )
+                ->orWhereRaw(
+                    "JSON_UNQUOTE(JSON_EXTRACT(data, '$.target_type')) = ?",
+                    ['all']
+                )
                 ->orWhere(function ($query) use ($user): void {
                     $query
-                        ->where('data->target_type', 'users')
-                        ->where('data->recipient_user_id', (string) $user->getKey());
+                        ->whereRaw(
+                            "JSON_UNQUOTE(JSON_EXTRACT(data, '$.target_type')) = ?",
+                            ['users']
+                        )
+                        ->whereRaw(
+                            "CAST(JSON_UNQUOTE(JSON_EXTRACT(data, '$.recipient_user_id')) AS UNSIGNED) = ?",
+                            [(int) $user->getKey()]
+                        );
                 })
-                ->orWhere(function ($query) use ($user): void {
-                    $activityType = $user->employee?->activity_type?->value;
-
+                ->orWhere(function ($query) use ($activityType): void {
                     if ($activityType === null) {
                         $query->whereRaw('1 = 0');
 
@@ -85,8 +108,14 @@ class NotificationController extends Controller
                     }
 
                     $query
-                        ->where('data->target_type', 'positions')
-                        ->where('data->recipient_activity_type', $activityType);
+                        ->whereRaw(
+                            "JSON_UNQUOTE(JSON_EXTRACT(data, '$.target_type')) = ?",
+                            ['positions']
+                        )
+                        ->whereRaw(
+                            "JSON_UNQUOTE(JSON_EXTRACT(data, '$.recipient_activity_type')) = ?",
+                            [$activityType]
+                        );
                 });
         });
     }

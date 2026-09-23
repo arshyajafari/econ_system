@@ -82,6 +82,35 @@ class NotificationRecipientResolverTest extends TestCase
 
 
 
+    public function test_all_notification_is_visible_to_every_recipient(): void
+    {
+        $firstUser = $this->createUserWithEmployee(EmployeeActivityType::DELIVERY_OPERATOR);
+        $secondUser = $this->createUserWithEmployee(EmployeeActivityType::ACCOUNTANT);
+
+        $notification = new SystemMessageNotification(
+            title: 'Broadcast',
+            body: 'All users should see this.',
+            priority: 'normal',
+            senderId: $firstUser->id,
+            messageId: 'broadcast-message',
+            targetType: 'all',
+            targetValues: [],
+        );
+
+        $firstUser->notify($notification);
+        $secondUser->notify($notification);
+
+        $this->actingAs($firstUser)
+            ->getJson('/api/v1/notifications')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->actingAs($secondUser)
+            ->getJson('/api/v1/notifications')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
     public function test_targeted_notification_is_not_visible_to_another_user_even_if_a_row_exists_for_them(): void
     {
         $targetUser = $this->createUserWithEmployee(EmployeeActivityType::DELIVERY_OPERATOR);
