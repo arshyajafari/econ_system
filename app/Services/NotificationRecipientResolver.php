@@ -24,21 +24,21 @@ class NotificationRecipientResolver
         array $userIds = [],
         array $positionTypes = [],
     ): Collection {
-        return match ($targetType) {
-            'all' => User::query()
-                ->active()
-                ->get(),
+        $query = User::query()
+            ->active()
+            ->with('employee:id,public_id,first_name,last_name,status,activity_type');
 
-            'users' => User::query()
-                ->active()
+        return match ($targetType) {
+            'all' => $query->get(),
+
+            'users' => $query
                 ->whereIn('public_id', array_values(array_unique($userIds)))
                 ->get(),
 
-            'positions' => User::query()
-                ->active()
+            'positions' => $query
                 ->whereNotNull('employee_id')
-                ->whereHas('employee', function ($query) use ($positionTypes): void {
-                    $query
+                ->whereHas('employee', function ($employeeQuery) use ($positionTypes): void {
+                    $employeeQuery
                         ->whereIn('activity_type', array_values(array_unique($positionTypes)))
                         ->where('status', EmployeeStatus::ACTIVE->value);
                 })

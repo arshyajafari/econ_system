@@ -29,6 +29,8 @@ class SystemMessageNotification extends Notification
 
     public function toArray(object $notifiable): array
     {
+        $activityType = $notifiable->employee?->activity_type;
+
         return [
             'title' => $this->title,
             'body' => $this->body,
@@ -37,6 +39,9 @@ class SystemMessageNotification extends Notification
             'message_id' => $this->messageId,
             'target_type' => $this->targetType,
             'target_values' => $this->targetValues,
+            'recipient_user_id' => $notifiable->getKey(),
+            'recipient_employee_id' => $notifiable->employee_id,
+            'recipient_activity_type' => $activityType?->value,
         ];
     }
 }

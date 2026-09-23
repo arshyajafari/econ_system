@@ -9,6 +9,7 @@ use App\Enums\Gender;
 use App\Enums\UserStatus;
 use App\Models\Employee;
 use App\Models\User;
+use App\Notifications\SystemMessageNotification;
 use App\Services\NotificationRecipientResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -32,6 +33,10 @@ class NotificationRecipientResolverTest extends TestCase
         $this->assertSame([$deliveryUser->id], $recipients->modelKeys());
         $this->assertNotContains($accountantUser->id, $recipients->modelKeys());
         $this->assertNotContains($scientificUser->id, $recipients->modelKeys());
+        $this->assertSame(
+            EmployeeActivityType::DELIVERY_OPERATOR,
+            $recipients->first()->employee->activity_type,
+        );
     }
 
     public function test_inactive_employee_is_not_a_position_recipient_even_when_the_user_is_active(): void
@@ -45,6 +50,34 @@ class NotificationRecipientResolverTest extends TestCase
         );
 
         $this->assertNotContains($user->id, $recipients->modelKeys());
+    }
+
+    public function test_notification_stores_the_exact_recipient_position_snapshot(): void
+    {
+        $user = $this->createUserWithEmployee(EmployeeActivityType::DELIVERY_OPERATOR);
+
+        $notification = new SystemMessageNotification(
+            title: 'Test',
+            body: 'Body',
+            priority: 'normal',
+            senderId: 1,
+            messageId: 'test-message-id',
+            targetType: 'positions',
+            targetValues: [EmployeeActivityType::DELIVERY_OPERATOR->value],
+        );
+
+        $payload = $notification->toArray($user->load('employee'));
+
+        $this->assertSame($user->id, $payload['recipient_user_id']);
+        $this->assertSame($user->employee_id, $payload['recipient_employee_id']);
+        $this->assertSame(
+            EmployeeActivityType::DELIVERY_OPERATOR->value,
+            $payload['recipient_activity_type'],
+        );
+        $this->assertSame(
+            [EmployeeActivityType::DELIVERY_OPERATOR->value],
+            $payload['target_values'],
+        );
     }
 
     private function createUserWithEmployee(EmployeeActivityType $activityType): User
