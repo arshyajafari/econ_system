@@ -72,6 +72,28 @@ class CreateSampleAction
                 $inventory->save();
             }
 
+            // A visit can contain a product only once at the database level.
+            // If the same product is registered again for the same visit,
+            // increase the existing sample quantity instead of triggering
+            // the samples_visit_id_product_id_unique constraint.
+            $sample = Sample::query()
+                ->where('visit_id', $visit->id)
+                ->where('product_id', $product->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($sample) {
+                $sample->quantity += $quantity;
+
+                if (array_key_exists('description', $data) && $data['description'] !== null) {
+                    $sample->description = $data['description'];
+                }
+
+                $sample->save();
+
+                return $sample->fresh(Sample::DEFAULT_RELATIONS);
+            }
+
             $sample = Sample::create([
                 'client_operation_id' => $data['client_operation_id'] ?? null,
                 'visit_id' => $visit->id,
