@@ -35,7 +35,14 @@ class OrderReturnPolicy {
             || ($user->can('order_returns.update') && $this->ownsReturn($user, $orderReturn) && $this->editableBeforeAdminApproval($orderReturn));
     }
     public function submit(User $user, OrderReturn $orderReturn): bool {
-        return $this->isAdmin($user) || ($this->isDeliveryOperator($user) && $user->can('order_returns.submit') && $this->ownsReturn($user, $orderReturn)) || ($user->can('order_returns.submit') && $this->ownsReturn($user, $orderReturn));
+        if ($user->hasRole('sales visitor')) {
+            return $this->ownsReturn($user, $orderReturn)
+                && $orderReturn->status->value === 'draft';
+        }
+
+        return $this->isAdmin($user)
+            || ($this->isDeliveryOperator($user) && $user->can('order_returns.submit') && $this->ownsReturn($user, $orderReturn))
+            || ($user->can('order_returns.submit') && $this->ownsReturn($user, $orderReturn));
     }
     public function confirm(User $user, OrderReturn $orderReturn): bool { return $this->isAdmin($user) && $user->can('order_returns.confirm'); }
     public function complete(User $user, OrderReturn $orderReturn): bool { return $this->isAdmin($user) && $user->can('order_returns.complete'); }
