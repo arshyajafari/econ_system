@@ -9,12 +9,15 @@ use App\Http\Requests\Notification\StoreSystemMessageRequest;
 use App\Http\Resources\SystemNotificationResource;
 use App\Models\User;
 use App\Notifications\SystemMessageNotification;
+use App\Services\NotificationRecipientResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Notifications\DatabaseNotification;
 
-class NotificationController extends Controller {
-    public function index(Request $request) {
+class NotificationController extends Controller
+{
+    public function index(Request $request)
+    {
         $perPage = min(max($request->integer('per_page', 20), 1), 50);
 
         return SystemNotificationResource::collection(
@@ -22,26 +25,30 @@ class NotificationController extends Controller {
         );
     }
 
-    public function unreadCount(Request $request) {
+    public function unreadCount(Request $request)
+    {
         return response()->json([
             'count' => $request->user()->unreadNotifications()->count(),
         ]);
     }
 
-    public function markRead(Request $request, string $notification) {
+    public function markRead(Request $request, string $notification)
+    {
         $model = $request->user()->notifications()->whereKey($notification)->firstOrFail();
         $model->markAsRead();
 
         return SystemNotificationResource::make($model->fresh());
     }
 
-    public function markAllRead(Request $request) {
+    public function markAllRead(Request $request)
+    {
         $request->user()->unreadNotifications()->update(['read_at' => now()]);
 
         return response()->json(['success' => true]);
     }
 
-    public function recipients(Request $request) {
+    public function recipients(Request $request)
+    {
         abort_unless($request->user()->hasRole(Role::ADMIN->value), 403);
 
         $users = User::query()
@@ -67,18 +74,24 @@ class NotificationController extends Controller {
         ]);
     }
 
-    public function update(Request $request, string $notification) {
+    public function update(Request $request, string $notification)
+    {
         abort_unless($request->user()->hasRole(Role::ADMIN->value), 403);
         $data = $request->validate([
             'title' => ['required', 'string', 'max:120'],
             'body' => ['required', 'string', 'max:5000'],
             'priority' => ['required', 'in:low,normal,high,urgent'],
         ]);
+
         $rows = DatabaseNotification::query()
             ->where('data->message_id', $notification)
             ->where('data->sender_id', (int) $request->user()->getKey())
             ->get();
-        if ($rows->isEmpty()) abort(404);
+
+        if ($rows->isEmpty()) {
+            abort(404);
+        }
+
         foreach ($rows as $row) {
             $payload = $row->data;
             $payload['title'] = $data['title'];
@@ -87,32 +100,45 @@ class NotificationController extends Controller {
             $row->data = $payload;
             $row->save();
         }
+
         return response()->json(['success' => true]);
     }
 
-    public function destroy(Request $request, string $notification) {
+    public function destroy(Request $request, string $notification)
+    {
         abort_unless($request->user()->hasRole(Role::ADMIN->value), 403);
+
         $rows = DatabaseNotification::query()
             ->where('data->message_id', $notification)
             ->where('data->sender_id', (int) $request->user()->getKey())
             ->get();
-        if ($rows->isEmpty()) abort(404);
-        foreach ($rows as $row) $row->delete();
+
+        if ($rows->isEmpty()) {
+            abort(404);
+        }
+
+        foreach ($rows as $row) {
+            $row->delete();
+        }
+
         return response()->noContent();
     }
 
-    public function send(StoreSystemMessageRequest $request) {
+    public function send(
+        StoreSystemMessageRequest $request,
+        NotificationRecipientResolver $recipientResolver,
+    ) {
         $data = $request->validated();
 
-        $users = match ($data['target_type']) {
-            'all' => User::active()->get(),
-            'users' => User::active()->whereIn('public_id', $data['user_ids'])->get(),
-            'positions' => User::active()
-                ->whereHas('employee', function ($query) use ($data) {
-                    $query->whereIn('activity_type', $data['position_types']);
-                })
-                ->get(),
-        };
+        $positionTypes = $data['target_type'] === 'positions'
+            ? $recipientResolver->normalizePositions($data['position_types'])
+            : [];
+
+        $users = $recipientResolver->resolve(
+            targetType: $data['target_type'],
+            userIds: $data['user_ids'] ?? [],
+            positionTypes: $positionTypes,
+        );
 
         if ($users->isEmpty()) {
             return response()->json([
@@ -120,16 +146,23 @@ class NotificationController extends Controller {
             ], 422);
         }
 
-        $notification = new SystemMessageNotification(
-            $data['title'],
-            $data['body'],
-            $data['priority'],
-            (int) $request->user()->getKey(),
-            (string) Str::uuid(),
-        );
+        $messageId = (string) Str::uuid();
+        $targetValues = match ($data['target_type']) {
+            'all' => [],
+            'users' => array_values(array_unique($data['user_ids'] ?? [])),
+            'positions' => $positionTypes,
+        };
 
         foreach ($users as $user) {
-            $user->notify($notification);
+            $user->notify(new SystemMessageNotification(
+                title: $data['title'],
+                body: $data['body'],
+                priority: $data['priority'],
+                senderId: (int) $request->user()->getKey(),
+                messageId: $messageId,
+                targetType: $data['target_type'],
+                targetValues: $targetValues,
+            ));
         }
 
         return response()->json([
