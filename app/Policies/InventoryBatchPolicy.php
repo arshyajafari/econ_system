@@ -14,7 +14,7 @@ class InventoryBatchPolicy
 
     public function viewAny(User $user): bool { return $this->canView($user); }
     public function view(User $user, InventoryBatch $batch): bool { return $this->canView($user); }
-    public function create(User $user): bool { return $user->hasRole('admin'); }
-    public function update(User $user, InventoryBatch $batch): bool { return $user->hasRole('admin'); }
+    public function create(User $user): bool { return $user->hasAnyRole(['admin', 'accountant']); }
+    public function update(User $user, InventoryBatch $batch): bool { return $user->hasAnyRole(['admin', 'accountant']); }
     public function delete(User $user, InventoryBatch $batch): bool { return $user->hasRole('admin'); }
 }
