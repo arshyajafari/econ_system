@@ -207,8 +207,14 @@ class NotificationController extends Controller
         ]);
 
         $rows = DatabaseNotification::query()
-            ->where('data->message_id', $notification)
-            ->where('data->sender_id', (int) $request->user()->getKey())
+            ->whereRaw(
+                "JSON_UNQUOTE(JSON_EXTRACT(data, '$.message_id')) = ?",
+                [$notification]
+            )
+            ->whereRaw(
+                "JSON_UNQUOTE(JSON_EXTRACT(data, '$.sender_id')) = ?",
+                [(int) $request->user()->getKey()]
+            )
             ->get();
 
         if ($rows->isEmpty()) {
