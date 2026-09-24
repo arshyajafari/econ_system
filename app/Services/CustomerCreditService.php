@@ -103,6 +103,64 @@ class CustomerCreditService {
         return $amount;
     }
 
+    public function availablePaymentCreditAmount(int $customerId): float
+    {
+        return max(
+            0,
+            round(
+                $this->creditSources($customerId)
+                    ->filter(fn (array $source) => $source['transaction']->payment_id !== null)
+                    ->sum('available'),
+                2,
+            ),
+        );
+    }
+
+    public function allocatePaymentCreditToInvoice(
+        int $customerId,
+        Invoice $invoice,
+        float $requestedAmount,
+        ?string $description = null,
+    ): float {
+        $requestedAmount = round($requestedAmount, 2);
+
+        if ($requestedAmount <= 0 || (int) $invoice->customer_id !== $customerId) {
+            return 0.0;
+        }
+
+        $remainingToAllocate = min(
+            $requestedAmount,
+            $this->availablePaymentCreditAmount($customerId),
+            $invoice->effectiveRemainingAmount(),
+        );
+
+        if ($remainingToAllocate <= 0) {
+            return 0.0;
+        }
+
+        $allocatedTotal = 0.0;
+
+        foreach ($this->creditSources($customerId)->filter(
+            fn (array $source) => $source['transaction']->payment_id !== null
+        ) as $source) {
+            if ($remainingToAllocate <= 0) {
+                break;
+            }
+
+            $allocated = $this->createAllocation(
+                sourceTransaction: $source['transaction'],
+                invoice: $invoice,
+                amount: min($source['available'], $remainingToAllocate),
+                description: $description,
+            );
+
+            $allocatedTotal += $allocated;
+            $remainingToAllocate -= $allocated;
+        }
+
+        return round($allocatedTotal, 2);
+    }
+
     public function invoiceAppliedAmount(Invoice $invoice): float {
         return (float) CustomerCreditAllocation::query()
             ->where('invoice_id', $invoice->id)
