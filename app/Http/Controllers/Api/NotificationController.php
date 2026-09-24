@@ -23,7 +23,7 @@ class NotificationController extends Controller
         $user = $request->user();
 
         $query = $this->canManageMessages($user)
-            ? $this->visibleNotificationsForManager()
+            ? $this->visibleNotificationsForManager($user)
             : $this->visibleNotifications($user);
 
         return SystemNotificationResource::collection(
@@ -77,7 +77,7 @@ class NotificationController extends Controller
         ]);
     }
 
-    private function visibleNotificationsForManager()
+    private function visibleNotificationsForManager(User $user)
     {
         /*
          * Admins and accountants have management visibility over the complete
@@ -96,14 +96,41 @@ class NotificationController extends Controller
          */
         return $query
             ->selectRaw(
-                "MAX(id) AS id,
+                "COALESCE(
+                    MAX(
+                        CASE
+                            WHEN notifiable_type = ? AND notifiable_id = ? THEN id
+                            ELSE NULL
+                        END
+                    ),
+                    MAX(id)
+                ) AS id,
                  MAX(type) AS type,
                  MAX(notifiable_type) AS notifiable_type,
                  MAX(notifiable_id) AS notifiable_id,
                  MAX(data) AS data,
-                 MAX(read_at) AS read_at,
+                 MAX(
+                    CASE
+                        WHEN notifiable_type = ? AND notifiable_id = ? THEN read_at
+                        ELSE NULL
+                    END
+                 ) AS read_at,
                  MAX(created_at) AS created_at,
-                 MAX(updated_at) AS updated_at"
+                 MAX(updated_at) AS updated_at,
+                 MAX(
+                    CASE
+                        WHEN notifiable_type = ? AND notifiable_id = ? THEN 1
+                        ELSE 0
+                    END
+                 ) AS is_manager_recipient",
+                [
+                    User::class,
+                    $user->getKey(),
+                    User::class,
+                    $user->getKey(),
+                    User::class,
+                    $user->getKey(),
+                ]
             )
             ->groupByRaw(
                 "COALESCE(
