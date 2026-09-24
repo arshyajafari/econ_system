@@ -23,7 +23,7 @@ class NotificationController extends Controller
         $user = $request->user();
 
         $query = $this->canManageMessages($user)
-            ? $this->visibleNotificationsForManager($user)
+            ? $this->visibleNotificationsForManager()
             : $this->visibleNotifications($user);
 
         return SystemNotificationResource::collection(
@@ -77,7 +77,7 @@ class NotificationController extends Controller
         ]);
     }
 
-    private function visibleNotificationsForManager(User $user)
+    private function visibleNotificationsForManager()
     {
         /*
          * Admins and accountants have management visibility over the complete
