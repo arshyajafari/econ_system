@@ -11,8 +11,7 @@ use Illuminate\Support\Collection;
 
 class CustomerCreditService {
     public function availableAmount(int $customerId): float {
-        $available = $this->creditSources($customerId)->sum('available');
-        return max(0, round($available, 2));
+        return max(0, round($this->creditSources($customerId)->sum('available'), 2));
     }
 
     public function allocateToInvoice(int $customerId, Invoice $invoice, float $requestedAmount, ?string $description = null): float {
@@ -123,14 +122,18 @@ class CustomerCreditService {
             ->orderBy('id')
             ->get();
 
-        $paymentGroups = $transactions
-            ->filter(fn (CustomerTransaction $transaction) => $transaction->payment?->status?->value === 'confirmed')
-            ->groupBy(fn (CustomerTransaction $transaction) => $transaction->payment?->invoice_id);
+        $paymentTransactions = $transactions
+            ->filter(fn (CustomerTransaction $transaction) => $transaction->payment?->status?->value === 'confirmed');
+
+        $paymentGroups = $paymentTransactions
+            ->filter(fn (CustomerTransaction $transaction) => $transaction->payment?->invoice_id !== null)
+            ->groupBy(fn (CustomerTransaction $transaction) => $transaction->payment->invoice_id);
 
         $paymentAvailableByTransaction = [];
 
-        foreach ($paymentGroups as $invoiceId => $group) {
+        foreach ($paymentGroups as $group) {
             $invoice = $group->first()?->payment?->invoice;
+
             if (!$invoice) {
                 continue;
             }
@@ -155,10 +158,17 @@ class CustomerCreditService {
         return $transactions->map(function (CustomerTransaction $transaction) use ($paymentAvailableByTransaction) {
             $allocated = (float) $transaction->creditAllocations->sum('amount');
             $sourceAmount = (float) $transaction->amount;
+            $payment = $transaction->payment;
 
-            $available = $transaction->order_return_id
-                ? max(0, round($sourceAmount - $allocated, 2))
-                : (float) ($paymentAvailableByTransaction[$transaction->id] ?? 0);
+            if ($transaction->order_return_id) {
+                $available = max(0, round($sourceAmount - $allocated, 2));
+            } elseif ($payment?->invoice_id === null) {
+                // New customer-level payments have no single invoice. Their
+                // entire unallocated confirmed amount is reusable customer credit.
+                $available = max(0, round($sourceAmount - $allocated, 2));
+            } else {
+                $available = (float) ($paymentAvailableByTransaction[$transaction->id] ?? 0);
+            }
 
             return [
                 'transaction' => $transaction,
