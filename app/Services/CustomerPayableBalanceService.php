@@ -49,8 +49,8 @@ class CustomerPayableBalanceService
             );
         });
 
-        $availableCredit = $this->customerCreditService->availableAmount($customerId);
+        $availablePaymentCredit = $this->customerCreditService->availablePaymentCreditAmount($customerId);
 
-        return max(0.0, round($invoiceBalance - $availableCredit, 2));
+        return max(0.0, round($invoiceBalance - $availablePaymentCredit, 2));
     }
 }
