@@ -13,11 +13,15 @@ class SystemNotificationResource extends JsonResource
             'title' => data_get($this->data, 'title'),
             'body' => data_get($this->data, 'body'),
             'priority' => data_get($this->data, 'priority', 'normal'),
-            'is_read' => $this->read_at !== null
+            'is_read' => (
+                $request->user()?->hasAnyRole(['admin', 'accountant'])
+                && (int) data_get($this->data, 'sender_id') === (int) $request->user()?->getKey()
+            )
                 || (
                     $request->user()?->hasAnyRole(['admin', 'accountant'])
-                    && (int) data_get($this->data, 'sender_id') === (int) $request->user()?->getKey()
-                ),
+                    && (int) $this->getAttribute('is_manager_recipient') !== 1
+                )
+                || $this->read_at !== null,
             'created_at' => $this->created_at?->toIso8601String(),
             'read_at' => $this->read_at?->toIso8601String(),
             'message_id' => data_get($this->data, 'message_id'),
