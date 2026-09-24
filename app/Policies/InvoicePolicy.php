@@ -13,7 +13,7 @@ class InvoicePolicy
 
     public function viewAny(User $user): bool { return $this->isAdmin($user) || $this->isAccountant($user) || $user->can('invoices.view'); }
     public function view(User $user, Invoice $invoice): bool { return $this->isAdmin($user) || $this->isAccountant($user) || ($user->can('invoices.view') && $this->ownsInvoice($user, $invoice)); }
-    public function create(User $user): bool { return $this->isAdmin($user) || ($this->isAccountant($user) && $user->can('invoices.create')); }
+    public function create(User $user): bool { return $this->isAdmin($user) || $this->isAccountant($user); }
     public function update(User $user, Invoice $invoice): bool { return $this->isAdmin($user) || ($this->isAccountant($user) && $user->can('invoices.update')); }
 
     // Issuing an invoice is a final approval step and therefore remains
