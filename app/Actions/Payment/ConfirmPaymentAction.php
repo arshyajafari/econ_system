@@ -84,27 +84,31 @@ class ConfirmPaymentAction {
                 ->lockForUpdate()
                 ->get();
 
-            // First consume older customer credit (returns/legacy overpayments)
-            // against the oldest eligible invoices.
-            $availableCredit = $this->customerCreditService->availableAmount($customer->id);
+            // Existing payment-originated credit (for example an older
+            // overpayment) is allocated first. Unallocated return credit is
+            // intentionally excluded because Invoice::effectiveRemainingAmount()
+            // already subtracts it from the invoice balance.
+            $availablePaymentCredit = $this->customerCreditService->availablePaymentCreditAmount($customer->id);
 
             foreach ($invoices as $invoice) {
-                if ($availableCredit <= 0) {
+                if ($availablePaymentCredit <= 0) {
                     break;
                 }
 
-                $allocated = $this->customerCreditService->allocateToInvoice(
+                $allocated = $this->customerCreditService->allocatePaymentCreditToInvoice(
                     customerId: $customer->id,
                     invoice: $invoice,
-                    requestedAmount: $availableCredit,
-                    description: "استفاده از اعتبار مشتری برای فاکتور {$invoice->code}",
+                    requestedAmount: $availablePaymentCredit,
+                    description: "استفاده از اعتبار پرداختی مشتری برای فاکتور {$invoice->code}",
                 );
 
-                $availableCredit = max(0, round($availableCredit - $allocated, 2));
+                $availablePaymentCredit = max(0, round($availablePaymentCredit - $allocated, 2));
             }
 
-            // Then apply this payment itself to the oldest eligible invoices.
-            $remainingPaymentCredit = $customerCreditServiceAmount = $customerCredit;
+            // Apply the newly confirmed customer-level payment to the oldest
+            // eligible invoices. Return credit is already reflected in each
+            // invoice's effective remaining amount.
+            $remainingPaymentCredit = $customerCredit;
 
             foreach ($invoices as $invoice) {
                 if ($remainingPaymentCredit <= 0) {
