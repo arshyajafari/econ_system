@@ -41,6 +41,7 @@ class OrderReturnPolicy {
         }
 
         return $this->isAdmin($user)
+            || ($this->isAccountant($user) && $orderReturn->status->value === 'draft')
             || ($this->isDeliveryOperator($user) && $user->can('order_returns.submit') && $this->ownsReturn($user, $orderReturn))
             || ($user->can('order_returns.submit') && $this->ownsReturn($user, $orderReturn));
     }
