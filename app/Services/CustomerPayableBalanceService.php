@@ -25,30 +25,23 @@ class CustomerPayableBalanceService
             ->get();
 
         $invoiceBalance = $invoices->sum(function (Invoice $invoice) use ($excludePaymentId): float {
-            $confirmed = $invoice->confirmedPaidAmount();
-            $pending = $invoice->pendingPaidAmount();
+            $remaining = $invoice->effectiveRemainingAmount();
 
             if ($excludePaymentId !== null) {
-                $pending = (float) $invoice->payments
+                $remaining -= (float) $invoice->payments
                     ->where('status', PaymentStatus::PENDING)
                     ->reject(fn ($payment) => (int) $payment->id === $excludePaymentId)
                     ->sum(fn ($payment) => (float) $payment->amount + (float) $payment->settlement_discount_amount);
+            } else {
+                $remaining -= $invoice->pendingPaidAmount();
             }
 
-            $appliedCredit = $invoice->appliedCustomerCreditAmount();
-
-            return max(
-                0.0,
-                round(
-                    (float) $invoice->total_amount
-                    - $confirmed
-                    - $pending
-                    - $appliedCredit,
-                    2,
-                ),
-            );
+            return max(0.0, round($remaining, 2));
         });
 
+        // Return credit is already included in effectiveRemainingAmount().
+        // Only payment-originated customer credit (such as an overpayment)
+        // is subtracted separately because it is not attached to an invoice.
         $availablePaymentCredit = $this->customerCreditService->availablePaymentCreditAmount($customerId);
 
         return max(0.0, round($invoiceBalance - $availablePaymentCredit, 2));
