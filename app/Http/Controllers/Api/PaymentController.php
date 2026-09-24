@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Actions\Payment\CancelPaymentAction;
 use App\Actions\Payment\ConfirmPaymentAction;
 use App\Actions\Payment\CreatePaymentAction;
+use App\Actions\Payment\GetCustomerPayableBalanceAction;
 use App\Actions\Payment\ListPaymentsAction;
 use App\Actions\Payment\ShowPaymentAction;
 use App\Actions\Payment\UpdatePaymentAction;
@@ -13,7 +14,9 @@ use App\Http\Requests\Payment\PaymentIndexRequest;
 use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Http\Requests\Payment\UpdatePaymentRequest;
 use App\Http\Resources\PaymentResource;
+use App\Models\Customer;
 use App\Models\Payment;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class PaymentController extends Controller
@@ -29,6 +32,13 @@ class PaymentController extends Controller
     {
         $this->authorize('view', $payment);
         return new PaymentResource($action->execute($payment));
+    }
+
+    public function customerPayableBalance(Customer $customer, GetCustomerPayableBalanceAction $action): JsonResponse
+    {
+        $this->authorize('view', $customer);
+
+        return response()->json($action->execute($customer));
     }
 
     public function store(StorePaymentRequest $request, CreatePaymentAction $action): PaymentResource
