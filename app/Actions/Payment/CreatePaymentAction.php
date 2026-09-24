@@ -44,6 +44,10 @@ class CreatePaymentAction {
                 throw new BusinessRuleException('مبلغ پرداخت باید بیشتر از صفر باشد.');
             }
 
+            if ($amount + $discountAmount > $remainingBalance) {
+                throw new BusinessRuleException('مبلغ پرداخت و تخفیف تسویه نمی‌تواند بیشتر از مانده قابل پرداخت مشتری باشد.');
+            }
+
             if ($discountAmount < 0) {
                 throw new BusinessRuleException('مبلغ تخفیف تسویه نمی‌تواند منفی باشد.');
             }
