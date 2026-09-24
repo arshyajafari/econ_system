@@ -21,7 +21,7 @@
 
     class ProductCategoryController extends Controller {
         public function __construct() {
-            $this->authorizeModel(ProductCategory::class, 'product_category');
+            $this->authorizeModel(ProductCategory::class, 'productCategory');
         }
 
         public function index(ProductCategoryIndexRequest $request,
