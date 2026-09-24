@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ExpenseCategory;
 use App\Traits\HasAudit;
 use App\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,6 +42,7 @@ class Expense extends BaseModel
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'category' => ExpenseCategory::class,
         'expense_date' => 'date',
     ];
 
@@ -49,8 +51,4 @@ class Expense extends BaseModel
         return $this->belongsTo(Employee::class);
     }
 
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
 }
