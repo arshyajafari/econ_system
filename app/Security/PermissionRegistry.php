@@ -2,8 +2,10 @@
 
 namespace App\Security;
 
-class PermissionRegistry {
-    public static function all(): array {
+class PermissionRegistry
+{
+    public static function all(): array
+    {
         return [
             'dashboard' => ['view'],
             'reports' => ['view'],
@@ -20,17 +22,22 @@ class PermissionRegistry {
             'order_returns' => ['view','create','update','submit','confirm','complete','cancel','allocate','export'],
             'invoices' => ['view','create','update','issue','cancel'],
             'payments' => ['view','create','update','delete','confirm','cancel'],
+            'expenses' => ['view','create','update','delete'],
             'deliveries' => ['view','create','update','prepare','ship','complete','cancel','export'],
             'visits' => ['view','create','update','delete','complete','cancel','export'],
             'samples' => ['view','create','update','delete','export'],
         ];
     }
 
-    public static function names(): array {
+    public static function names(): array
+    {
         $permissions = [];
         foreach (self::all() as $resource => $abilities) {
-            foreach ($abilities as $ability) $permissions[] = "{$resource}.{$ability}";
+            foreach ($abilities as $ability) {
+                $permissions[] = "{$resource}.{$ability}";
+            }
         }
+
         return $permissions;
     }
 }
