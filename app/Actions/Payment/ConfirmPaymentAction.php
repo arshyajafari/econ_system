@@ -55,6 +55,37 @@ class ConfirmPaymentAction {
                 throw new BusinessRuleException('تخفیف تسویه نمی‌تواند بیشتر از مانده حساب مشتری باشد.');
             }
 
+            $invoices = Invoice::query()
+                ->with(['payments', 'creditAllocations', 'returnTransactions.orderReturn'])
+                ->where('customer_id', $customer->id)
+                ->where('status', InvoiceStatus::ISSUED)
+                ->whereHas('order.delivery', fn ($query) => $query->whereIn('status', ['shipped', 'delivered']))
+                ->orderBy('issued_at')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            // Allocate only older payment-originated customer credit first.
+            // Unallocated return credit is already reflected in
+            // Invoice::effectiveRemainingAmount() and must not be allocated
+            // again.
+            $availablePaymentCredit = $this->customerCreditService->availablePaymentCreditAmount($customer->id);
+
+            foreach ($invoices as $invoice) {
+                if ($availablePaymentCredit <= 0) {
+                    break;
+                }
+
+                $allocated = $this->customerCreditService->allocatePaymentCreditToInvoice(
+                    customerId: $customer->id,
+                    invoice: $invoice,
+                    requestedAmount: $availablePaymentCredit,
+                    description: "استفاده از اعتبار پرداختی مشتری برای فاکتور {$invoice->code}",
+                );
+
+                $availablePaymentCredit = max(0, round($availablePaymentCredit - $allocated, 2));
+            }
+
             $payment->status = PaymentStatus::CONFIRMED;
             $payment->save();
 
@@ -73,37 +104,6 @@ class ConfirmPaymentAction {
                 description: $description,
                 transactionAt: $payment->payment_date,
             );
-
-            $invoices = Invoice::query()
-                ->with(['payments', 'creditAllocations', 'returnTransactions.orderReturn'])
-                ->where('customer_id', $customer->id)
-                ->where('status', InvoiceStatus::ISSUED)
-                ->whereHas('order.delivery', fn ($query) => $query->whereIn('status', ['shipped', 'delivered']))
-                ->orderBy('issued_at')
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get();
-
-            // Existing payment-originated credit (for example an older
-            // overpayment) is allocated first. Unallocated return credit is
-            // intentionally excluded because Invoice::effectiveRemainingAmount()
-            // already subtracts it from the invoice balance.
-            $availablePaymentCredit = $this->customerCreditService->availablePaymentCreditAmount($customer->id);
-
-            foreach ($invoices as $invoice) {
-                if ($availablePaymentCredit <= 0) {
-                    break;
-                }
-
-                $allocated = $this->customerCreditService->allocatePaymentCreditToInvoice(
-                    customerId: $customer->id,
-                    invoice: $invoice,
-                    requestedAmount: $availablePaymentCredit,
-                    description: "استفاده از اعتبار پرداختی مشتری برای فاکتور {$invoice->code}",
-                );
-
-                $availablePaymentCredit = max(0, round($availablePaymentCredit - $allocated, 2));
-            }
 
             // Apply the newly confirmed customer-level payment to the oldest
             // eligible invoices. Return credit is already reflected in each
