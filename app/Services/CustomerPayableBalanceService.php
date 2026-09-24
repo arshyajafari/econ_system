@@ -38,6 +38,20 @@ class CustomerPayableBalanceService
             return max(0.0, round($remaining, 2));
         });
 
+        // Customer-level pending payments have no invoice_id, so they are
+        // intentionally not included in Invoice::pendingPaidAmount().
+        // They must nevertheless reduce the balance shown to the user;
+        // otherwise a second pending payment can be created against the same debt.
+        $pendingCustomerLevelPayments = \App\Models\Payment::query()
+            ->where('customer_id', $customerId)
+            ->whereNull('invoice_id')
+            ->where('status', PaymentStatus::PENDING)
+            ->when(
+                $excludePaymentId !== null,
+                fn ($query) => $query->where('id', '!=', $excludePaymentId),
+            )
+            ->sum(fn ($payment) => (float) $payment->amount + (float) $payment->settlement_discount_amount);
+
         // The payable balance is customer-level debt: every issued invoice
         // participates in the balance calculation. Delivery state belongs to
         // fulfillment and must not make an existing invoice debt disappear.
@@ -46,6 +60,14 @@ class CustomerPayableBalanceService
         // is subtracted separately because it is not attached to an invoice.
         $availablePaymentCredit = $this->customerCreditService->availablePaymentCreditAmount($customerId);
 
-        return max(0.0, round($invoiceBalance - $availablePaymentCredit, 2));
+        return max(
+            0.0,
+            round(
+                $invoiceBalance
+                - (float) $pendingCustomerLevelPayments
+                - $availablePaymentCredit,
+                2,
+            ),
+        );
     }
 }
