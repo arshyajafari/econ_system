@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 class StorePaymentRequest extends CrudRequest {
     public function rules(): array {
         return [
-            'invoice_id' => ['required', 'string', 'exists:invoices,public_id'],
+            'customer_id' => ['required', 'string', 'exists:customers,public_id'],
             'method' => ['required', Rule::enum(PaymentMethod::class)],
             'amount' => ['required', 'numeric', 'gt:0'],
             'settlement_discount_amount' => ['nullable', 'numeric', 'gte:0'],

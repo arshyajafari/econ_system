@@ -2,19 +2,22 @@
 
 namespace App\Actions\Payment;
 
-use App\Enums\DeliveryStatus;
-use Carbon\Carbon;
-use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
-use App\Models\Delivery;
-use App\Models\Invoice;
+use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\CustomerPayableBalanceService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CreatePaymentAction {
+    public function __construct(
+        protected CustomerPayableBalanceService $payableBalanceService,
+    ) {
+    }
+
     public function execute(array $data, User $user): Payment {
         return DB::transaction(function () use ($data, $user) {
             $employee = $user->employee;
@@ -23,28 +26,17 @@ class CreatePaymentAction {
                 throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
             }
 
-            $invoice = Invoice::query()->lockForUpdate()
-                ->with(['payments', 'returnTransactions.orderReturn'])
-                ->where('public_id', $data['invoice_id'])
+            $customer = Customer::query()
+                ->lockForUpdate()
+                ->where('public_id', $data['customer_id'])
                 ->firstOrFail();
 
-            if ($invoice->status !== InvoiceStatus::ISSUED) {
-                throw new BusinessRuleException('فقط فاکتور صادرشده قابل پرداخت است.');
+            $remainingBalance = $this->payableBalanceService->calculate($customer->id);
+
+            if ($remainingBalance <= 0) {
+                throw new BusinessRuleException('این مشتری مانده قابل پرداختی ندارد.');
             }
 
-            // Payment is allowed only after the delivery has actually been shipped.
-            // Lock the delivery row so a concurrent shipment transition cannot
-            // race this business-rule check.
-            $delivery = Delivery::query()
-                ->lockForUpdate()
-                ->where('order_id', $invoice->order_id)
-                ->first();
-
-            if (!$delivery || !in_array($delivery->status, [DeliveryStatus::SHIPPED, DeliveryStatus::DELIVERED], true)) {
-                throw new BusinessRuleException('تا زمانی که ارسال فاکتور انجام نشده باشد، ثبت پرداخت مجاز نیست.');
-            }
-
-            $remainingAmount = $invoice->effectiveRemainingAmount(includePending: true);
             $amount = (float) $data['amount'];
             $discountAmount = (float) ($data['settlement_discount_amount'] ?? 0);
 
@@ -56,17 +48,9 @@ class CreatePaymentAction {
                 throw new BusinessRuleException('مبلغ تخفیف تسویه نمی‌تواند منفی باشد.');
             }
 
-            if ($remainingAmount <= 0) {
-                throw new BusinessRuleException('این فاکتور تسویه شده است.');
+            if ($discountAmount > $remainingBalance) {
+                throw new BusinessRuleException('تخفیف تسویه نمی‌تواند بیشتر از مانده حساب مشتری باشد.');
             }
-
-            if ($discountAmount > $remainingAmount) {
-                throw new BusinessRuleException('تخفیف تسویه نمی‌تواند بیشتر از مانده فاکتور باشد.');
-            }
-
-            // A customer may intentionally overpay. The invoice is settled
-            // up to its remaining balance and the excess becomes reusable
-            // customer credit after confirmation.
 
             $meta = [];
 
@@ -76,8 +60,8 @@ class CreatePaymentAction {
             }
 
             $payment = Payment::create([
-                'invoice_id' => $invoice->id,
-                'customer_id' => $invoice->customer_id,
+                'invoice_id' => null,
+                'customer_id' => $customer->id,
                 'employee_id' => $employee->id,
                 'status' => PaymentStatus::PENDING,
                 'method' => $data['method'],
@@ -97,10 +81,7 @@ class CreatePaymentAction {
     {
         $date = Carbon::parse($paymentDate);
 
-        // The payment form sends a calendar date. When no time is supplied,
-        // preserve that selected date but record the actual registration time
-        // instead of defaulting to 00:00:00.
-        if (preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', trim($paymentDate)) === 1) {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($paymentDate)) === 1) {
             $now = now();
             $date->setTime($now->hour, $now->minute, $now->second);
         }

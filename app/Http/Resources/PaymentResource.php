@@ -12,7 +12,7 @@ class PaymentResource extends JsonResource {
 
         return [
             'id' => $this->public_id,
-            'invoice' => $this->whenLoaded('invoice', fn() => [
+            'invoice' => $this->when($this->relationLoaded('invoice') && $this->invoice, fn() => [
                 'id' => $this->invoice->public_id,
                 'code' => $this->invoice->code,
                 'status' => $this->invoice->status?->value,

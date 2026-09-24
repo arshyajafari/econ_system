@@ -2,42 +2,24 @@
 
 namespace App\Actions\Payment;
 
-use App\Enums\DeliveryStatus;
-use App\Enums\InvoiceStatus;
-use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
-use App\Models\Delivery;
-use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\CustomerPayableBalanceService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class UpdatePaymentAction {
+    public function __construct(
+        protected CustomerPayableBalanceService $payableBalanceService,
+    ) {
+    }
+
     public function execute(Payment $payment, array $data): Payment {
         return DB::transaction(function () use ($payment, $data) {
             $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
-            if ($payment->status !== PaymentStatus::PENDING) {
+            if ($payment->status->value !== 'pending') {
                 throw new BusinessRuleException('فقط پرداخت در وضعیت pending قابل ویرایش است.');
-            }
-
-            $invoice = Invoice::query()->lockForUpdate()
-                ->with(['payments', 'returnTransactions.orderReturn'])
-                ->findOrFail($payment->invoice_id);
-
-            if ($invoice->status !== InvoiceStatus::ISSUED) {
-                throw new BusinessRuleException('فقط فاکتور صادرشده قابل ویرایش پرداخت است.');
-            }
-
-            // Editing a pending payment is still a payment operation. It is
-            // therefore subject to the same shipped-delivery rule as creation.
-            $delivery = Delivery::query()
-                ->lockForUpdate()
-                ->where('order_id', $invoice->order_id)
-                ->first();
-
-            if (!$delivery || !in_array($delivery->status, [DeliveryStatus::SHIPPED, DeliveryStatus::DELIVERED], true)) {
-                throw new BusinessRuleException('تا زمانی که ارسال فاکتور انجام نشده باشد، ویرایش پرداخت مجاز نیست.');
             }
 
             $amount = array_key_exists('amount', $data)
@@ -56,31 +38,17 @@ class UpdatePaymentAction {
                 throw new BusinessRuleException('مبلغ تخفیف تسویه نمی‌تواند منفی باشد.');
             }
 
-            $confirmedAmount = $invoice->payments
-                ->where('status', PaymentStatus::CONFIRMED)
-                ->sum(fn ($item) => (float) $item->amount + (float) $item->settlement_discount_amount);
-
-            $otherPendingAmount = $invoice->payments
-                ->where('status', PaymentStatus::PENDING)
-                ->where('id', '!=', $payment->id)
-                ->sum(fn ($item) => (float) $item->amount + (float) $item->settlement_discount_amount);
-
-            $appliedCustomerCredit = $invoice->appliedCustomerCreditAmount();
-
-            $remainingAmount = max(
-                0,
-                (float) $invoice->total_amount
-                    - (float) $confirmedAmount
-                    - (float) $otherPendingAmount
-                    - (float) $appliedCustomerCredit,
+            $remainingBalance = $this->payableBalanceService->calculate(
+                customerId: $payment->customer_id,
+                excludePaymentId: $payment->id,
             );
 
-            if ($discountAmount > $remainingAmount) {
-                throw new BusinessRuleException('تخفیف تسویه نمی‌تواند بیشتر از مانده فاکتور باشد.');
+            if ($remainingBalance <= 0) {
+                throw new BusinessRuleException('این مشتری دیگر مانده قابل پرداختی ندارد.');
             }
 
-            if ($amount + $discountAmount > $remainingAmount) {
-                throw new BusinessRuleException('مبلغ پرداخت و تخفیف تسویه بیشتر از مانده فاکتور است.');
+            if ($discountAmount > $remainingBalance) {
+                throw new BusinessRuleException('تخفیف تسویه نمی‌تواند بیشتر از مانده حساب مشتری باشد.');
             }
 
             if (array_key_exists('method', $data)) {
