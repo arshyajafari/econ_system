@@ -51,6 +51,7 @@ class OrderPolicy
     public function submit(User $user, Order $order): bool
     {
         return $this->isAdmin($user)
+            || ($this->isAccountant($user) && $order->status->value === 'draft')
             || ($user->can('orders.submit') && $this->ownsOrder($user, $order) && $order->status->value === 'draft');
     }
 
