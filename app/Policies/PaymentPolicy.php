@@ -10,6 +10,7 @@ class PaymentPolicy
 {
     private function isAdmin(User $user): bool { return $user->hasRole('admin'); }
     private function isAccountant(User $user): bool { return $user->hasRole('accountant'); }
+    private function isSettlementOperator(User $user): bool { return $user->hasRole('settlement_operator'); }
 
     public function viewAny(User $user): bool
     {
@@ -31,7 +32,7 @@ class PaymentPolicy
     public function update(User $user, Payment $payment): bool
     {
         // Editing payment records remains restricted to admin/accountant.
-        return ($this->isAdmin($user) || $this->isAccountant($user))
+        return ($this->isAdmin($user) || $this->isAccountant($user) || $this->isSettlementOperator($user))
             && $payment->status === PaymentStatus::PENDING;
     }
 
