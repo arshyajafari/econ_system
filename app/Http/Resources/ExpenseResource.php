@@ -13,7 +13,7 @@ class ExpenseResource extends JsonResource
             'id' => $this->public_id,
             'title' => $this->title,
             'amount' => $this->amount,
-            'category' => $this->category,
+            'category' => $this->category?->value,
             'expense_date' => $this->expense_date?->toDateString(),
             'employee' => $this->whenLoaded('employee', fn () => [
                 'id' => $this->employee->public_id,
