@@ -9,7 +9,10 @@ use Illuminate\Validation\Rule;
 
 class StoreSystemMessageRequest extends FormRequest {
     public function authorize(): bool {
-        return $this->user()?->hasRole(Role::ADMIN->value) ?? false;
+        return $this->user()?->hasAnyRole([
+            Role::ADMIN->value,
+            Role::ACCOUNTANT->value,
+        ]) ?? false;
     }
 
     public function rules(): array {
