@@ -19,7 +19,6 @@ class CustomerPayableBalanceService
             ->with(['payments', 'creditAllocations', 'returnTransactions.orderReturn'])
             ->where('customer_id', $customerId)
             ->where('status', InvoiceStatus::ISSUED)
-            ->whereHas('order.delivery', fn ($query) => $query->whereIn('status', ['shipped', 'delivered']))
             ->orderBy('issued_at')
             ->orderBy('id')
             ->get();
@@ -39,6 +38,9 @@ class CustomerPayableBalanceService
             return max(0.0, round($remaining, 2));
         });
 
+        // The payable balance is customer-level debt: every issued invoice
+        // participates in the balance calculation. Delivery state belongs to
+        // fulfillment and must not make an existing invoice debt disappear.
         // Return credit is already included in effectiveRemainingAmount().
         // Only payment-originated customer credit (such as an overpayment)
         // is subtracted separately because it is not attached to an invoice.
