@@ -79,19 +79,14 @@ class NotificationController extends Controller
 
     private function visibleNotificationsForManager(User $user)
     {
+        /*
+         * Admins and accountants have management visibility over the complete
+         * system-message history. Other users are restricted to
+         * visibleNotifications(), which only returns messages addressed to
+         * their own account.
+         */
         $query = DatabaseNotification::query()
-            ->where(function ($query) use ($user): void {
-                $query->where(function ($query) use ($user): void {
-                    $query
-                        ->where('notifiable_type', User::class)
-                        ->where('notifiable_id', $user->getKey());
-
-                    $this->applyRecipientVisibility($query, $user);
-                })->orWhereRaw(
-                    "JSON_UNQUOTE(JSON_EXTRACT(data, '$.sender_id')) = ?",
-                    [$user->getKey()]
-                );
-            });
+            ->where('type', SystemMessageNotification::class);
 
         /*
          * A system message is stored once per recipient. Managers must see
