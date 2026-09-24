@@ -20,10 +20,14 @@ class NotificationController extends Controller
     {
         $perPage = min(max($request->integer('per_page', 20), 1), 50);
 
+        $user = $request->user();
+
+        $query = $this->canManageMessages($user)
+            ? $this->visibleNotificationsForManager($user)
+            : $this->visibleNotifications($user);
+
         return SystemNotificationResource::collection(
-            $this->visibleNotifications($request->user())
-                ->latest()
-                ->paginate($perPage)
+            $query->latest('created_at')->paginate($perPage)
         );
     }
 
@@ -65,22 +69,68 @@ class NotificationController extends Controller
      * targeted message from becoming visible if recipient rows were ever
      * created too broadly.
      */
+    private function canManageMessages(User $user): bool
+    {
+        return $user->hasAnyRole([
+            Role::ADMIN->value,
+            Role::ACCOUNTANT->value,
+        ]);
+    }
+
+    private function visibleNotificationsForManager(User $user)
+    {
+        $query = DatabaseNotification::query()
+            ->where(function ($query) use ($user): void {
+                $query->where(function ($query) use ($user): void {
+                    $query
+                        ->where('notifiable_type', User::class)
+                        ->where('notifiable_id', $user->getKey());
+
+                    $this->applyRecipientVisibility($query, $user);
+                })->orWhereRaw(
+                    "JSON_UNQUOTE(JSON_EXTRACT(data, '$.sender_id')) = ?",
+                    [$user->getKey()]
+                );
+            });
+
+        /*
+         * A system message is stored once per recipient. Managers must see
+         * one row per sent message, not one row per recipient. Grouping by the
+         * message UUID keeps the inbox compact while the fallback preserves
+         * legacy notifications that do not have message_id.
+         */
+        return $query
+            ->selectRaw(
+                "MAX(id) AS id,
+                 MAX(type) AS type,
+                 MAX(notifiable_type) AS notifiable_type,
+                 MAX(notifiable_id) AS notifiable_id,
+                 MAX(data) AS data,
+                 MAX(read_at) AS read_at,
+                 MAX(created_at) AS created_at,
+                 MAX(updated_at) AS updated_at"
+            )
+            ->groupByRaw(
+                "COALESCE(
+                    JSON_UNQUOTE(JSON_EXTRACT(data, '$.message_id')),
+                    CONCAT('legacy:', id)
+                )"
+            );
+    }
+
     private function visibleNotifications(User $user)
     {
-        /*
-         * The notifications migration stores data as TEXT, not JSON.
-         * Use explicit MySQL JSON functions instead of Laravel JSON-column
-         * syntax so the query matches the actual schema.
-         *
-         * The notification relation already scopes rows to the authenticated
-         * user's notifiable id. Target metadata is a second security boundary.
-         * Rows without target_type are legacy notifications and remain visible
-         * to their owner.
-         */
         $query = $user->notifications();
+        $this->applyRecipientVisibility($query, $user);
+
+        return $query;
+    }
+
+    private function applyRecipientVisibility($query, User $user): void
+    {
         $activityType = $user->employee?->activity_type?->value;
 
-        return $query->where(function ($query) use ($user, $activityType): void {
+        $query->where(function ($query) use ($user, $activityType): void {
             $query
                 ->whereRaw(
                     "JSON_UNQUOTE(JSON_EXTRACT(data, '$.target_type')) IS NULL"
@@ -122,7 +172,7 @@ class NotificationController extends Controller
 
     public function recipients(Request $request)
     {
-        abort_unless($request->user()->hasRole(Role::ADMIN->value), 403);
+        abort_unless($this->canManageMessages($request->user()), 403);
 
         $users = User::query()
             ->active()
@@ -149,7 +199,7 @@ class NotificationController extends Controller
 
     public function update(Request $request, string $notification)
     {
-        abort_unless($request->user()->hasRole(Role::ADMIN->value), 403);
+        abort_unless($this->canManageMessages($request->user()), 403);
         $data = $request->validate([
             'title' => ['required', 'string', 'max:120'],
             'body' => ['required', 'string', 'max:5000'],
@@ -179,7 +229,7 @@ class NotificationController extends Controller
 
     public function destroy(Request $request, string $notification)
     {
-        abort_unless($request->user()->hasRole(Role::ADMIN->value), 403);
+        abort_unless($this->canManageMessages($request->user()), 403);
 
         $rows = DatabaseNotification::query()
             ->where('data->message_id', $notification)
