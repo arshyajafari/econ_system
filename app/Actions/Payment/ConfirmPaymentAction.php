@@ -47,6 +47,10 @@ class ConfirmPaymentAction {
                 throw new BusinessRuleException('مبلغ پرداخت باید بیشتر از صفر باشد.');
             }
 
+            if ($paymentAmount + $discountAmount > $remainingBeforePayment) {
+                throw new BusinessRuleException('مبلغ پرداخت و تخفیف تسویه نمی‌تواند بیشتر از مانده قابل پرداخت مشتری باشد.');
+            }
+
             if ($discountAmount < 0) {
                 throw new BusinessRuleException('مبلغ تخفیف تسویه نمی‌تواند منفی باشد.');
             }
