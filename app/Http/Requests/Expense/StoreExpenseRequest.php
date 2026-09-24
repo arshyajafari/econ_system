@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Expense;
 
+use App\Enums\ExpenseCategory;
 use App\Http\Requests\CrudRequest;
+use Illuminate\Validation\Rule;
 use App\Validation\ValidationRules;
 
 class StoreExpenseRequest extends CrudRequest
@@ -12,7 +14,7 @@ class StoreExpenseRequest extends CrudRequest
         return [
             'title' => ['required', 'string', 'max:150'],
             'amount' => ['required', 'numeric', 'gt:0'],
-            'category' => ['required', 'string', 'max:50'],
+            'category' => ['required', Rule::enum(ExpenseCategory::class)],
             'expense_date' => ['required', 'date'],
             'employee_id' => ['nullable', 'string', 'exists:employees,public_id'],
             ...ValidationRules::description(),
