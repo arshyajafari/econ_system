@@ -5,7 +5,6 @@
     use App\Http\Requests\BaseFormRequest;
     use App\Validation\ValidationRules;
     use App\Models\InventoryBatch;
-    use Illuminate\Validation\Rule;
 
     class UpdateInventoryBatchRequest extends BaseFormRequest {
         public function rules(): array {
