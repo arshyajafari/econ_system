@@ -5,8 +5,10 @@ namespace App\Security;
 use App\Enums\Permission;
 use App\Enums\Role;
 
-class RoleRegistry {
-    public static function permissions(): array {
+class RoleRegistry
+{
+    public static function permissions(): array
+    {
         return [
             Role::ADMIN->value => PermissionRegistry::names(),
 
@@ -27,8 +29,6 @@ class RoleRegistry {
                 Permission::SAMPLE_UPDATE->value,
             ],
 
-            // Accountants may view, create and edit operational records.
-            // Final approval/completion and deletion remain administrator-only.
             Role::ACCOUNTANT->value => array_values(array_unique([
                 ...array_values(array_filter(
                     PermissionRegistry::names(),
@@ -49,6 +49,8 @@ class RoleRegistry {
                 Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value,
                 Permission::PAYMENT_UPDATE->value, Permission::PAYMENT_CANCEL->value,
                 Permission::DELIVERY_VIEW->value,
+                Permission::EXPENSE_VIEW->value, Permission::EXPENSE_CREATE->value,
+                Permission::EXPENSE_UPDATE->value, Permission::EXPENSE_DELETE->value,
             ])),
 
             Role::SETTLEMENT_OPERATOR->value => [
