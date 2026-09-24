@@ -55,7 +55,7 @@ class RoleRegistry {
                 Permission::CUSTOMER_VIEW->value,
                 Permission::ORDER_RETURN_VIEW->value,
                 Permission::PAYMENT_VIEW->value, Permission::PAYMENT_CREATE->value,
-                Permission::PAYMENT_CANCEL->value,
+                Permission::PAYMENT_UPDATE->value, Permission::PAYMENT_CANCEL->value,
                 Permission::DELIVERY_VIEW->value,
             ],
 
