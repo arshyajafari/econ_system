@@ -59,7 +59,6 @@ class ConfirmPaymentAction {
                 ->with(['payments', 'creditAllocations', 'returnTransactions.orderReturn'])
                 ->where('customer_id', $customer->id)
                 ->where('status', InvoiceStatus::ISSUED)
-                ->whereHas('order.delivery', fn ($query) => $query->whereIn('status', ['shipped', 'delivered']))
                 ->orderBy('issued_at')
                 ->orderBy('id')
                 ->lockForUpdate()
@@ -106,8 +105,9 @@ class ConfirmPaymentAction {
             );
 
             // Apply the newly confirmed customer-level payment to the oldest
-            // eligible invoices. Return credit is already reflected in each
-            // invoice's effective remaining amount.
+            // issued invoices. Delivery state must not hide outstanding debt;
+            // return credit is already reflected in each invoice's effective
+            // remaining amount.
             $remainingPaymentCredit = $customerCredit;
 
             foreach ($invoices as $invoice) {
