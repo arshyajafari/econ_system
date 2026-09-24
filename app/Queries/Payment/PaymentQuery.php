@@ -17,7 +17,9 @@ class PaymentQuery extends BaseQuery
         $this->applyInvoice($filters['invoice_id'] ?? null);
         $this->applyCustomer($filters['customer_id'] ?? null);
 
-        if ($user?->hasRole('admin')) {
+        if ($user?->hasAnyRole(['admin', 'accountant'])) {
+            // Admin and accountant have workspace-wide payment visibility.
+            // Other payment operators remain scoped to their own records.
             $this->applyEmployee($filters['employee_id'] ?? null);
         } else {
             $employeeId = $user?->employee?->id;
