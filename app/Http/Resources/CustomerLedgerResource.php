@@ -18,6 +18,7 @@ class CustomerLedgerResource extends JsonResource
             'total_debit' => $this->resource['total_debit'],
             'total_credit' => $this->resource['total_credit'],
             'closing_balance' => $this->resource['closing_balance'],
+            'average_due_date' => $this->resource['average_due_date'],
             'transactions' => CustomerLedgerTransactionResource::collection($this->resource['transactions']),
         ];
     }
