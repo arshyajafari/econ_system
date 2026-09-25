@@ -14,10 +14,10 @@
 
         public function execute(Invoice $invoice): Invoice {
             return DB::transaction(function () use ($invoice) {
-                $invoice = Invoice::query()
-                    ->lockForUpdate()
-                    ->with(['items', 'order.delivery'])
-                    ->findOrFail($invoice->id);
+                $invoice = Invoice::query()->lockForUpdate()->with([
+                        'items',
+                        'order.delivery'
+                    ])->findOrFail($invoice->id);
 
                 if ($invoice->status !== InvoiceStatus::DRAFT) {
                     throw new BusinessRuleException('فقط فاکتور در وضعیت draft قابل صدور است.');
@@ -45,9 +45,7 @@
                 $invoice->issued_at = $issuedAt;
 
                 if ($invoice->order?->delivery?->delivered_at) {
-                    $invoice->due_date = $invoice->order->delivery->delivered_at
-                        ->copy()
-                        ->addMonthsNoOverflow(4)
+                    $invoice->due_date = $invoice->order->delivery->delivered_at->copy()->addMonthsNoOverflow(4)
                         ->toDateString();
                 }
 
@@ -65,4 +63,3 @@
             });
         }
     }
-}
