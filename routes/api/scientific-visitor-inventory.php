@@ -7,4 +7,5 @@ Route::prefix('scientific-visitor-inventory')->name('scientific-visitor-inventor
     Route::get('/', [ScientificVisitorInventoryController::class, 'index'])->name('index');
     Route::post('/', [ScientificVisitorInventoryController::class, 'store'])->name('store');
     Route::put('/{scientificVisitorInventory}', [ScientificVisitorInventoryController::class, 'update'])->name('update');
+    Route::delete('/{scientificVisitorInventory}', [ScientificVisitorInventoryController::class, 'destroy'])->name('destroy');
 });
