@@ -15,7 +15,10 @@ class CreateInvoiceAction {
 
     public function execute(Order $order): Invoice {
         return DB::transaction(function () use ($order) {
-            $order = Order::query()->lockForUpdate()->with(['customer','items'])->findOrFail($order->id);
+            $order = Order::query()
+                ->lockForUpdate()
+                ->with(['customer', 'items', 'delivery'])
+                ->findOrFail($order->id);
             if (!in_array($order->status, [OrderStatus::CONFIRMED, OrderStatus::COMPLETED], true)) throw new BusinessRuleException('فقط سفارش تأییدشده یا تکمیل‌شده قابل ایجاد فاکتور است.');
             if ($order->invoice()->exists()) throw new BusinessRuleException('برای این سفارش قبلاً فاکتور ایجاد شده است.');
             if ($order->items->isEmpty()) throw new BusinessRuleException('سفارش بدون آیتم قابل ایجاد فاکتور نیست.');
@@ -25,6 +28,8 @@ class CreateInvoiceAction {
             $totalAmount = round($subtotal - $discountAmount, 2);
             if ($totalAmount <= 0) throw new BusinessRuleException('مبلغ نهایی فاکتور باید بیشتر از صفر باشد.');
 
+            $dueDate = $order->delivery?->delivered_at?->copy()->addMonthsNoOverflow(4)->toDateString();
+
             $invoice = Invoice::create([
                 'code' => $this->codeGenerator->generate(Invoice::class),
                 'order_id' => $order->id,
@@ -32,6 +37,7 @@ class CreateInvoiceAction {
                 'employee_id' => $order->sales_employee_id,
                 'status' => InvoiceStatus::DRAFT,
                 'issued_at' => null,
+                'due_date' => $dueDate,
                 'subtotal' => $subtotal,
                 'discount_amount' => $discountAmount,
                 'tax_amount' => 0,
