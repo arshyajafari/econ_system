@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Actions\ScientificVisitorInventory\CreateScientificVisitorInventoryAction;
+use App\Actions\ScientificVisitorInventory\DeleteScientificVisitorInventoryAction;
 use App\Actions\ScientificVisitorInventory\ListScientificVisitorInventoryAction;
 use App\Actions\ScientificVisitorInventory\UpdateScientificVisitorInventoryAction;
 use App\Http\Controllers\Controller;
@@ -49,5 +50,16 @@ class ScientificVisitorInventoryController extends Controller
         return new ScientificVisitorInventoryResource(
             $action->execute($scientificVisitorInventory, $request->validated())
         );
+    }
+
+    public function destroy(
+        ScientificVisitorInventory $scientificVisitorInventory,
+        DeleteScientificVisitorInventoryAction $action
+    ): JsonResponse {
+        $this->authorize('delete', $scientificVisitorInventory);
+
+        $action->execute($scientificVisitorInventory);
+
+        return response()->json(null, 204);
     }
 }
