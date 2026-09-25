@@ -44,6 +44,6 @@ class ScientificVisitorInventoryPolicy
 
     public function delete(User $user, ScientificVisitorInventory $inventory): bool
     {
-        return false;
+        return $this->isManager($user);
     }
 }
