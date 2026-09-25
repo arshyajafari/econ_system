@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Enums\CustomerTransactionType;
+use App\Enums\InvoiceStatus;
 use App\Models\CustomerTransaction;
+use App\Models\Invoice;
 use Carbon\CarbonImmutable;
 
 class CustomerLedgerService {
@@ -62,8 +64,28 @@ class CustomerLedgerService {
             'total_debit' => $totalDebit,
             'total_credit' => $totalCredit,
             'closing_balance' => $balance,
+            'average_due_date' => $this->calculateAverageDueDate($customerId),
             'transactions' => $transactions,
         ];
+    }
+
+    protected function calculateAverageDueDate(int $customerId): ?string {
+        $dates = Invoice::query()
+            ->where('customer_id', $customerId)
+            ->where('status', InvoiceStatus::ISSUED)
+            ->whereNotNull('due_date')
+            ->pluck('due_date');
+
+        if ($dates->isEmpty()) {
+            return null;
+        }
+
+        $averageTimestamp = $dates
+            ->map(fn ($date) => CarbonImmutable::parse($date)->startOfDay()->timestamp)
+            ->average();
+
+        return CarbonImmutable::createFromTimestamp((int) round($averageTimestamp))
+            ->toDateString();
     }
 
     protected function calculateOpeningBalance($baseQuery, ?string $from): float {
