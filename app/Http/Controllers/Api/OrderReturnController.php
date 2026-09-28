@@ -32,7 +32,7 @@ class OrderReturnController extends Controller {
         return OrderReturnResource::collection($query->apply($request->validated(), $request->user())->paginate($request->integer('per_page', 20)));
     }
 
-    public function returnableOrders(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection {
+    public function returnableOrders(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection {
         $user = auth()->user();
         $this->authorize('create', OrderReturn::class);
 
@@ -54,7 +54,22 @@ class OrderReturnController extends Controller {
             }
         }
 
-        $orders = $orders->orderByDesc('created_at')->limit(100)->get();
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $orders->where(function ($query) use ($search) {
+                $query->where('code', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                        $customerQuery
+                            ->where('customer_name', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%")
+                            ->orWhere('national_code', 'like', "%{$search}%")
+                            ->orWhere('phone_number', 'like', "%{$search}%")
+                            ->orWhere('telephone_number', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $orders = $orders->orderByDesc('created_at')->limit(20)->get();
 
         return OrderResource::collection($orders);
     }
