@@ -40,6 +40,7 @@ class CustomerTransaction extends BaseModel {
         'transaction_at',
         'description',
         'meta',
+        'source_key',
     ];
 
     protected $casts = [
