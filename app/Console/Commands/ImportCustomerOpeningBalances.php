@@ -34,12 +34,10 @@ class ImportCustomerOpeningBalances extends Command
         try {
             $openingDate = CarbonImmutable::createFromFormat('Y-m-d', $date);
         } catch (Throwable) {
-            $this->error('Invalid date. Use Y-m-d format, for example 2026-09-30.');
-
-            return self::FAILURE;
+            $openingDate = false;
         }
 
-        if ($openingDate->format('Y-m-d') !== $date) {
+        if ($openingDate === false || $openingDate->format('Y-m-d') !== $date) {
             $this->error('Invalid date. Use Y-m-d format, for example 2026-09-30.');
 
             return self::FAILURE;
