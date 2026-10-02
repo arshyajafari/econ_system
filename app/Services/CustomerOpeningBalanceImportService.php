@@ -10,7 +10,6 @@ use App\Models\CustomerTransaction;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 use Throwable;
 
 class CustomerOpeningBalanceImportService
@@ -163,9 +162,9 @@ class CustomerOpeningBalanceImportService
             DB::transaction(function () use ($customer, $balance, $sourceKey): void {
                 CustomerTransaction::query()->create([
                     'customer_id' => $customer->id,
-                    'type' => bccomp($balance, '0', 2) >= 0
-                        ? CustomerTransactionType::DEBIT
-                        : CustomerTransactionType::CREDIT,
+                    'type' => str_starts_with($balance, '-')
+                        ? CustomerTransactionType::CREDIT
+                        : CustomerTransactionType::DEBIT,
                     'amount' => ltrim($balance, '+-'),
                     'transaction_at' => CarbonImmutable::parse($this->openingDate)->startOfDay(),
                     'description' => 'مانده اولیه مشتری - ورود از Excel',
