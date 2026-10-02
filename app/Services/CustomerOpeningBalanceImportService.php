@@ -28,6 +28,8 @@ class CustomerOpeningBalanceImportService
 
     private array $seenCustomerCodes = [];
 
+    private bool $headerChecked = false;
+
     public function __construct(
         private readonly string $openingDate,
         private readonly bool $dryRun = false,
@@ -38,6 +40,24 @@ class CustomerOpeningBalanceImportService
     {
         if ($rows->isEmpty()) {
             return;
+        }
+
+        if (!$this->headerChecked) {
+            $this->headerChecked = true;
+            $firstRow = $rows->first();
+            $keys = $firstRow instanceof Collection ? array_keys($firstRow->all()) : [];
+
+            $missingColumns = array_values(array_diff(['customer_id', 'balance'], $keys));
+            if ($missingColumns !== []) {
+                $this->statistics['failed']++;
+                $this->errors[] = [
+                    'row' => $startRowNumber,
+                    'reason' => 'missing_required_columns',
+                    'columns' => $missingColumns,
+                ];
+
+                return;
+            }
         }
 
         $normalized = [];
@@ -240,6 +260,8 @@ class CustomerOpeningBalanceImportService
         [$integer, $decimal] = array_pad(explode('.', $value, 2), 2, '0');
         $sign = str_starts_with($integer, '-') ? '-' : '';
         $integer = ltrim($integer, '+-');
+        $integer = ltrim($integer, '0');
+        $integer = $integer === '' ? '0' : $integer;
         $decimal = str_pad($decimal, 2, '0');
 
         return $sign . $integer . '.' . $decimal;
