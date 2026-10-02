@@ -1,7 +1,6 @@
 <?php
 
     use App\Http\Controllers\Api\CustomerController;
-    use App\Http\Controllers\Api\CustomerOpeningBalanceImportController;
     use App\Http\Controllers\Api\CustomerLedgerController;
     use Illuminate\Support\Facades\Route;
 
@@ -15,11 +14,6 @@
             CustomerController::class,
             'store'
         ])->name('store');
-
-        Route::post('/opening-balances/import', [
-            CustomerOpeningBalanceImportController::class,
-            'store'
-        ])->name('opening-balances.import');
 
         Route::get('/{customer}/ledger', [
             CustomerLedgerController::class,
