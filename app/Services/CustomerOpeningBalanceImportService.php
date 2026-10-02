@@ -258,7 +258,7 @@ class CustomerOpeningBalanceImportService
     private function isValidAmount(string $amount): bool
     {
         return preg_match('/^-?\d+(?:\.\d{1,2})?$/', $amount) === 1
-            && bccomp($amount, '0', 2) !== 0;
+            && preg_replace('/^[-+]?0(?:\.0{1,2})?$/', '', $amount) !== '';
     }
 
     private function error(
