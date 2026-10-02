@@ -7,7 +7,6 @@ use App\Enums\InvoiceStatus;
 use App\Models\CustomerTransaction;
 use App\Models\Invoice;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Collection;
 
 class CustomerLedgerService
 {
