@@ -14,7 +14,7 @@ use Throwable;
 
 class ImportCustomerOpeningBalances extends Command
 {
-    protected $signature = 'customers:imports
+    protected $signature = 'customers:import
                             {file=imports/customer-opening-balances.xlsx : Excel file name or path relative to storage/app or the project root}
                             {--date= : Opening balance date in Y-m-d format}
                             {--dry-run : Validate and report without writing transactions}';
