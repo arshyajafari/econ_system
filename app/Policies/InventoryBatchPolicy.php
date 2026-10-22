@@ -9,7 +9,7 @@ class InventoryBatchPolicy
 {
     private function canView(User $user): bool
     {
-        return $user->hasAnyRole(['admin', 'accountant', 'sales visitor']);
+        return $user->hasAnyRole(['admin', 'accountant']);
     }
 
     public function viewAny(User $user): bool { return $this->canView($user); }
