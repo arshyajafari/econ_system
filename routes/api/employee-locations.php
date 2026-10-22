@@ -5,5 +5,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('employees/locations')->name('employees.locations.')->group(function () {
     Route::get('/', [EmployeeLocationController::class, 'index'])->name('index');
+    Route::get('/history', [EmployeeLocationController::class, 'history'])->name('history');
     Route::post('/me', [EmployeeLocationController::class, 'store'])->name('store');
 });

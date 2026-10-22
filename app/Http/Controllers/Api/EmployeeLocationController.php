@@ -40,4 +40,34 @@ class EmployeeLocationController extends Controller {
 
         return EmployeeLocationResource::collection($locations);
     }
+
+    public function history(Request $request) {
+        abort_unless($request->user()->hasRole('admin'), 403);
+
+        $validated = $request->validate([
+            'employee_id' => ['required', 'string', 'max:100'],
+            'date' => ['required', 'date_format:Y-m-d'],
+        ]);
+
+        $employee = Employee::query()
+            ->where('public_id', $validated['employee_id'])
+            ->firstOrFail();
+
+        $start = \Illuminate\Support\Carbon::createFromFormat(
+            '!Y-m-d',
+            $validated['date'],
+            config('app.timezone')
+        )->startOfDay();
+        $end = $start->copy()->endOfDay();
+
+        $locations = EmployeeLocation::query()
+            ->where('employee_id', $employee->id)
+            ->whereBetween('captured_at', [$start, $end])
+            ->with('employee')
+            ->orderBy('captured_at')
+            ->limit(5000)
+            ->get();
+
+        return EmployeeLocationResource::collection($locations);
+    }
 }
