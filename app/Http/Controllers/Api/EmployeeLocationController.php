@@ -29,13 +29,15 @@ class EmployeeLocationController extends Controller {
 
         $employees = Employee::query()
             ->active()
-            ->with('latestLocation')
+            ->with('latestLocation.employee')
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get();
 
-        return EmployeeLocationResource::collection(
-            $employees->map(fn(Employee $employee) => $employee->latestLocation)->filter()
-        );
+        $locations = $employees->map(fn (Employee $employee) => $employee->latestLocation)
+            ->filter()
+            ->values();
+
+        return EmployeeLocationResource::collection($locations);
     }
 }
