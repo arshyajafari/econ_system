@@ -1,13 +1,13 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api;
+namespace App\Http\Controllers\Api;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Http\\Requests\\Employee\\StoreEmployeeLocationRequest;
-use App\\Http\\Resources\\EmployeeLocationResource;
-use App\\Models\\Employee;
-use App\\Models\\EmployeeLocation;
-use Illuminate\\Http\\Request;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Employee\StoreEmployeeLocationRequest;
+use App\Http\Resources\EmployeeLocationResource;
+use App\Models\Employee;
+use App\Models\EmployeeLocation;
+use Illuminate\Http\Request;
 
 class EmployeeLocationController extends Controller {
     public function store(StoreEmployeeLocationRequest $request): EmployeeLocationResource {
@@ -53,7 +53,7 @@ class EmployeeLocationController extends Controller {
             ->where('public_id', $validated['employee_id'])
             ->firstOrFail();
 
-        $start = \\Illuminate\\Support\\Carbon::createFromFormat(
+        $start = \Illuminate\Support\Carbon::createFromFormat(
             '!Y-m-d',
             $validated['date'],
             config('app.timezone')
