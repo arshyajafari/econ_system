@@ -9,6 +9,7 @@ return new class extends Migration {
     {
         Schema::table('employee_locations', function (Blueprint $table) {
             $table->index(['employee_id', 'captured_at'], 'employee_locations_employee_captured_at_index');
+            $table->index('captured_at', 'employee_locations_captured_at_index');
         });
     }
 
@@ -16,6 +17,7 @@ return new class extends Migration {
     {
         Schema::table('employee_locations', function (Blueprint $table) {
             $table->dropIndex('employee_locations_employee_captured_at_index');
+            $table->dropIndex('employee_locations_captured_at_index');
         });
     }
 };
