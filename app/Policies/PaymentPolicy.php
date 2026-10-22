@@ -10,7 +10,7 @@ class PaymentPolicy
 {
     private function isAdmin(User $user): bool { return $user->hasRole('admin'); }
     private function isAccountant(User $user): bool { return $user->hasRole('accountant'); }
-    private function isSettlementOperator(User $user): bool { return $user->hasRole('settlement_operator'); }
+    private function isSettlementOperator(User $user): bool { return $user->hasRole('settlement operator'); }
 
     public function viewAny(User $user): bool
     {
