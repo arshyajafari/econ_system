@@ -9,11 +9,11 @@ class InventoryMovementPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['admin', 'accountant', 'sales visitor']);
+        return $user->hasAnyRole(['admin', 'accountant']);
     }
 
     public function view(User $user, InventoryMovement $movement): bool
     {
-        return $user->hasAnyRole(['admin', 'accountant', 'sales visitor']);
+        return $user->hasAnyRole(['admin', 'accountant']);
     }
 }
