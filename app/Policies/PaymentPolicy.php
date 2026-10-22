@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\PaymentStatus;
+use App\Enums\Role;
 use App\Models\Payment;
 use App\Models\User;
 
@@ -10,7 +11,7 @@ class PaymentPolicy
 {
     private function isAdmin(User $user): bool { return $user->hasRole('admin'); }
     private function isAccountant(User $user): bool { return $user->hasRole('accountant'); }
-    private function isSettlementOperator(User $user): bool { return $user->hasRole('settlement operator'); }
+    private function isSettlementOperator(User $user): bool { return $user->hasRole(Role::SETTLEMENT_OPERATOR->value); }
 
     public function viewAny(User $user): bool
     {
@@ -31,7 +32,7 @@ class PaymentPolicy
 
     public function update(User $user, Payment $payment): bool
     {
-        // Editing payment records remains restricted to admin/accountant.
+        // Editing pending payment records is allowed to admin, accountant, and settlement operator.
         return ($this->isAdmin($user) || $this->isAccountant($user) || $this->isSettlementOperator($user))
             && $payment->status === PaymentStatus::PENDING;
     }
