@@ -16,11 +16,11 @@
         }
 
         public function create(User $user): bool {
-            return $user->can('doctors.create');
+            return $user->can('doctors.create') || $this->hasScientificVisitorActivity($user);
         }
 
         public function update(User $user, Doctor $doctor): bool {
-            return $user->can('doctors.update');
+            return $user->can('doctors.update') || $this->hasScientificVisitorActivity($user);
         }
 
         public function delete(User $user, Doctor $doctor): bool {
@@ -28,17 +28,21 @@
         }
 
         public function restore(User $user, Doctor $doctor): bool {
-            return $user->can('doctors.restore');
+            return $user->can('doctors.restore') || $this->hasScientificVisitorActivity($user);
         }
 
         public function changeStatus(User $user, Doctor $doctor): bool {
-            return $user->can('doctors.change_status');
+            return $user->can('doctors.change_status') || $this->hasScientificVisitorActivity($user);
         }
 
         public function export(User $user): bool {
-            return $user->can('doctors.export');
+            return $user->can('doctors.export') || $this->hasScientificVisitorActivity($user);
         }
     
+        private function hasScientificVisitorActivity(User $user): bool {
+            return $this->hasScientificVisitorActivity($user);
+        }
+
         private function canViewDoctors(User $user): bool {
             if ($user->can('doctors.view')) {
                 return true;
