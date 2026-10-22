@@ -12,7 +12,7 @@
         }
 
         public function view(User $user, Doctor $doctor): bool {
-            return $user->can('doctors.view');
+            return $this->canViewDoctors($user);
         }
 
         public function create(User $user): bool {
