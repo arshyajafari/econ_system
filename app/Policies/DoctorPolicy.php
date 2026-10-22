@@ -2,12 +2,13 @@
 
     namespace App\Policies;
 
+    use App\Enums\EmployeeActivityType;
     use App\Models\Doctor;
     use App\Models\User;
 
     class DoctorPolicy {
         public function viewAny(User $user): bool {
-            return $user->can('doctors.view');
+            return $this->canViewDoctors($user);
         }
 
         public function view(User $user, Doctor $doctor): bool {
@@ -37,4 +38,23 @@
         public function export(User $user): bool {
             return $user->can('doctors.export');
         }
-    }
+    
+        private function canViewDoctors(User $user): bool {
+            if ($user->can('doctors.view')) {
+                return true;
+            }
+
+            $employee = $user->employee;
+            if (!$employee) {
+                return false;
+            }
+
+            if ($employee->activity_type === EmployeeActivityType::SCIENTIFIC_VISITOR) {
+                return true;
+            }
+
+            return $employee->activities()
+                ->where('activity_type', EmployeeActivityType::SCIENTIFIC_VISITOR->value)
+                ->exists();
+        }
+}
