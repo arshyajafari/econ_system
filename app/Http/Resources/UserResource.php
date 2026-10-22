@@ -16,6 +16,8 @@ class UserResource extends JsonResource {
                 'id' => $this->employee->public_id,
                 'full_name' => $this->employee->full_name,
                 'phone_number' => $this->employee->phone_number,
+                'activity_type' => $this->employee->activity_type?->value,
+                'activities' => $this->employee->activities()->pluck('activity_type')->values()->all(),
             ],
         ];
     }
