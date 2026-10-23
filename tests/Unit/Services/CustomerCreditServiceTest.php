@@ -3,7 +3,6 @@
 namespace Tests\Unit\Services;
 
 use App\Models\CustomerCreditAllocation;
-use App\Models\CustomerCreditService;
 use App\Models\CustomerTransaction;
 use App\Models\Invoice;
 use App\Services\CustomerCreditService as ServicesCustomerCreditService;
@@ -137,10 +136,16 @@ class CustomerCreditServiceTest extends TestCase
 
     public function test_allocation_does_not_exceed_the_invoice_remaining_balance(): void
     {
+        DB::table('order_returns')->insert([
+            'id' => 91,
+            'order_id' => 50,
+            'status' => 'confirmed',
+        ]);
+
         DB::table('customer_transactions')->insert([
             'id' => 2,
             'customer_id' => 7,
-            'order_return_id' => 90,
+            'order_return_id' => 91,
             'type' => 'credit',
             'amount' => 80,
             'transaction_at' => now(),
