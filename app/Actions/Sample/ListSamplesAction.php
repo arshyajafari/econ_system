@@ -10,10 +10,15 @@ class ListSamplesAction
 {
     public function execute(array $filters, User $user): LengthAwarePaginator
     {
-        $employeeId = $user->hasRole('scientific visitor') ? $user->employee?->id : null;
+        $isScientificVisitor = $user->hasRole('scientific visitor');
+        $employeeId = $isScientificVisitor ? $user->employee?->id : null;
 
-        return SampleQuery::make()
-            ->apply($filters, $employeeId)
-            ->paginate($filters['per_page'] ?? 20);
+        $query = SampleQuery::make()->apply($filters, $employeeId);
+
+        if (!$isScientificVisitor) {
+            $query->excludeScientificVisitorSamples();
+        }
+
+        return $query->paginate($filters['per_page'] ?? 20);
     }
 }
