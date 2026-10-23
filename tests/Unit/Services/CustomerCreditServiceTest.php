@@ -166,4 +166,46 @@ class CustomerCreditServiceTest extends TestCase
                 ->sum('amount'),
         );
     }
+    public function test_invoice_linked_payment_exposes_only_its_overpayment_as_reusable_credit(): void
+    {
+        DB::table('invoices')->insert([
+            'id' => 11,
+            'customer_id' => 7,
+            'order_id' => 51,
+            'code' => 'INV-000011',
+            'total_amount' => 100,
+        ]);
+
+        DB::table('payments')->insert([
+            'id' => 20,
+            'invoice_id' => 10,
+            'status' => 'confirmed',
+            'amount' => 130,
+            'settlement_discount_amount' => 0,
+        ]);
+
+        DB::table('customer_transactions')->insert([
+            'id' => 3,
+            'customer_id' => 7,
+            'payment_id' => 20,
+            'type' => 'credit',
+            'amount' => 130,
+            'transaction_at' => now(),
+        ]);
+
+        $service = new ServicesCustomerCreditService();
+        $source = CustomerTransaction::query()->findOrFail(3);
+        $targetInvoice = Invoice::query()->findOrFail(11);
+
+        $allocated = $service->allocateSourceToInvoice($source, $targetInvoice, 130);
+
+        $this->assertSame(30.0, $allocated);
+        $this->assertSame(
+            30.0,
+            (float) CustomerCreditAllocation::query()
+                ->where('source_transaction_id', 3)
+                ->sum('amount'),
+        );
+    }
+
 }
