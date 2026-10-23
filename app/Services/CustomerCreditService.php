@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Enums\CustomerTransactionType;
+use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\CustomerCreditAllocation;
 use App\Models\CustomerTransaction;
 use App\Models\Invoice;
+use App\Models\Payment;
 use Illuminate\Support\Collection;
 
 class CustomerCreditService {
@@ -26,7 +28,7 @@ class CustomerCreditService {
         }
 
         $available = $this->availableAmount($customerId);
-        $remaining = $invoice->effectiveRemainingAmount();
+        $remaining = $this->freshInvoice($invoice)->effectiveRemainingAmount();
         $amountToAllocate = min($requestedAmount, $available, $remaining);
 
         if ($amountToAllocate <= 0) {
@@ -63,18 +65,10 @@ class CustomerCreditService {
             return 0.0;
         }
 
-        $alreadyAllocated = (float) CustomerCreditAllocation::query()
-            ->where('source_transaction_id', $sourceTransaction->id)
-            ->sum('amount');
-
-        $sourceAvailable = max(0, round((float) $sourceTransaction->amount - $alreadyAllocated, 2));
-        $invoiceRemaining = $invoice->effectiveRemainingAmount();
-        $amount = min($requestedAmount, $sourceAvailable, $invoiceRemaining);
-
         return $this->createAllocation(
             sourceTransaction: $sourceTransaction,
             invoice: $invoice,
-            amount: $amount,
+            amount: $requestedAmount,
             description: $description,
         );
     }
@@ -91,16 +85,116 @@ class CustomerCreditService {
             return 0.0;
         }
 
+        // The source row is the mutex for all allocations from this credit.
+        // Every allocation path must take this lock before reading its
+        // allocated total, otherwise concurrent transactions can spend the
+        // same credit twice.
+        $lockedSource = CustomerTransaction::query()
+            ->lockForUpdate()
+            ->findOrFail($sourceTransaction->id);
+
+        if ((int) $lockedSource->customer_id !== (int) $invoice->customer_id
+            || $lockedSource->type !== CustomerTransactionType::CREDIT) {
+            return 0.0;
+        }
+
+        $sourceAvailable = $this->availableAmountForLockedSource($lockedSource);
+        $freshInvoice = $this->freshInvoice($invoice);
+        $invoiceRemaining = $freshInvoice->effectiveRemainingAmount();
+        $amount = min($amount, $sourceAvailable, $invoiceRemaining);
+
+        if ($amount <= 0) {
+            return 0.0;
+        }
+
         CustomerCreditAllocation::create([
-            'customer_id' => $invoice->customer_id,
-            'source_transaction_id' => $sourceTransaction->id,
-            'invoice_id' => $invoice->id,
-            'amount' => $amount,
+            'customer_id' => $freshInvoice->customer_id,
+            'source_transaction_id' => $lockedSource->id,
+            'invoice_id' => $freshInvoice->id,
+            'amount' => round($amount, 2),
             'allocated_at' => now(),
-            'description' => $description ?? "استفاده از اعتبار مشتری برای فاکتور {$invoice->code}",
+            'description' => $description ?? "استفاده از اعتبار مشتری برای فاکتور {$freshInvoice->code}",
         ]);
 
-        return $amount;
+        return round($amount, 2);
+    }
+
+    /**
+     * Recalculate a source's spendable amount only after its row has been
+     * locked. Allocation rows are read with a locking read so a transaction
+     * that waited for the source lock sees allocations committed by the
+     * previous holder rather than relying on a stale eager-loaded relation.
+     */
+    protected function availableAmountForLockedSource(CustomerTransaction $source): float
+    {
+        $allocated = (float) CustomerCreditAllocation::query()
+            ->where('source_transaction_id', $source->id)
+            ->lockForUpdate()
+            ->get(['amount'])
+            ->sum(fn (CustomerCreditAllocation $allocation) => (float) $allocation->amount);
+
+        $sourceAmount = (float) $source->amount;
+
+        if ($source->order_return_id !== null) {
+            return max(0, round($sourceAmount - $allocated, 2));
+        }
+
+        if ($source->payment_id === null) {
+            return 0.0;
+        }
+
+        $payment = Payment::query()->find($source->payment_id);
+
+        if (!$payment || $payment->status !== PaymentStatus::CONFIRMED) {
+            return 0.0;
+        }
+
+        // A customer-level payment is reusable credit in full. A payment
+        // attached to an invoice contributes reusable credit only for the
+        // portion that exceeds that invoice's total, matching creditSources().
+        if ($payment->invoice_id === null) {
+            return max(0, round($sourceAmount - $allocated, 2));
+        }
+
+        $invoiceTotal = (float) Invoice::query()
+            ->whereKey($payment->invoice_id)
+            ->value('total_amount');
+
+        $transactions = CustomerTransaction::query()
+            ->where('customer_id', $source->customer_id)
+            ->where('type', CustomerTransactionType::CREDIT)
+            ->whereHas('payment', fn ($query) => $query
+                ->where('status', PaymentStatus::CONFIRMED)
+                ->where('invoice_id', $payment->invoice_id))
+            ->orderBy('transaction_at')
+            ->orderBy('id')
+            ->get(['id', 'amount']);
+
+        $cumulative = 0.0;
+
+        foreach ($transactions as $transaction) {
+            $before = $cumulative;
+            $cumulative += (float) $transaction->amount;
+
+            if ((int) $transaction->id !== (int) $source->id) {
+                continue;
+            }
+
+            $overpaymentBefore = max(0, round($before - $invoiceTotal, 2));
+            $overpaymentAfter = max(0, round($cumulative - $invoiceTotal, 2));
+            $availableForSource = max(0, round($overpaymentAfter - $overpaymentBefore, 2));
+
+            return max(0, round($availableForSource - $allocated, 2));
+        }
+
+        return 0.0;
+    }
+
+    protected function freshInvoice(Invoice $invoice): Invoice
+    {
+        return Invoice::query()
+            ->with(['payments', 'creditAllocations', 'returnTransactions.orderReturn'])
+            ->findOrFail($invoice->id);
     }
 
     public function availablePaymentCreditAmount(int $customerId): float
@@ -131,7 +225,7 @@ class CustomerCreditService {
         $remainingToAllocate = min(
             $requestedAmount,
             $this->availablePaymentCreditAmount($customerId),
-            $invoice->effectiveRemainingAmount(),
+            $this->freshInvoice($invoice)->effectiveRemainingAmount(),
         );
 
         if ($remainingToAllocate <= 0) {
