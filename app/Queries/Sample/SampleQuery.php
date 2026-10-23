@@ -26,6 +26,19 @@ class SampleQuery extends BaseQuery
         return $this;
     }
 
+    /**
+     * Keep scientific visitors' samples private to their own account.
+     * This is applied to lists requested by users who are not scientific visitors.
+     */
+    public function excludeScientificVisitorSamples(): static
+    {
+        $this->query->whereDoesntHave('visit.employee.user', function ($query) {
+            $query->role('scientific visitor');
+        });
+
+        return $this;
+    }
+
     protected function applyVisit(?string $visitId): void
     {
         if (!$visitId) return;
