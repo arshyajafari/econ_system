@@ -12,6 +12,11 @@ class SamplePolicy
         return $user->hasRole('scientific visitor');
     }
 
+    private function isScientificVisitorSample(Sample $sample): bool
+    {
+        return $sample->visit?->employee?->user?->hasRole('scientific visitor') ?? false;
+    }
+
     private function ownsSample(User $user, Sample $sample): bool
     {
         return $this->isScientificVisitor($user)
@@ -22,6 +27,10 @@ class SamplePolicy
 
     public function view(User $user, Sample $sample): bool
     {
+        if ($this->isScientificVisitorSample($sample)) {
+            return $this->ownsSample($user, $sample);
+        }
+
         return $user->can('samples.view') || $this->ownsSample($user, $sample);
     }
 
