@@ -26,7 +26,17 @@
                 'visit_date' => $this->visit_date?->toISOString(),
                 'purpose' => $this->purpose,
                 'description' => $this->description,
-                'samples' => SampleResource::collection($this->whenLoaded('samples')),
+                'samples' => $this->whenLoaded('samples', function () use ($request) {
+                    $employee = $this->relationLoaded('employee') ? $this->employee : null;
+                    $isScientificVisitorVisit = $employee?->user?->hasRole('scientific visitor') ?? false;
+                    $isOwner = (int) $request->user()?->employee_id === (int) $this->employee_id;
+
+                    if ($isScientificVisitorVisit && !$isOwner) {
+                        return [];
+                    }
+
+                    return SampleResource::collection($this->samples);
+                }),
                 'created_at' => $this->created_at?->toISOString(),
                 'updated_at' => $this->updated_at?->toISOString(),
             ];
