@@ -1,14 +1,14 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api;
+namespace App\Http\Controllers\Api;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Http\\Requests\\Employee\\StoreEmployeeLocationRequest;
-use App\\Http\\Resources\\EmployeeLocationResource;
-use App\\Models\\Employee;
-use App\\Models\\EmployeeLocation;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Carbon;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Employee\StoreEmployeeLocationRequest;
+use App\Http\Resources\EmployeeLocationResource;
+use App\Models\Employee;
+use App\Models\EmployeeLocation;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class EmployeeLocationController extends Controller {
     private const MAX_GAP_MS = 300_000;
