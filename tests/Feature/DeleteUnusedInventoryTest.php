@@ -62,6 +62,69 @@ class DeleteUnusedInventoryTest extends TestCase
         $this->assertDatabaseHas('inventory_movements', ['id' => $movement->id]);
     }
 
+    public function test_product_with_a_soft_deleted_doctor_visit_sample_cannot_be_deleted(): void
+    {
+        $product = $this->createProduct();
+        $now = now();
+
+        $doctorId = DB::table('doctors')->insertGetId([
+            'public_id' => (string) Str::ulid(),
+            'code' => 'DOC-' . Str::upper(Str::random(8)),
+            'first_name' => 'Test',
+            'last_name' => 'Doctor',
+            'status' => 'active',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $employeeId = DB::table('employees')->insertGetId([
+            'public_id' => (string) Str::ulid(),
+            'code' => 'EMP-' . Str::upper(Str::random(8)),
+            'first_name' => 'Test',
+            'last_name' => 'Employee',
+            'national_code' => Str::upper(Str::random(10)),
+            'phone_number' => '09' . random_int(100000000, 999999999),
+            'hire_date' => $now->toDateString(),
+            'status' => 'active',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $visitId = DB::table('visits')->insertGetId([
+            'public_id' => (string) Str::ulid(),
+            'doctor_id' => $doctorId,
+            'employee_id' => $employeeId,
+            'visit_date' => $now,
+            'status' => 'active',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $sampleId = DB::table('samples')->insertGetId([
+            'public_id' => (string) Str::ulid(),
+            'visit_id' => $visitId,
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'created_at' => $now,
+            'updated_at' => $now,
+            'deleted_at' => $now,
+        ]);
+
+        try {
+            app(DeleteProductAction::class)->execute($product);
+            $this->fail('A product referenced by a doctor-visit sample must not be deleted.');
+        } catch (BusinessRuleException) {
+            $this->assertDatabaseHas('products', [
+                'id' => $product->id,
+                'deleted_at' => null,
+            ]);
+            $this->assertDatabaseHas('samples', [
+                'id' => $sampleId,
+                'deleted_at' => $now,
+            ]);
+        }
+    }
+
     public function test_product_with_a_batch_that_has_operational_history_cannot_be_deleted(): void
     {
         $product = $this->createProduct();
