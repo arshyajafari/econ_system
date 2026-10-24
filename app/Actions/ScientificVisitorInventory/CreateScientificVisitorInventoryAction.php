@@ -40,7 +40,10 @@ class CreateScientificVisitorInventoryAction
                 throw new BusinessRuleException('موجودی قابل تحویل این بچ کافی نیست.');
             }
 
-            $inventory = ScientificVisitorInventory::query()
+            // The employee/product pair has a unique constraint even for soft-deleted
+            // rows. Reuse and restore an existing ledger instead of attempting an
+            // insert that would fail after an empty ledger was deleted.
+            $inventory = ScientificVisitorInventory::withTrashed()
                 ->where('employee_id', $employee->id)
                 ->where('product_id', $batch->product_id)
                 ->lockForUpdate()
@@ -53,6 +56,10 @@ class CreateScientificVisitorInventoryAction
                     'received_quantity' => 0,
                     'used_quantity' => 0,
                 ]);
+            } elseif ($inventory->trashed()) {
+                // Older deployments may contain deleted ledgers with history.
+                // Restore that history; never create a competing aggregate row.
+                $inventory->restore();
             }
 
             $inventory->received_quantity += $quantity;
