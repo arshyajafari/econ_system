@@ -14,7 +14,7 @@ class OrderReturnAmountCalculator
      *
      * @param iterable<OrderReturnItem> $items
      */
-    public function validateManualAmount(iterable $items, float $manualAmount): void
+    public function validateManualAmount(iterable $items, float $manualAmount): float
     {
         if ($manualAmount <= 0) {
             throw new BusinessRuleException('مبلغ دستی مرجوعی باید بیشتر از صفر باشد.');
@@ -43,5 +43,7 @@ class OrderReturnAmountCalculator
                 'مبلغ دستی مرجوعی نمی‌تواند از ارزش روز اقلام پولی مرجوعی بیشتر باشد.'
             );
         }
+
+        return $maximumAmount;
     }
 }
