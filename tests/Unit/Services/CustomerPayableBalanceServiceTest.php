@@ -130,10 +130,45 @@ class CustomerPayableBalanceServiceTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_unallocated_return_credit_from_a_settled_invoice_reduces_other_invoice_payable_balance(): void
+    {
+        DB::table('invoices')->where('id', 30)->update(['total_amount' => 5000000]);
+        DB::table('invoices')->where('id', 31)->update(['total_amount' => 5000000]);
+        DB::table('deliveries')->where('id', 21)->update(['status' => DeliveryStatus::DELIVERED->value]);
+
+        DB::table('payments')->insert([
+            'id' => 100,
+            'invoice_id' => 30,
+            'customer_id' => 7,
+            'status' => 'confirmed',
+            'amount' => 5000000,
+            'settlement_discount_amount' => 0,
+        ]);
+
+        DB::table('order_returns')->insert([
+            'id' => 200,
+            'order_id' => 10,
+            'status' => 'completed',
+        ]);
+
+        DB::table('customer_transactions')->insert([
+            'id' => 300,
+            'customer_id' => 7,
+            'order_return_id' => 200,
+            'type' => 'credit',
+            'amount' => 2000000,
+            'transaction_at' => now(),
+        ]);
+
+        $service = new CustomerPayableBalanceService(new CustomerCreditService());
+
+        $this->assertSame(3000000.0, $service->calculate(7));
+    }
+
     public function test_only_issued_invoices_with_confirmed_delivery_contribute_to_payable_balance(): void
     {
         $credits = Mockery::mock(CustomerCreditService::class);
-        $credits->shouldReceive('availablePaymentCreditAmount')->twice()->with(7)->andReturn(0.0);
+        $credits->shouldReceive('availableAmount')->twice()->with(7)->andReturn(0.0);
 
         $service = new CustomerPayableBalanceService($credits);
 
