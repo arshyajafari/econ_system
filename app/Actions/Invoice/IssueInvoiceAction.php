@@ -29,6 +29,10 @@
 
                 $subtotal = $invoice->items->sum(fn($item) => (float)$item->total_price);
 
+                if ($invoice->discountExceedsSubtotal((float) $subtotal)) {
+                    throw new BusinessRuleException('تخفیف فاکتور نمی‌تواند بیشتر از مبلغ پایه فاکتور باشد.');
+                }
+
                 $expectedTotal = $subtotal - (float)$invoice->discount_amount + (float)$invoice->tax_amount;
 
                 if ($expectedTotal <= 0) {
