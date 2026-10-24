@@ -115,7 +115,7 @@ class CustomerLedgerService {
         $value = trim((string) ($amount ?? '0'));
 
         if (!preg_match('/^([+-]?)(\\d+)(?:\\.(\\d{1,2}))?$/D', $value, $matches)) {
-            throw new \\InvalidArgumentException('Invalid currency amount for customer ledger.');
+            throw new \InvalidArgumentException('Invalid currency amount for customer ledger.');
         }
 
         $whole = (int) $matches[2];
