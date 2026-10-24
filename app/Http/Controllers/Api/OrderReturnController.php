@@ -22,6 +22,8 @@ use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
 use App\Enums\OrderStatus;
+use App\Enums\InvoiceStatus;
+use App\Enums\DeliveryStatus;
 use App\Queries\OrderReturn\OrderReturnQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,6 +41,8 @@ class OrderReturnController extends Controller {
 
         $orders = Order::query()->with(['customer', 'items.product', 'invoice'])
             ->where('status', OrderStatus::COMPLETED)
+            ->whereHas('invoice', fn ($query) => $query->where('status', InvoiceStatus::ISSUED))
+            ->whereHas('delivery', fn ($query) => $query->where('status', DeliveryStatus::DELIVERED))
             ->whereHas('items', function ($query) {
                 $query->whereRaw('order_items.quantity > (SELECT COALESCE(SUM(order_return_items.quantity), 0) FROM order_return_items INNER JOIN order_returns ON order_returns.id = order_return_items.order_return_id WHERE order_return_items.order_item_id = order_items.id AND order_returns.status NOT IN (?, ?) AND order_returns.deleted_at IS NULL AND order_return_items.deleted_at IS NULL)', ['draft', 'cancelled']);
             });
@@ -81,7 +85,8 @@ class OrderReturnController extends Controller {
 
         $order = Order::query()
             ->where('public_id', $order)
-            ->whereHas('invoice')
+            ->whereHas('invoice', fn ($query) => $query->where('status', InvoiceStatus::ISSUED))
+            ->whereHas('delivery', fn ($query) => $query->where('status', DeliveryStatus::DELIVERED))
             ->firstOrFail();
 
         if ($user?->hasRole('sales visitor')) {

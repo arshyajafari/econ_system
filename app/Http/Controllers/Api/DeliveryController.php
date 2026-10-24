@@ -15,6 +15,7 @@ use App\Http\Requests\Delivery\UpdateDeliveryRequest;
 use App\Http\Resources\DeliveryResource;
 use App\Models\Order;
 use App\Enums\OrderStatus;
+use App\Enums\InvoiceStatus;
 use App\Models\Delivery;
 use App\Queries\Delivery\DeliveryQuery;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +33,7 @@ class DeliveryController extends Controller {
         $orders = Order::query()
             ->with(['customer'])
             ->whereIn('status', [OrderStatus::CONFIRMED, OrderStatus::COMPLETED])
+            ->whereHas('invoice', fn ($query) => $query->where('status', InvoiceStatus::ISSUED))
             ->whereDoesntHave('delivery')
             ->orderByDesc('created_at')
             ->get();

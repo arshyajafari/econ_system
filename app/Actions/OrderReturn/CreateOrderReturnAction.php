@@ -4,6 +4,8 @@ namespace App\Actions\OrderReturn;
 
 use App\Enums\OrderReturnStatus;
 use App\Enums\OrderStatus;
+use App\Enums\InvoiceStatus;
+use App\Enums\DeliveryStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Order;
 use App\Models\OrderReturn;
@@ -20,7 +22,7 @@ class CreateOrderReturnAction {
             if (!$employee) throw new BusinessRuleException('کاربر فعلی به کارمند متصل نیست.');
             if (empty($data['items'])) throw new BusinessRuleException('مرجوعی باید حداقل یک آیتم داشته باشد.');
 
-            $order = Order::query()->where('public_id', $data['order_id'])->lockForUpdate()->with(['items', 'returns.items'])->firstOrFail();
+            $order = Order::query()->where('public_id', $data['order_id'])->lockForUpdate()->with(['items', 'returns.items', 'invoice', 'delivery'])->firstOrFail();
 
             $canCreateForAnyCompletedOrder = $user->hasAnyRole(['admin', 'accountant', 'delivery operator']);
             if (!$canCreateForAnyCompletedOrder) {
@@ -32,7 +34,8 @@ class CreateOrderReturnAction {
             }
 
             if ($order->status !== OrderStatus::COMPLETED) throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل برگشت است.');
-            if (!$order->invoice()->exists()) throw new BusinessRuleException('برای ثبت مرجوعی، ابتدا باید برای این سفارش فاکتور ایجاد شود.');
+            if (!$order->invoice || $order->invoice->status !== InvoiceStatus::ISSUED) throw new BusinessRuleException('برای ثبت مرجوعی، ابتدا باید فاکتور سفارش صادر شود.');
+            if (!$order->delivery || $order->delivery->status !== DeliveryStatus::DELIVERED) throw new BusinessRuleException('ثبت مرجوعی پس از تحویل تأییدشده سفارش امکان‌پذیر است.');
 
             $requestedQuantities = collect($data['items'])->groupBy('order_item_id')->map(fn ($items) => [
                 'quantity' => $items->sum(fn ($item) => (int) $item['quantity']),
