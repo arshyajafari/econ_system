@@ -32,6 +32,7 @@ class CreateOrderReturnAction {
             }
 
             if ($order->status !== OrderStatus::COMPLETED) throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل برگشت است.');
+            if (!$order->invoice()->exists()) throw new BusinessRuleException('برای ثبت مرجوعی، ابتدا باید برای این سفارش فاکتور ایجاد شود.');
 
             $requestedQuantities = collect($data['items'])->groupBy('order_item_id')->map(fn ($items) => [
                 'quantity' => $items->sum(fn ($item) => (int) $item['quantity']),

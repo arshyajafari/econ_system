@@ -79,7 +79,10 @@ class OrderReturnController extends Controller {
         $user = auth()->user();
         $this->authorize('create', OrderReturn::class);
 
-        $order = Order::query()->where('public_id', $order)->firstOrFail();
+        $order = Order::query()
+            ->where('public_id', $order)
+            ->whereHas('invoice')
+            ->firstOrFail();
 
         if ($user?->hasRole('sales visitor')) {
             $employeeId = $user->employee?->id;
