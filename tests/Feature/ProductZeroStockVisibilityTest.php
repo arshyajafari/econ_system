@@ -1,14 +1,14 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\InventoryBatch;
-use App\\Models\\Product;
-use App\\Queries\\Product\\ProductQuery;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Str;
-use Tests\\TestCase;
+use App\Models\InventoryBatch;
+use App\Models\Product;
+use App\Queries\Product\ProductQuery;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Tests\TestCase;
 
 class ProductZeroStockVisibilityTest extends TestCase
 {
