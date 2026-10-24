@@ -16,6 +16,12 @@
         }
 
         public function apply(array $filters): static {
+            // Non-admin users should only browse products with physical stock.
+            // Apply this in the backend so UI filtering cannot be bypassed.
+            if (!auth()->user()?->hasRole('admin')) {
+                $this->query->whereHas('inventoryBatches', fn ($query) => $query->where('quantity', '>', 0));
+            }
+
             $this->applySearch($filters['search'] ?? null, Product::SEARCHABLE);
             $this->applyBrand($filters['brand_id'] ?? null);
             $this->applyCategory($filters['product_category_id'] ?? null);

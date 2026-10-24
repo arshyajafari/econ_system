@@ -18,7 +18,15 @@ class ProductPolicy
     }
 
     public function viewAny(User $user): bool { return $this->canView($user); }
-    public function view(User $user, Product $product): bool { return $this->canView($user); }
+    public function view(User $user, Product $product): bool
+    {
+        if (!$this->canView($user)) {
+            return false;
+        }
+
+        return $user->hasRole('admin')
+            || $product->inventoryBatches()->where('quantity', '>', 0)->exists();
+    }
     public function create(User $user): bool { return $this->canEdit($user); }
     public function update(User $user, Product $product): bool { return $this->canEdit($user); }
     public function delete(User $user, Product $product): bool { return $user->hasRole('admin'); }

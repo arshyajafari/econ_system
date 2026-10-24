@@ -21,6 +21,7 @@ class Product extends BaseModel implements HasGeneratedCode
 
     public const DEFAULT_PER_PAGE = 20;
     public const MAX_PER_PAGE = 500;
+    public const ZERO_STOCK_ARCHIVE_DAYS = 30;
     public const DEFAULT_RELATIONS = ['brand', 'category', 'currentPrice'];
     public const SEARCHABLE = ['code', 'title', 'barcode'];
     public const SORTABLE = ['title', 'sort_order', 'created_at'];
@@ -35,7 +36,46 @@ class Product extends BaseModel implements HasGeneratedCode
         return array_merge(parent::casts(), [
             'status' => ProductStatus::class,
             'meta' => 'array',
+            'zero_stock_since' => 'immutable_datetime',
         ]);
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (Product $product): void {
+            $product->syncZeroStockSince();
+        });
+    }
+
+    /**
+     * Keep the zero-stock clock tied to physical on-hand quantity across all
+     * non-deleted batches. Reserved quantity does not mean physical stock is zero.
+     */
+    public function syncZeroStockSince(): void
+    {
+        if (!$this->exists || !$this->getKey()) {
+            return;
+        }
+
+        $hasPhysicalStock = $this->inventoryBatches()->where('quantity', '>', 0)->exists();
+
+        if ($hasPhysicalStock) {
+            if ($this->zero_stock_since !== null) {
+                $this->forceFill(['zero_stock_since' => null])->saveQuietly();
+            }
+
+            return;
+        }
+
+        if ($this->zero_stock_since === null) {
+            $this->forceFill(['zero_stock_since' => now()])->saveQuietly();
+        }
+    }
+
+    public function isArchivedForNoStock(): bool
+    {
+        return $this->zero_stock_since !== null
+            && $this->zero_stock_since->lte(now()->subDays(self::ZERO_STOCK_ARCHIVE_DAYS));
     }
 
     public function brand(): BelongsTo { return $this->belongsTo(Brand::class); }
