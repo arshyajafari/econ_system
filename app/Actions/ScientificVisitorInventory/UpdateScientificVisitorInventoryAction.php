@@ -2,10 +2,7 @@
 
 namespace App\Actions\ScientificVisitorInventory;
 
-use App\Enums\InventoryMovementType;
 use App\Exceptions\BusinessRuleException;
-use App\Models\InventoryBatch;
-use App\Models\InventoryMovement;
 use App\Models\ScientificVisitorInventory;
 use Illuminate\Support\Facades\DB;
 
