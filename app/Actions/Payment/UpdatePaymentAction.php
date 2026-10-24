@@ -6,6 +6,7 @@ use App\Exceptions\BusinessRuleException;
 use App\Models\Customer;
 use App\Models\Payment;
 use App\Services\CustomerPayableBalanceService;
+use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -54,11 +55,11 @@ class UpdatePaymentAction {
                 throw new BusinessRuleException('این مشتری دیگر مانده قابل پرداختی ندارد.');
             }
 
-            if ($amount + $discountAmount > $remainingBalance) {
+            if (Money::sumExceeds($remainingBalance, $amount, $discountAmount)) {
                 throw new BusinessRuleException('مبلغ پرداخت و تخفیف تسویه نمی‌تواند بیشتر از مانده قابل پرداخت مشتری باشد.');
             }
 
-            if ($discountAmount > $remainingBalance) {
+            if (Money::sumExceeds($remainingBalance, $discountAmount)) {
                 throw new BusinessRuleException('تخفیف تسویه نمی‌تواند بیشتر از مانده حساب مشتری باشد.');
             }
 
