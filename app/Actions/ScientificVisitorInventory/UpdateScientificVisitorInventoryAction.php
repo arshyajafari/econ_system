@@ -2,10 +2,7 @@
 
 namespace App\Actions\ScientificVisitorInventory;
 
-use App\Enums\InventoryMovementType;
 use App\Exceptions\BusinessRuleException;
-use App\Models\InventoryBatch;
-use App\Models\InventoryMovement;
 use App\Models\ScientificVisitorInventory;
 use Illuminate\Support\Facades\DB;
 
@@ -31,57 +28,9 @@ class UpdateScientificVisitorInventoryAction
             }
 
             if ($delta !== 0) {
-                if (empty($data['inventory_batch_id'])) {
-                    throw new BusinessRuleException('برای تغییر تعداد، انتخاب بچ محصول الزامی است.');
-                }
-
-                $batch = InventoryBatch::query()
-                    ->where('public_id', $data['inventory_batch_id'])
-                    ->lockForUpdate()
-                    ->firstOrFail();
-
-                if ((int) $batch->product_id !== (int) $inventory->product_id) {
-                    throw new BusinessRuleException('بچ انتخاب‌شده مربوط به این محصول نیست.');
-                }
-
-                if ($batch->is_expired) {
-                    throw new BusinessRuleException('اصلاح موجودی با بچ منقضی‌شده مجاز نیست.');
-                }
-
-                $movementType = $delta > 0
-                    ? InventoryMovementType::OUT
-                    : InventoryMovementType::IN;
-
-                $movementQuantity = abs($delta);
-
-                if ($delta > 0) {
-                    if ($movementQuantity > (int) $batch->available_quantity) {
-                        throw new BusinessRuleException('موجودی قابل تحویل این بچ برای افزایش نمونه کافی نیست.');
-                    }
-
-                    $batch->quantity -= $movementQuantity;
-                } else {
-                    $batch->quantity += $movementQuantity;
-                }
-
-                $batch->save();
-
-                $inventory->received_quantity = $newQuantity;
-
-                InventoryMovement::create([
-                    'inventory_batch_id' => $batch->id,
-                    'type' => $movementType,
-                    'quantity' => $movementQuantity,
-                    'reason' => 'scientific_visitor_inventory_adjustment',
-                    'description' => $delta > 0
-                        ? "افزایش نمونه تحویلی به {$inventory->employee?->fullName} از {$oldQuantity} به {$newQuantity}"
-                        : "برگشت نمونه از {$inventory->employee?->fullName}؛ کاهش نمونه تحویلی از {$oldQuantity} به {$newQuantity}",
-                    'moved_at' => now(),
-                ]);
-
-                if ($delta > 0) {
-                    $inventory->last_received_at = now();
-                }
+                throw new BusinessRuleException(
+                    'تغییر تعداد از طریق ویرایش موجودی تجمیعی مجاز نیست؛ تحویل جدید را از مسیر تحویل به ویزیتور ثبت کنید. برگشت یا اصلاح تعداد پس از ثبت ردیابی دقیق بچ‌ها امکان‌پذیر خواهد بود.'
+                );
             }
 
             if (array_key_exists('description', $data)) {
