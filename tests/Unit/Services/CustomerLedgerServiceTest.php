@@ -122,6 +122,8 @@ class CustomerLedgerServiceTest extends TestCase
                 'id' => 1,
                 'customer_id' => 7,
                 'invoice_id' => 30,
+                'payment_id' => null,
+                'order_return_id' => null,
                 'type' => 'debit',
                 'amount' => '0.10',
                 'transaction_at' => '2026-01-01 10:00:00',
@@ -129,7 +131,9 @@ class CustomerLedgerServiceTest extends TestCase
             [
                 'id' => 2,
                 'customer_id' => 7,
+                'invoice_id' => null,
                 'payment_id' => 40,
+                'order_return_id' => null,
                 'type' => 'credit',
                 'amount' => '0.20',
                 'transaction_at' => '2026-01-02 10:00:00',
@@ -137,6 +141,9 @@ class CustomerLedgerServiceTest extends TestCase
             [
                 'id' => 3,
                 'customer_id' => 7,
+                'invoice_id' => null,
+                'payment_id' => null,
+                'order_return_id' => null,
                 'type' => 'debit',
                 'amount' => '0.30',
                 'transaction_at' => '2026-01-03 10:00:00',
