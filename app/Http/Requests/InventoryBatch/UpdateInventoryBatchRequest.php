@@ -21,8 +21,11 @@ class UpdateInventoryBatchRequest extends BaseFormRequest
                 'nullable',
                 'date',
             ],
-            // Quantity must be changed through inventory-adjustments so the
-            // adjustment record and stock movement are created atomically.
+            // Fail explicitly rather than silently ignoring stale clients that
+            // still try to change quantity through the metadata endpoint.
+            'quantity' => ['prohibited'],
+            // Stock corrections must use inventory-adjustments so the adjustment
+            // record and stock movement are created atomically.
             ...ValidationRules::description(),
         ];
     }
