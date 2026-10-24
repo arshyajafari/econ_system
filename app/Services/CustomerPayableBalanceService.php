@@ -69,17 +69,26 @@ class CustomerPayableBalanceService
         // Only issued invoices with a confirmed delivery contribute to the
         // payable balance. Before delivery confirmation, the invoice is not
         // yet eligible for customer payment collection.
-        // Return credit is already included in effectiveRemainingAmount().
-        // Only payment-originated customer credit (such as an overpayment)
-        // is subtracted separately because it is not attached to an invoice.
-        $availablePaymentCredit = $this->customerCreditService->availablePaymentCreditAmount($customerId);
+        // Invoice remaining amounts already include return credit that can
+        // be applied virtually to the originating invoice. Subtract only
+        // customer credit that is still reusable after that virtual amount,
+        // including excess return credit when the originating invoice was
+        // already settled before the return.
+        $availableCustomerCredit = $this->customerCreditService->availableAmount($customerId);
+        $virtuallyAppliedReturnCredit = $invoices->sum(
+            fn (Invoice $invoice) => $invoice->unallocatedCompletedReturnCreditAmount(),
+        );
+        $availableCustomerCredit = max(
+            0.0,
+            round($availableCustomerCredit - $virtuallyAppliedReturnCredit, 2),
+        );
 
         return max(
             0.0,
             round(
                 $invoiceBalance
                 - (float) $pendingCustomerLevelPayments
-                - $availablePaymentCredit,
+                - $availableCustomerCredit,
                 2,
             ),
         );

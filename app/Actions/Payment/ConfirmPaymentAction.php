@@ -91,6 +91,27 @@ class ConfirmPaymentAction {
                 $availablePaymentCredit = max(0, round($availablePaymentCredit - $allocated, 2));
             }
 
+            // Reuse return credit that remains after the originating
+            // invoice's own outstanding balance has already been reduced.
+            // Never allocate a return's credit back to its originating order;
+            // that portion is already reflected by effectiveRemainingAmount().
+            $availableReturnCredit = $this->customerCreditService->availableReturnCreditAmount($customer->id);
+
+            foreach ($invoices as $invoice) {
+                if ($availableReturnCredit <= 0) {
+                    break;
+                }
+
+                $allocated = $this->customerCreditService->allocateReturnCreditToInvoice(
+                    customerId: $customer->id,
+                    invoice: $invoice,
+                    requestedAmount: $availableReturnCredit,
+                    description: "استفاده از اعتبار مرجوعی برای فاکتور {$invoice->code}",
+                );
+
+                $availableReturnCredit = max(0, round($availableReturnCredit - $allocated, 2));
+            }
+
             $payment->status = PaymentStatus::CONFIRMED;
             $payment->save();
 

@@ -210,6 +210,80 @@ class CustomerCreditService {
         );
     }
 
+    /**
+     * Return credits not already reflected in an originating invoice's
+     * remaining amount. Unallocated return credit may reduce the originating
+     * invoice virtually; only the excess is reusable against other invoices.
+     */
+    public function availableReturnCreditAmount(int $customerId): float
+    {
+        $availableReturnCredit = $this->creditSources($customerId)
+            ->filter(fn (array $source) => $source['transaction']->order_return_id !== null)
+            ->sum('available');
+
+        $invoices = Invoice::query()
+            ->with(['payments', 'creditAllocations', 'returnTransactions.orderReturn'])
+            ->where('customer_id', $customerId)
+            ->get();
+
+        $virtuallyAppliedReturnCredit = $invoices->sum(
+            fn (Invoice $invoice) => $invoice->unallocatedCompletedReturnCreditAmount(),
+        );
+
+        return max(0, round($availableReturnCredit - $virtuallyAppliedReturnCredit, 2));
+    }
+
+    /**
+     * Apply reusable return credit to an invoice other than the return's
+     * originating order. Credit already reflected virtually on the origin
+     * invoice must not be allocated a second time.
+     */
+    public function allocateReturnCreditToInvoice(
+        int $customerId,
+        Invoice $invoice,
+        float $requestedAmount,
+        ?string $description = null,
+    ): float {
+        $requestedAmount = round($requestedAmount, 2);
+
+        if ($requestedAmount <= 0 || (int) $invoice->customer_id !== $customerId) {
+            return 0.0;
+        }
+
+        $remainingToAllocate = min(
+            $requestedAmount,
+            $this->availableReturnCreditAmount($customerId),
+            $this->freshInvoice($invoice)->effectiveRemainingAmount(),
+        );
+
+        if ($remainingToAllocate <= 0) {
+            return 0.0;
+        }
+
+        $allocatedTotal = 0.0;
+
+        foreach ($this->creditSources($customerId)->filter(
+            fn (array $source) => $source['transaction']->order_return_id !== null
+                && (int) $source['transaction']->orderReturn?->order_id !== (int) $invoice->order_id
+        ) as $source) {
+            if ($remainingToAllocate <= 0) {
+                break;
+            }
+
+            $allocated = $this->createAllocation(
+                sourceTransaction: $source['transaction'],
+                invoice: $invoice,
+                amount: min($source['available'], $remainingToAllocate),
+                description: $description,
+            );
+
+            $allocatedTotal += $allocated;
+            $remainingToAllocate -= $allocated;
+        }
+
+        return round($allocatedTotal, 2);
+    }
+
     public function allocatePaymentCreditToInvoice(
         int $customerId,
         Invoice $invoice,
@@ -263,7 +337,7 @@ class CustomerCreditService {
 
     protected function creditSources(int $customerId): Collection {
         $transactions = CustomerTransaction::query()
-            ->with(['payment.invoice', 'creditAllocations'])
+            ->with(['payment.invoice', 'orderReturn', 'creditAllocations'])
             ->where('customer_id', $customerId)
             ->where('type', CustomerTransactionType::CREDIT)
             ->where(function ($query) {
