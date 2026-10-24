@@ -5,13 +5,17 @@
     use App\Enums\OrderReturnStatus;
     use App\Exceptions\BusinessRuleException;
     use App\Models\OrderReturn;
+    use App\Services\OrderReturnAmountCalculator;
     use Illuminate\Support\Facades\DB;
 
     class SubmitOrderReturnAction {
+        public function __construct(protected OrderReturnAmountCalculator $orderReturnAmountCalculator) {}
+
         public function execute(OrderReturn $orderReturn): OrderReturn {
             return DB::transaction(function () use ($orderReturn) {
                 $orderReturn = OrderReturn::query()->lockForUpdate()->with([
                     'items.orderItem',
+                    'items.product.currentPrice',
                     'order.items',
                     'order.returns.items',
                 ])->findOrFail($orderReturn->id);
@@ -28,6 +32,11 @@
 
                 if (!$order) {
                     throw new BusinessRuleException('سفارش مربوط به برگشت پیدا نشد.');
+                }
+
+                $manualReturnAmount = data_get($orderReturn->meta, 'return_amount');
+                if ($manualReturnAmount !== null) {
+                    $this->orderReturnAmountCalculator->validateManualAmount($orderReturn->items, (float) $manualReturnAmount);
                 }
 
                 foreach ($orderReturn->items as $item) {
