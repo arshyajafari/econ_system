@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\User;
 use App\Services\CustomerPayableBalanceService;
+use App\Support\Money;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -44,7 +45,7 @@ class CreatePaymentAction {
                 throw new BusinessRuleException('مبلغ پرداخت باید بیشتر از صفر باشد.');
             }
 
-            if ($amount + $discountAmount > $remainingBalance) {
+            if (Money::sumExceeds($remainingBalance, $amount, $discountAmount)) {
                 throw new BusinessRuleException('مبلغ پرداخت و تخفیف تسویه نمی‌تواند بیشتر از مانده قابل پرداخت مشتری باشد.');
             }
 
@@ -52,7 +53,7 @@ class CreatePaymentAction {
                 throw new BusinessRuleException('مبلغ تخفیف تسویه نمی‌تواند منفی باشد.');
             }
 
-            if ($discountAmount > $remainingBalance) {
+            if (Money::sumExceeds($remainingBalance, $discountAmount)) {
                 throw new BusinessRuleException('تخفیف تسویه نمی‌تواند بیشتر از مانده حساب مشتری باشد.');
             }
 
