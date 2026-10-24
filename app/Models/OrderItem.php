@@ -70,6 +70,22 @@ class OrderItem extends BaseModel
         return (int) $this->quantity + $this->effectiveFreeQuantity();
     }
 
+    /**
+     * Remaining returnable paid and free units are tracked independently.
+     * The order quantity represents paid units; offer gifts are additional units.
+     *
+     * @return array{paid: int, free: int}
+     */
+    public function remainingReturnableQuantities(
+        int $returnedPaidQuantity = 0,
+        int $returnedFreeQuantity = 0,
+    ): array {
+        return [
+            'paid' => max(0, (int) $this->quantity - max(0, $returnedPaidQuantity)),
+            'free' => max(0, $this->effectiveFreeQuantity() - max(0, $returnedFreeQuantity)),
+        ];
+    }
+
     public function isOfferValid(): bool {
         if ($this->offer_type !== self::OFFER_TYPE_BUY_X_GET_Y) return true;
         return (int) $this->offer_buy_quantity > 0

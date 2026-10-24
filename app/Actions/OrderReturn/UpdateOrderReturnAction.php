@@ -49,7 +49,12 @@ class UpdateOrderReturnAction
                 }
 
                 $quantity = (int) $itemData['quantity'];
-                $freeQuantity = min($quantity, (int) ($itemData['free_quantity'] ?? 0));
+                $freeQuantity = (int) ($itemData['free_quantity'] ?? 0);
+
+                if ($quantity <= 0 || $freeQuantity < 0 || $freeQuantity > $quantity) {
+                    throw new BusinessRuleException('تعداد کل و تعداد رایگان مرجوعی نامعتبر است.');
+                }
+
                 $requestedPaid = $quantity - $freeQuantity;
 
                 $previous = $order->returns

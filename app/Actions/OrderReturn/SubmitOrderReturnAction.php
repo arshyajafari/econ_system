@@ -37,15 +37,39 @@
                         throw new BusinessRuleException('آیتم سفارش مربوط به برگشت پیدا نشد.');
                     }
 
-                    $alreadyReturned = $order->returns->where('id', '!=', $orderReturn->id)
-                        ->reject(fn($return) => $return->status === OrderReturnStatus::DRAFT || $return->status === OrderReturnStatus::CANCELLED)
-                        ->flatMap(fn($return) => $return->items)->where('order_item_id', $orderItem->id)
-                        ->sum('quantity');
+                    $previousReturns = $order->returns->where('id', '!=', $orderReturn->id)
+                        ->reject(fn ($return) => in_array(
+                            $return->status,
+                            [OrderReturnStatus::DRAFT, OrderReturnStatus::CANCELLED],
+                            true,
+                        ))
+                        ->flatMap(fn ($return) => $return->items)
+                        ->where('order_item_id', $orderItem->id);
 
-                    $returnableQuantity = (int)$orderItem->quantity - (int)$alreadyReturned;
+                    $returnedFree = (int) $previousReturns->sum('free_quantity');
+                    $returnedPaid = (int) $previousReturns->sum(
+                        fn ($previousItem) => (int) $previousItem->quantity - (int) $previousItem->free_quantity,
+                    );
 
-                    if ((int)$item->quantity > $returnableQuantity) {
-                        throw new BusinessRuleException("مقدار برگشتی محصول {$item->product_id} بیشتر از مقدار قابل برگشت است.");
+                    $requestedTotal = (int) $item->quantity;
+                    $requestedFree = (int) $item->free_quantity;
+
+                    if ($requestedTotal <= 0 || $requestedFree < 0 || $requestedFree > $requestedTotal) {
+                        throw new BusinessRuleException('تعداد کل و تعداد رایگان مرجوعی نامعتبر است.');
+                    }
+
+                    $requestedPaid = $requestedTotal - $requestedFree;
+                    $remainingReturnable = $orderItem->remainingReturnableQuantities(
+                        returnedPaidQuantity: $returnedPaid,
+                        returnedFreeQuantity: $returnedFree,
+                    );
+
+                    if ($requestedPaid > $remainingReturnable['paid']) {
+                        throw new BusinessRuleException("مقدار پولی برگشتی محصول {$item->product_id} بیشتر از مقدار قابل برگشت است.");
+                    }
+
+                    if ($requestedFree > $remainingReturnable['free']) {
+                        throw new BusinessRuleException("مقدار رایگان برگشتی محصول {$item->product_id} بیشتر از مقدار قابل برگشت است.");
                     }
                 }
 
