@@ -25,12 +25,12 @@ class InventoryBatch extends BaseModel
         static::restored($syncProductStockState);
         static::forceDeleted($syncProductStockState);
     }
+
     public const SEARCHABLE = ['batch_number'];
     public const SORTABLE = ['expire_date', 'received_at', 'created_at'];
 
     /**
-     * Movements created only when stock is initially entered are not evidence
-     * that a batch has been used operationally.
+     * These movement reasons represent initial entry only, not operational use.
      */
     private const INITIAL_STOCK_MOVEMENT_REASONS = [
         'inventory_receipt',
@@ -57,38 +57,44 @@ class InventoryBatch extends BaseModel
     public function returnAllocations(): HasMany { return $this->hasMany(OrderReturnItemAllocation::class); }
 
     /**
-     * A batch is deletable only when it has no operational history.
-     *
-     * Initial receipt / opening-balance movements are allowed so users can
-     * remove an unused batch entered by mistake. Adjustments, reservations,
-     * order allocations, return allocations and all non-initial movements
-     * preserve the batch as part of the audit trail. Trashed related records
-     * are deliberately included.
+     * A batch has operational history once it participates in reservations,
+     * adjustments, allocations, or non-initial stock movements. Trashed
+     * related records count so the audit trail cannot be bypassed by deletion.
      */
-    public function canBeDeleted(): bool
+    public function hasOperationalHistory(): bool
     {
         if ((int) $this->reserved_quantity > 0) {
-            return false;
+            return true;
         }
 
         if ($this->adjustments()->withTrashed()->exists()) {
-            return false;
+            return true;
         }
 
         if ($this->allocations()->withTrashed()->exists()) {
-            return false;
+            return true;
         }
 
         if ($this->returnAllocations()->withTrashed()->exists()) {
-            return false;
+            return true;
         }
 
-        return !$this->movements()
+        return $this->movements()
             ->where(function ($query) {
                 $query->whereNull('reason')
                     ->orWhereNotIn('reason', self::INITIAL_STOCK_MOVEMENT_REASONS);
             })
             ->exists();
+    }
+
+    /**
+     * Initial receipt / opening-balance movements are allowed so users can
+     * remove an unused batch entered by mistake. Operational history preserves
+     * the batch as part of the audit trail.
+     */
+    public function canBeDeleted(): bool
+    {
+        return !$this->hasOperationalHistory();
     }
 
     public function getAvailableQuantityAttribute(): int { return max(0, $this->quantity - $this->reserved_quantity); }
