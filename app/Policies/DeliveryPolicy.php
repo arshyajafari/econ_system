@@ -11,7 +11,7 @@ class DeliveryPolicy {
     private function isDeliveryOperator(User $user): bool { return $user->hasRole('delivery operator'); }
 
     public function viewAny(User $user): bool {
-        return $this->isAdmin($user) || $this->isAccountant($user) || $this->isDeliveryOperator($user) || $user->hasRole('settlement operator');
+        return $this->isAdmin($user) || $user->can('deliveries.view');
     }
 
     public function view(User $user, Delivery $delivery): bool { return $this->viewAny($user); }
