@@ -69,23 +69,60 @@ class CustomerLedgerService {
         ];
     }
 
+    /**
+     * Calculate the average due date weighted by each invoice's outstanding
+     * amount. Fully settled invoices must not distort the receivables view.
+     */
     protected function calculateAverageDueDate(int $customerId): ?string {
-        $dates = Invoice::query()
+        $invoices = Invoice::query()
+            ->with([
+                'payments',
+                'creditAllocations',
+                'returnTransactions.orderReturn',
+            ])
             ->where('customer_id', $customerId)
             ->where('status', InvoiceStatus::ISSUED)
             ->whereNotNull('due_date')
-            ->pluck('due_date');
+            ->get();
 
-        if ($dates->isEmpty()) {
+        $outstanding = [];
+        $totalOutstandingMinor = 0;
+
+        foreach ($invoices as $invoice) {
+            $remainingMinor = $this->toMinorUnits($invoice->effectiveRemainingAmount());
+
+            if ($remainingMinor <= 0) {
+                continue;
+            }
+
+            $dueTimestamp = CarbonImmutable::parse($invoice->due_date)
+                ->startOfDay()
+                ->timestamp;
+
+            $outstanding[] = [
+                'timestamp' => $dueTimestamp,
+                'amount_minor' => $remainingMinor,
+            ];
+            $totalOutstandingMinor += $remainingMinor;
+        }
+
+        if ($totalOutstandingMinor <= 0 || $outstanding === []) {
             return null;
         }
 
-        $averageTimestamp = $dates
-            ->map(fn ($date) => CarbonImmutable::parse($date)->startOfDay()->timestamp)
-            ->average();
+        // Normalize weights before multiplying by timestamps to avoid large
+        // intermediate products for high-value invoices.
+        $baseTimestamp = $outstanding[0]['timestamp'];
+        $weightedOffsetSeconds = 0.0;
 
-        return CarbonImmutable::createFromTimestamp((int) round($averageTimestamp))
-            ->toDateString();
+        foreach ($outstanding as $invoice) {
+            $weight = $invoice['amount_minor'] / $totalOutstandingMinor;
+            $weightedOffsetSeconds += ($invoice['timestamp'] - $baseTimestamp) * $weight;
+        }
+
+        $averageTimestamp = (int) round($baseTimestamp + $weightedOffsetSeconds);
+
+        return CarbonImmutable::createFromTimestamp($averageTimestamp)->toDateString();
     }
 
     protected function calculateOpeningBalanceMinor($baseQuery, ?string $from): int {
