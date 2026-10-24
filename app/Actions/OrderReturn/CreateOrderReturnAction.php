@@ -37,9 +37,18 @@ class CreateOrderReturnAction {
             if (!$order->invoice || $order->invoice->status !== InvoiceStatus::ISSUED) throw new BusinessRuleException('برای ثبت مرجوعی، ابتدا باید فاکتور سفارش صادر شود.');
             if (!$order->delivery || $order->delivery->status !== DeliveryStatus::DELIVERED) throw new BusinessRuleException('ثبت مرجوعی پس از تحویل تأییدشده سفارش امکان‌پذیر است.');
 
+            foreach ($data['items'] as $itemData) {
+                $quantity = (int) ($itemData['quantity'] ?? 0);
+                $freeQuantity = (int) ($itemData['free_quantity'] ?? 0);
+
+                if ($quantity <= 0 || $freeQuantity < 0 || $freeQuantity > $quantity) {
+                    throw new BusinessRuleException('تعداد کل و تعداد رایگان مرجوعی نامعتبر است.');
+                }
+            }
+
             $requestedQuantities = collect($data['items'])->groupBy('order_item_id')->map(fn ($items) => [
                 'quantity' => $items->sum(fn ($item) => (int) $item['quantity']),
-                'free_quantity' => $items->sum(fn ($item) => min((int) $item['quantity'], (int) ($item['free_quantity'] ?? 0))),
+                'free_quantity' => $items->sum(fn ($item) => (int) ($item['free_quantity'] ?? 0)),
             ]);
 
             foreach ($requestedQuantities as $orderItemPublicId => $requested) {
@@ -69,7 +78,7 @@ class CreateOrderReturnAction {
             foreach ($data['items'] as $itemData) {
                 $orderItem = $order->items->firstWhere('public_id', $itemData['order_item_id']);
                 $quantity = (int) $itemData['quantity'];
-                $freeQuantity = min($quantity, (int) ($itemData['free_quantity'] ?? 0));
+                $freeQuantity = (int) ($itemData['free_quantity'] ?? 0);
                 $orderReturn->items()->create([
                     'order_item_id' => $orderItem->id, 'product_id' => $orderItem->product_id,
                     'quantity' => $quantity, 'free_quantity' => $freeQuantity,
