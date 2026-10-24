@@ -283,4 +283,36 @@ class DeleteUnusedInventoryTest extends TestCase
         ]);
     }
 
+
+    public function test_scientific_visitor_inventory_quantity_cannot_be_changed_without_batch_traceability(): void
+    {
+        $product = $this->createProduct();
+        $employeeId = $this->createEmployee();
+        $inventoryId = $this->createScientificVisitorInventory($employeeId, $product->id, received: 5, used: 2);
+        $inventory = \App\Models\ScientificVisitorInventory::query()->findOrFail($inventoryId);
+        $batch = $this->createBatch($product, quantity: 10);
+        $action = app(\App\Actions\ScientificVisitorInventory\UpdateScientificVisitorInventoryAction::class);
+
+        foreach ([4, 6] as $newQuantity) {
+            try {
+                $action->execute($inventory, [
+                    'quantity' => $newQuantity,
+                    'inventory_batch_id' => $batch->public_id,
+                ]);
+                $this->fail('Aggregate quantity edits must not change warehouse stock without source-batch allocations.');
+            } catch (\App\Exceptions\BusinessRuleException) {
+                $this->assertDatabaseHas('scientific_visitor_inventories', [
+                    'id' => $inventoryId,
+                    'received_quantity' => 5,
+                    'used_quantity' => 2,
+                    'deleted_at' => null,
+                ]);
+                $this->assertDatabaseHas('inventory_batches', [
+                    'id' => $batch->id,
+                    'quantity' => 10,
+                ]);
+            }
+        }
+    }
+
 }
