@@ -13,41 +13,44 @@ class PaymentPolicyUpdatePermissionTest extends TestCase
     public function test_settlement_operator_cannot_update_pending_payment_without_update_permission(): void
     {
         $user = $this->userWith(['settlement_operator']);
-        $payment = Payment::make(['status' => PaymentStatus::PENDING]);
 
-        $this->assertFalse((new PaymentPolicy())->update($user, $payment));
+        $this->assertFalse((new PaymentPolicy())->update($user, $this->payment(PaymentStatus::PENDING)));
     }
 
     public function test_settlement_operator_with_update_permission_can_update_pending_payment(): void
     {
         $user = $this->userWith(['settlement_operator'], ['payments.update']);
-        $payment = Payment::make(['status' => PaymentStatus::PENDING]);
 
-        $this->assertTrue((new PaymentPolicy())->update($user, $payment));
+        $this->assertTrue((new PaymentPolicy())->update($user, $this->payment(PaymentStatus::PENDING)));
     }
 
     public function test_accountant_without_update_permission_cannot_update_pending_payment(): void
     {
         $user = $this->userWith(['accountant']);
-        $payment = Payment::make(['status' => PaymentStatus::PENDING]);
 
-        $this->assertFalse((new PaymentPolicy())->update($user, $payment));
+        $this->assertFalse((new PaymentPolicy())->update($user, $this->payment(PaymentStatus::PENDING)));
     }
 
     public function test_admin_can_update_pending_payment_without_separate_permission_check(): void
     {
         $user = $this->userWith(['admin']);
-        $payment = Payment::make(['status' => PaymentStatus::PENDING]);
 
-        $this->assertTrue((new PaymentPolicy())->update($user, $payment));
+        $this->assertTrue((new PaymentPolicy())->update($user, $this->payment(PaymentStatus::PENDING)));
     }
 
     public function test_confirmed_payment_cannot_be_updated_even_with_permission(): void
     {
         $user = $this->userWith(['admin', 'accountant', 'settlement_operator'], ['payments.update']);
-        $payment = Payment::make(['status' => PaymentStatus::CONFIRMED]);
 
-        $this->assertFalse((new PaymentPolicy())->update($user, $payment));
+        $this->assertFalse((new PaymentPolicy())->update($user, $this->payment(PaymentStatus::CONFIRMED)));
+    }
+
+    private function payment(PaymentStatus $status): Payment
+    {
+        $payment = new Payment();
+        $payment->setAttribute('status', $status);
+
+        return $payment;
     }
 
     /**
