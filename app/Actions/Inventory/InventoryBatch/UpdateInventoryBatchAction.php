@@ -4,6 +4,7 @@ namespace App\Actions\Inventory\InventoryBatch;
 
 use App\Exceptions\BusinessRuleException;
 use App\Models\InventoryBatch;
+use App\Models\Product;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -12,6 +13,10 @@ class UpdateInventoryBatchAction
     public function execute(InventoryBatch $batch, array $data): InventoryBatch
     {
         return DB::transaction(function () use ($batch, $data) {
+            // Match receipt locking order (product, then batch) so concurrent
+            // receipts and identity edits serialize without inverted locks.
+            $initialBatch = InventoryBatch::query()->findOrFail($batch->id);
+            Product::query()->lockForUpdate()->findOrFail($initialBatch->product_id);
             $batch = InventoryBatch::query()->lockForUpdate()->findOrFail($batch->id);
 
             $batchNumber = array_key_exists('batch_number', $data)
