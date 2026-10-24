@@ -39,6 +39,6 @@
         ];
 
         public function inventoryBatch(): BelongsTo {
-            return $this->belongsTo(InventoryBatch::class);
+            return $this->belongsTo(InventoryBatch::class)->withTrashed();
         }
     }
