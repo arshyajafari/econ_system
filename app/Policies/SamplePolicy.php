@@ -28,7 +28,9 @@ class SamplePolicy
     public function view(User $user, Sample $sample): bool
     {
         if ($this->isScientificVisitorSample($sample)) {
-            return $this->ownsSample($user, $sample);
+            // Admins can inspect all sample records; scientific visitors can
+            // inspect only records created under their own visits.
+            return $user->hasRole('admin') || $this->ownsSample($user, $sample);
         }
 
         return $user->can('samples.view') || $this->ownsSample($user, $sample);
