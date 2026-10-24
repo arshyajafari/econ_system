@@ -44,7 +44,37 @@ class OrderReturnController extends Controller {
             ->whereHas('invoice', fn ($query) => $query->where('status', InvoiceStatus::ISSUED))
             ->whereHas('delivery', fn ($query) => $query->where('status', DeliveryStatus::DELIVERED))
             ->whereHas('items', function ($query) {
-                $query->whereRaw('order_items.quantity > (SELECT COALESCE(SUM(order_return_items.quantity), 0) FROM order_return_items INNER JOIN order_returns ON order_returns.id = order_return_items.order_return_id WHERE order_return_items.order_item_id = order_items.id AND order_returns.status NOT IN (?, ?) AND order_returns.deleted_at IS NULL AND order_return_items.deleted_at IS NULL)', ['draft', 'cancelled']);
+                $query->whereRaw(
+                    "(
+                        order_items.quantity > (
+                            SELECT COALESCE(SUM(order_return_items.quantity - order_return_items.free_quantity), 0)
+                            FROM order_return_items
+                            INNER JOIN order_returns ON order_returns.id = order_return_items.order_return_id
+                            WHERE order_return_items.order_item_id = order_items.id
+                                AND order_returns.status NOT IN (?, ?)
+                                AND order_returns.deleted_at IS NULL
+                                AND order_return_items.deleted_at IS NULL
+                        )
+                        OR (
+                            CASE
+                                WHEN order_items.offer_type = 'buy_x_get_y'
+                                    AND order_items.offer_buy_quantity > 0
+                                    AND order_items.offer_free_quantity > 0
+                                THEN FLOOR(order_items.quantity / order_items.offer_buy_quantity) * order_items.offer_free_quantity
+                                ELSE 0
+                            END
+                        ) > (
+                            SELECT COALESCE(SUM(order_return_items.free_quantity), 0)
+                            FROM order_return_items
+                            INNER JOIN order_returns ON order_returns.id = order_return_items.order_return_id
+                            WHERE order_return_items.order_item_id = order_items.id
+                                AND order_returns.status NOT IN (?, ?)
+                                AND order_returns.deleted_at IS NULL
+                                AND order_return_items.deleted_at IS NULL
+                        )
+                    )",
+                    ['draft', 'cancelled', 'draft', 'cancelled'],
+                );
             });
 
         // A sales visitor may only see orders registered by that same sales employee.
