@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\InventoryMovementType;
 use App\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
