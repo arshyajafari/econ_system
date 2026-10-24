@@ -32,6 +32,10 @@
                     $invoice->description = $data['description'];
                 }
 
+                if ($invoice->discountExceedsSubtotal((float) $invoice->subtotal)) {
+                    throw new BusinessRuleException('تخفیف فاکتور نمی‌تواند بیشتر از مبلغ پایه فاکتور باشد.');
+                }
+
                 $invoice->total_amount = (float)$invoice->subtotal - (float)$invoice->discount_amount + (float)$invoice->tax_amount;
 
                 if ($invoice->total_amount <= 0) {
