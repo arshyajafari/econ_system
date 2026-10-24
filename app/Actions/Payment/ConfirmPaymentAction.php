@@ -12,6 +12,7 @@ use App\Models\Payment;
 use App\Services\CustomerCreditService;
 use App\Services\CustomerPayableBalanceService;
 use App\Services\CustomerTransactionService;
+use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 
 class ConfirmPaymentAction {
@@ -48,7 +49,7 @@ class ConfirmPaymentAction {
                 throw new BusinessRuleException('مبلغ پرداخت باید بیشتر از صفر باشد.');
             }
 
-            if ($paymentAmount + $discountAmount > $remainingBeforePayment) {
+            if (Money::sumExceeds($remainingBeforePayment, $paymentAmount, $discountAmount)) {
                 throw new BusinessRuleException('مبلغ پرداخت و تخفیف تسویه نمی‌تواند بیشتر از مانده قابل پرداخت مشتری باشد.');
             }
 
@@ -56,7 +57,7 @@ class ConfirmPaymentAction {
                 throw new BusinessRuleException('مبلغ تخفیف تسویه نمی‌تواند منفی باشد.');
             }
 
-            if ($discountAmount > $remainingBeforePayment) {
+            if (Money::sumExceeds($remainingBeforePayment, $discountAmount)) {
                 throw new BusinessRuleException('تخفیف تسویه نمی‌تواند بیشتر از مانده حساب مشتری باشد.');
             }
 
@@ -115,7 +116,7 @@ class ConfirmPaymentAction {
             $payment->status = PaymentStatus::CONFIRMED;
             $payment->save();
 
-            $customerCredit = $paymentAmount + $discountAmount;
+            $customerCredit = Money::add($paymentAmount, $discountAmount);
 
             $description = $discountAmount > 0
                 ? ($payment->description
