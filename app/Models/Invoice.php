@@ -189,6 +189,14 @@ class Invoice extends BaseModel {
             + $this->unallocatedCompletedReturnCreditAmount();
     }
 
+    /**
+     * Invoice discounts are monetary amounts and must not exceed the items subtotal.
+     * Tax is applied after discount and must not be used to offset an invalid discount.
+     */
+    public function discountExceedsSubtotal(float $subtotal): bool {
+        return round((float) $this->discount_amount, 2) > round($subtotal, 2);
+    }
+
     public function effectiveRemainingAmount(bool $includePending = false): float {
         $remaining = (float) $this->total_amount - $this->settledAmount();
 
