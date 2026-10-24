@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DeliveryStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Invoice;
@@ -19,6 +20,7 @@ class CustomerPayableBalanceService
             ->with(['payments', 'creditAllocations', 'returnTransactions.orderReturn'])
             ->where('customer_id', $customerId)
             ->where('status', InvoiceStatus::ISSUED)
+            ->whereHas('order.delivery', fn ($query) => $query->where('status', DeliveryStatus::DELIVERED))
             ->orderBy('issued_at')
             ->orderBy('id')
             ->get();
@@ -64,9 +66,9 @@ class CustomerPayableBalanceService
 
         $pendingCustomerLevelPayments += $pendingCustomerLevelDiscounts;
 
-        // The payable balance is customer-level debt: every issued invoice
-        // participates in the balance calculation. Delivery state belongs to
-        // fulfillment and must not make an existing invoice debt disappear.
+        // Only issued invoices with a confirmed delivery contribute to the
+        // payable balance. Before delivery confirmation, the invoice is not
+        // yet eligible for customer payment collection.
         // Return credit is already included in effectiveRemainingAmount().
         // Only payment-originated customer credit (such as an overpayment)
         // is subtracted separately because it is not attached to an invoice.
