@@ -93,8 +93,16 @@ class UpdatePaymentAction {
                 $meta['receipt_image_path'] = $newPath;
                 $payment->meta = $meta;
 
+                // Keep the previous receipt intact if the database transaction rolls back.
+                // Cleanup runs only after the new path has been committed successfully.
                 if ($oldPath && $oldPath !== $newPath) {
-                    Storage::disk('public')->delete($oldPath);
+                    DB::afterCommit(static function () use ($oldPath): void {
+                        try {
+                            Storage::disk('public')->delete($oldPath);
+                        } catch (\Throwable $exception) {
+                            report($exception);
+                        }
+                    });
                 }
             }
 
