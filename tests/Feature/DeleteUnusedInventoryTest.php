@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Actions\Inventory\InventoryBatch\DeleteInventoryBatchAction;
 use App\Actions\Product\DeleteProductAction;
+use App\Actions\ScientificVisitorInventory\CreateScientificVisitorInventoryAction;
 use App\Exceptions\BusinessRuleException;
 use App\Models\InventoryBatch;
 use App\Models\InventoryMovement;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -216,6 +218,50 @@ class DeleteUnusedInventoryTest extends TestCase
         ]);
 
         return InventoryMovement::query()->findOrFail($movementId);
+    }
+
+    public function test_assigning_inventory_restores_an_existing_soft_deleted_empty_ledger(): void
+    {
+        $product = $this->createProduct();
+        $employeeId = $this->createEmployee();
+        $inventoryId = $this->createScientificVisitorInventory($employeeId, $product->id, received: 0, used: 0);
+        $inventory = \\App\\Models\\ScientificVisitorInventory::query()->findOrFail($inventoryId);
+        app(\\App\\Actions\\ScientificVisitorInventory\\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
+
+        $user = User::query()->create([
+            'employee_id' => $employeeId,
+            'login' => 'scientific-' . Str::lower(Str::random(10)),
+            'password' => 'password',
+            'status' => 'active',
+        ]);
+        \\Spatie\\Permission\\Models\\Role::findOrCreate('scientific visitor', 'web');
+        $user->assignRole('scientific visitor');
+
+        $batch = $this->createBatch($product, quantity: 10);
+        $result = app(CreateScientificVisitorInventoryAction::class)->execute([
+            'employee_id' => \\App\\Models\\Employee::query()->findOrFail($employeeId)->public_id,
+            'inventory_batch_id' => $batch->public_id,
+            'quantity' => 3,
+        ]);
+
+        $this->assertSame($inventoryId, $result->id);
+        $this->assertDatabaseHas('scientific_visitor_inventories', [
+            'id' => $inventoryId,
+            'deleted_at' => null,
+            'received_quantity' => 3,
+            'used_quantity' => 0,
+        ]);
+        $this->assertSame(
+            1,
+            DB::table('scientific_visitor_inventories')
+                ->where('employee_id', $employeeId)
+                ->where('product_id', $product->id)
+                ->count(),
+        );
+        $this->assertDatabaseHas('inventory_batches', [
+            'id' => $batch->id,
+            'quantity' => 7,
+        ]);
     }
 
     public function test_scientific_visitor_inventory_with_transfer_history_cannot_be_deleted(): void
