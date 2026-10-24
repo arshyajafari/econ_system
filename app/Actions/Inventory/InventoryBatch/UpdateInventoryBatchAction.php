@@ -33,7 +33,7 @@ class UpdateInventoryBatchAction
             // Receipt logic merges batches by product + batch number + expiry.
             // Prevent metadata edits from creating duplicate identities that
             // later receipts would merge into an arbitrary matching batch.
-            if ($batchNumber !== null) {
+            if ($identityChanged && $batchNumber !== null) {
                 $duplicateQuery = InventoryBatch::query()
                     ->where('product_id', $batch->product_id)
                     ->where('batch_number', $batchNumber)
