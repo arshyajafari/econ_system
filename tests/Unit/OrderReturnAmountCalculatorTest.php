@@ -15,9 +15,9 @@ class OrderReturnAmountCalculatorTest extends TestCase
     {
         $item = $this->returnItem(quantity: 3, freeQuantity: 1, unitPrice: '100.00', currentPrice: '150.00');
 
-        (new OrderReturnAmountCalculator())->validateManualAmount([$item], 300.00);
+        $maximum = (new OrderReturnAmountCalculator())->validateManualAmount([$item], 300.00);
 
-        $this->assertTrue(true);
+        $this->assertSame(300.0, $maximum);
     }
 
     public function test_manual_amount_cannot_exceed_current_value_of_paid_units(): void
