@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payment;
 
+use App\Enums\DeliveryStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\BusinessRuleException;
@@ -63,6 +64,7 @@ class ConfirmPaymentAction {
                 ->with(['payments', 'creditAllocations', 'returnTransactions.orderReturn'])
                 ->where('customer_id', $customer->id)
                 ->where('status', InvoiceStatus::ISSUED)
+                ->whereHas('order.delivery', fn ($query) => $query->where('status', DeliveryStatus::DELIVERED))
                 ->orderBy('issued_at')
                 ->orderBy('id')
                 ->lockForUpdate()
@@ -108,9 +110,9 @@ class ConfirmPaymentAction {
                 transactionAt: $payment->payment_date,
             );
 
-            // Apply the newly confirmed customer-level payment to the oldest
-            // issued invoices. Delivery state must not hide outstanding debt;
-            // return credit is already reflected in each invoice's effective
+            // Apply the newly confirmed customer-level payment only to the
+            // oldest eligible invoices whose delivery has been confirmed.
+            // Return credit is already reflected in each invoice's effective
             // remaining amount.
             $remainingPaymentCredit = $customerCredit;
 
