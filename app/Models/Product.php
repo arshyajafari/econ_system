@@ -55,6 +55,8 @@ class Product extends BaseModel implements HasGeneratedCode
 
     public function orderItems(): HasMany { return $this->hasMany(OrderItem::class); }
     public function inventoryBatches(): HasMany { return $this->hasMany(InventoryBatch::class); }
+    public function samples(): HasMany { return $this->hasMany(Sample::class); }
+    public function scientificVisitorInventories(): HasMany { return $this->hasMany(ScientificVisitorInventory::class); }
 
     public function scopeActive(Builder $query): Builder { return $query->where('status', ProductStatus::ACTIVE->value); }
     public function scopeInactive(Builder $query): Builder { return $query->where('status', ProductStatus::INACTIVE->value); }
@@ -79,11 +81,30 @@ class Product extends BaseModel implements HasGeneratedCode
 
     public function scopeDefaultSort(Builder $query): Builder { return $query->orderBy('sort_order')->orderBy('title'); }
 
+    /**
+     * Products may be removed only when they have never been used in an order,
+     * a doctor visit sample, or scientific-visitor inventory, and all their
+     * batches are themselves safe to remove. Trashed records still count:
+     * historical use must not be bypassed by soft-deleting a dependent row.
+     */
     public function canBeDeleted(): bool
     {
-        if ($this->orderItems()->exists()) return false;
-        if ($this->inventoryBatches()->whereHas('movements')->exists()) return false;
-        return true;
+        if ($this->orderItems()->withTrashed()->exists()) {
+            return false;
+        }
+
+        if ($this->samples()->withTrashed()->exists()) {
+            return false;
+        }
+
+        if ($this->scientificVisitorInventories()->withTrashed()->exists()) {
+            return false;
+        }
+
+        return !$this->inventoryBatches()
+            ->withTrashed()
+            ->get()
+            ->contains(fn (InventoryBatch $batch) => !$batch->canBeDeleted());
     }
 
     public static function codeGenerator(): CodeGeneratorData
