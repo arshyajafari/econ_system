@@ -7,14 +7,22 @@ use App\Enums\OrderStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Order;
 use App\Models\OrderReturn;
+use App\Services\OrderReturnAmountCalculator;
 use Illuminate\Support\Facades\DB;
 
 class ConfirmOrderReturnAction {
+    public function __construct(protected OrderReturnAmountCalculator $orderReturnAmountCalculator) {}
+
     public function execute(OrderReturn $orderReturn): OrderReturn {
         return DB::transaction(function () use ($orderReturn) {
-            $orderReturn=OrderReturn::query()->lockForUpdate()->with(['items.orderItem','customer','employee'])->findOrFail($orderReturn->id);
+            $orderReturn=OrderReturn::query()->lockForUpdate()->with(['items.orderItem', 'items.product.currentPrice', 'customer', 'employee'])->findOrFail($orderReturn->id);
             if($orderReturn->status!==OrderReturnStatus::PENDING) throw new BusinessRuleException('فقط برگشت در وضعیت pending قابل تأیید است.');
             if($orderReturn->items->isEmpty()) throw new BusinessRuleException('برگشت سفارش حداقل باید یک آیتم داشته باشد.');
+
+            $manualReturnAmount = data_get($orderReturn->meta, 'return_amount');
+            if ($manualReturnAmount !== null) {
+                $this->orderReturnAmountCalculator->validateManualAmount($orderReturn->items, (float) $manualReturnAmount);
+            }
 
             $order=Order::query()->lockForUpdate()->with(['items','returns.items'])->findOrFail($orderReturn->order_id);
             if($order->status!==OrderStatus::COMPLETED) throw new BusinessRuleException('فقط سفارش تکمیل‌شده قابل تأیید مرجوعی است.');
