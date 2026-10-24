@@ -13,6 +13,18 @@ class InventoryBatch extends BaseModel
     use HasPublicId, SoftDeletes;
 
     public const DEFAULT_RELATIONS = ['product.currentPrice'];
+
+    protected static function booted(): void
+    {
+        $syncProductStockState = function (InventoryBatch $batch): void {
+            Product::withTrashed()->find($batch->product_id)?->syncZeroStockSince();
+        };
+
+        static::saved($syncProductStockState);
+        static::deleted($syncProductStockState);
+        static::restored($syncProductStockState);
+        static::forceDeleted($syncProductStockState);
+    }
     public const SEARCHABLE = ['batch_number'];
     public const SORTABLE = ['expire_date', 'received_at', 'created_at'];
 
