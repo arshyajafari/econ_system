@@ -31,9 +31,17 @@ class PaymentPolicy
 
     public function update(User $user, Payment $payment): bool
     {
-        // Editing payment records remains restricted to admin/accountant.
-        return ($this->isAdmin($user) || $this->isAccountant($user) || $this->isSettlementOperator($user))
-            && $payment->status === PaymentStatus::PENDING;
+        if ($payment->status !== PaymentStatus::PENDING) {
+            return false;
+        }
+
+        // Admins may manage pending payments. Other payment editors must have
+        // both an authorized operational role and the explicit update ability.
+        return $this->isAdmin($user)
+            || (
+                ($this->isAccountant($user) || $this->isSettlementOperator($user))
+                && $user->can('payments.update')
+            );
     }
 
     public function confirm(User $user, Payment $payment): bool
@@ -50,9 +58,7 @@ class PaymentPolicy
 
     public function delete(User $user, Payment $payment): bool
     {
-        // Deletion remains restricted to administrators; the accountant
-        // role can retain the permission for broader accounting workflows
-        // through its dedicated policy/controller rules if introduced later.
+        // Deletion remains restricted to administrators/accountants and pending records.
         return ($this->isAdmin($user) || $this->isAccountant($user))
             && $payment->status === PaymentStatus::PENDING;
     }
