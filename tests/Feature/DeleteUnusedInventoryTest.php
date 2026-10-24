@@ -225,8 +225,8 @@ class DeleteUnusedInventoryTest extends TestCase
         $product = $this->createProduct();
         $employeeId = $this->createEmployee();
         $inventoryId = $this->createScientificVisitorInventory($employeeId, $product->id, received: 0, used: 0);
-        $inventory = \\App\\Models\\ScientificVisitorInventory::query()->findOrFail($inventoryId);
-        app(\\App\\Actions\\ScientificVisitorInventory\\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
+        $inventory = \App\Models\ScientificVisitorInventory::query()->findOrFail($inventoryId);
+        app(\App\Actions\ScientificVisitorInventory\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
 
         $user = User::query()->create([
             'employee_id' => $employeeId,
@@ -234,12 +234,12 @@ class DeleteUnusedInventoryTest extends TestCase
             'password' => 'password',
             'status' => 'active',
         ]);
-        \\Spatie\\Permission\\Models\\Role::findOrCreate('scientific visitor', 'web');
+        \Spatie\Permission\Models\Role::findOrCreate('scientific visitor', 'web');
         $user->assignRole('scientific visitor');
 
         $batch = $this->createBatch($product, quantity: 10);
         $result = app(CreateScientificVisitorInventoryAction::class)->execute([
-            'employee_id' => \\App\\Models\\Employee::query()->findOrFail($employeeId)->public_id,
+            'employee_id' => \App\Models\Employee::query()->findOrFail($employeeId)->public_id,
             'inventory_batch_id' => $batch->public_id,
             'quantity' => 3,
         ]);
