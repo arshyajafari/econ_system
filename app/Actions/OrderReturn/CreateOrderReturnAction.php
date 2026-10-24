@@ -11,10 +11,14 @@ use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\User;
 use App\Services\CodeGeneratorService;
+use App\Services\OrderReturnAmountCalculator;
 use Illuminate\Support\Facades\DB;
 
 class CreateOrderReturnAction {
-    public function __construct(protected CodeGeneratorService $codeGenerator) {}
+    public function __construct(
+        protected CodeGeneratorService $codeGenerator,
+        protected OrderReturnAmountCalculator $orderReturnAmountCalculator,
+    ) {}
 
     public function execute(array $data, User $user): OrderReturn {
         return DB::transaction(function () use ($data, $user) {
@@ -87,6 +91,11 @@ class CreateOrderReturnAction {
                     'description' => $itemData['description'] ?? null,
                 ]);
             }
+            if ($manualReturnAmount !== null) {
+                $orderReturn->load('items.product.currentPrice');
+                $this->orderReturnAmountCalculator->validateManualAmount($orderReturn->items, $manualReturnAmount);
+            }
+
             return $orderReturn->fresh(['customer', 'employee', 'items.product', 'items.orderItem']);
         });
     }
