@@ -165,6 +165,44 @@ class CustomerPayableBalanceServiceTest extends TestCase
         $this->assertSame(3000000.0, $service->calculate(7));
     }
 
+    public function test_return_credit_reduces_origin_invoice_without_being_subtracted_twice_from_customer_balance(): void
+    {
+        DB::table('deliveries')->where('id', 21)->update([
+            'status' => DeliveryStatus::DELIVERED->value,
+        ]);
+
+        DB::table('payments')->insert([
+            'id' => 101,
+            'invoice_id' => 30,
+            'customer_id' => 7,
+            'status' => 'confirmed',
+            'amount' => 50,
+            'settlement_discount_amount' => 0,
+        ]);
+
+        DB::table('order_returns')->insert([
+            'id' => 201,
+            'order_id' => 10,
+            'status' => 'completed',
+        ]);
+
+        DB::table('customer_transactions')->insert([
+            'id' => 301,
+            'customer_id' => 7,
+            'order_return_id' => 201,
+            'type' => 'credit',
+            'amount' => 20,
+            'transaction_at' => now(),
+        ]);
+
+        $service = new CustomerPayableBalanceService(new CustomerCreditService());
+
+        // Invoice 30 retains 30 after payment and return credit; invoice 31
+        // contributes 250. The same 20 return credit must not be deducted
+        // a second time as reusable customer credit.
+        $this->assertSame(280.0, $service->calculate(7));
+    }
+
     public function test_only_issued_invoices_with_confirmed_delivery_contribute_to_payable_balance(): void
     {
         $credits = Mockery::mock(CustomerCreditService::class);
