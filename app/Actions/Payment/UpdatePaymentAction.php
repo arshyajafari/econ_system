@@ -3,6 +3,7 @@
 namespace App\Actions\Payment;
 
 use App\Exceptions\BusinessRuleException;
+use App\Models\Customer;
 use App\Models\Payment;
 use App\Services\CustomerPayableBalanceService;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +38,12 @@ class UpdatePaymentAction {
             if ($discountAmount < 0) {
                 throw new BusinessRuleException('مبلغ تخفیف تسویه نمی‌تواند منفی باشد.');
             }
+
+            // Serialize balance-affecting payment changes for the same customer.
+            // Creation and confirmation already lock this row before calculating
+            // the payable balance; without the same lock here, concurrent updates
+            // could each validate against a stale balance and over-allocate it.
+            Customer::query()->lockForUpdate()->findOrFail($payment->customer_id);
 
             $remainingBalance = $this->payableBalanceService->calculate(
                 customerId: $payment->customer_id,
@@ -86,8 +93,16 @@ class UpdatePaymentAction {
                 $meta['receipt_image_path'] = $newPath;
                 $payment->meta = $meta;
 
+                // Keep the previous receipt intact if the database transaction rolls back.
+                // Cleanup runs only after the new path has been committed successfully.
                 if ($oldPath && $oldPath !== $newPath) {
-                    Storage::disk('public')->delete($oldPath);
+                    DB::afterCommit(static function () use ($oldPath): void {
+                        try {
+                            Storage::disk('public')->delete($oldPath);
+                        } catch (\Throwable $exception) {
+                            report($exception);
+                        }
+                    });
                 }
             }
 
