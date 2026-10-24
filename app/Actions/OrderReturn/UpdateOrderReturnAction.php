@@ -5,10 +5,13 @@ namespace App\Actions\OrderReturn;
 use App\Enums\OrderReturnStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\OrderReturn;
+use App\Services\OrderReturnAmountCalculator;
 use Illuminate\Support\Facades\DB;
 
 class UpdateOrderReturnAction
 {
+    public function __construct(protected OrderReturnAmountCalculator $orderReturnAmountCalculator) {}
+
     public function execute(OrderReturn $orderReturn, array $data): OrderReturn
     {
         return DB::transaction(function () use ($orderReturn, $data) {
@@ -92,6 +95,11 @@ class UpdateOrderReturnAction
                     'total_price' => round($requestedPaid * (float) $orderItem->unit_price, 2),
                     'description' => $itemData['description'] ?? null,
                 ]);
+            }
+
+            if ($manualReturnAmount !== null) {
+                $orderReturn->load('items.product.currentPrice');
+                $this->orderReturnAmountCalculator->validateManualAmount($orderReturn->items, $manualReturnAmount);
             }
 
             return $orderReturn->fresh(['order', 'customer', 'employee', 'items.product']);
