@@ -14,6 +14,7 @@ use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Services\CustomerCreditService;
 use App\Services\CustomerTransactionService;
+use App\Services\OrderReturnAmountCalculator;
 use Illuminate\Support\Facades\DB;
 
 class CompleteOrderReturnAction
@@ -21,12 +22,17 @@ class CompleteOrderReturnAction
     public function __construct(
         protected CustomerTransactionService $customerTransactionService,
         protected CustomerCreditService $customerCreditService,
+        protected OrderReturnAmountCalculator $orderReturnAmountCalculator,
     ) {}
 
     public function execute(OrderReturn $orderReturn): OrderReturn
     {
         return DB::transaction(function () use ($orderReturn) {
-            $orderReturn = OrderReturn::query()->lockForUpdate()->with(['items.allocations.inventoryBatch', 'order.invoice'])->findOrFail($orderReturn->id);
+            $orderReturn = OrderReturn::query()->lockForUpdate()->with([
+                'items.allocations.inventoryBatch',
+                'items.product.currentPrice',
+                'order.invoice',
+            ])->findOrFail($orderReturn->id);
             if ($orderReturn->status !== OrderReturnStatus::CONFIRMED) {
                 throw new BusinessRuleException('فقط مرجوعی در وضعیت confirmed قابل تکمیل است.');
             }
@@ -83,11 +89,10 @@ class CompleteOrderReturnAction
             $manualReturnAmount = data_get($orderReturn->meta, 'return_amount');
 
             if ($manualReturnAmount !== null) {
-                // Manual amount is an explicit business override, e.g. current-price valuation.
+                // Manual amount represents current-price valuation, not an
+                // unrestricted override of the customer-credit amount.
                 $returnAmount = round((float) $manualReturnAmount, 2);
-                if ($returnAmount <= 0) {
-                    throw new BusinessRuleException('مبلغ دستی مرجوعی باید بیشتر از صفر باشد.');
-                }
+                $this->orderReturnAmountCalculator->validateManualAmount($orderReturn->items, $returnAmount);
             } else {
                 $invoiceSubtotal = (float) $invoice->subtotal;
                 $invoiceTotal = (float) $invoice->total_amount;
