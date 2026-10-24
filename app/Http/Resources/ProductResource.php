@@ -29,6 +29,11 @@ class ProductResource extends JsonResource
                 : $this->image,
             'barcode' => $this->barcode,
             'status' => $this->status,
+            'is_archived' => $this->isArchivedForNoStock(),
+            'zero_stock_since' => $this->when(
+                $request->user()?->hasRole('admin') ?? false,
+                fn () => $this->zero_stock_since?->toISOString(),
+            ),
             'sort_order' => $this->sort_order,
             'description' => $this->description,
             'brand' => $this->whenLoaded('brand', fn() => [
