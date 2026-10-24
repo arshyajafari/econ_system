@@ -217,4 +217,70 @@ class DeleteUnusedInventoryTest extends TestCase
 
         return InventoryMovement::query()->findOrFail($movementId);
     }
+
+    public function test_scientific_visitor_inventory_with_transfer_history_cannot_be_deleted(): void
+    {
+        $product = $this->createProduct();
+        $employeeId = $this->createEmployee();
+        $inventoryId = $this->createScientificVisitorInventory($employeeId, $product->id, received: 5, used: 2);
+        $inventory = \App\Models\ScientificVisitorInventory::query()->findOrFail($inventoryId);
+
+        try {
+            app(\App\Actions\ScientificVisitorInventory\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
+            $this->fail('A scientific visitor inventory with movement history must not be deleted.');
+        } catch (\App\Exceptions\BusinessRuleException) {
+            $this->assertDatabaseHas('scientific_visitor_inventories', [
+                'id' => $inventoryId,
+                'deleted_at' => null,
+                'received_quantity' => 5,
+                'used_quantity' => 2,
+            ]);
+        }
+    }
+
+    public function test_empty_scientific_visitor_inventory_can_be_deleted(): void
+    {
+        $product = $this->createProduct();
+        $employeeId = $this->createEmployee();
+        $inventoryId = $this->createScientificVisitorInventory($employeeId, $product->id, received: 0, used: 0);
+        $inventory = \App\Models\ScientificVisitorInventory::query()->findOrFail($inventoryId);
+
+        app(\App\Actions\ScientificVisitorInventory\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
+
+        $this->assertSoftDeleted('scientific_visitor_inventories', ['id' => $inventoryId]);
+    }
+
+    private function createEmployee(): int
+    {
+        $now = now();
+
+        return DB::table('employees')->insertGetId([
+            'public_id' => (string) Str::ulid(),
+            'code' => 'EMP-' . Str::upper(Str::random(8)),
+            'first_name' => 'Scientific',
+            'last_name' => 'Visitor',
+            'national_code' => Str::upper(Str::random(10)),
+            'phone_number' => '09' . random_int(100000000, 999999999),
+            'hire_date' => $now->toDateString(),
+            'status' => 'active',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+
+    private function createScientificVisitorInventory(int $employeeId, int $productId, int $received, int $used): int
+    {
+        $now = now();
+
+        return DB::table('scientific_visitor_inventories')->insertGetId([
+            'public_id' => (string) Str::ulid(),
+            'employee_id' => $employeeId,
+            'product_id' => $productId,
+            'received_quantity' => $received,
+            'used_quantity' => $used,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+
 }
