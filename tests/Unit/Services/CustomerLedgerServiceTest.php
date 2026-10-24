@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services;
 
 use App\Services\CustomerLedgerService;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -39,9 +40,11 @@ class CustomerLedgerServiceTest extends TestCase
             $table->id();
             $table->string('public_id')->nullable();
             $table->unsignedBigInteger('customer_id');
+            $table->unsignedBigInteger('order_id')->nullable();
             $table->string('code')->nullable();
             $table->string('status');
             $table->date('due_date')->nullable();
+            $table->decimal('total_amount', 15, 2)->default(0);
             $table->timestamp('deleted_at')->nullable();
         });
 
@@ -49,6 +52,11 @@ class CustomerLedgerServiceTest extends TestCase
             $table->id();
             $table->string('public_id')->nullable();
             $table->string('reference_number')->nullable();
+            $table->unsignedBigInteger('invoice_id')->nullable();
+            $table->unsignedBigInteger('customer_id')->nullable();
+            $table->string('status')->nullable();
+            $table->decimal('amount', 15, 2)->default(0);
+            $table->decimal('settlement_discount_amount', 15, 2)->default(0);
             $table->timestamp('deleted_at')->nullable();
         });
 
@@ -56,6 +64,8 @@ class CustomerLedgerServiceTest extends TestCase
             $table->id();
             $table->string('public_id')->nullable();
             $table->string('code')->nullable();
+            $table->unsignedBigInteger('order_id')->nullable();
+            $table->string('status')->nullable();
             $table->timestamp('deleted_at')->nullable();
         });
 
@@ -95,15 +105,22 @@ class CustomerLedgerServiceTest extends TestCase
             'id' => 30,
             'public_id' => 'INV-PUBLIC-30',
             'customer_id' => 7,
+            'order_id' => 300,
             'code' => 'INV-000030',
             'status' => 'issued',
             'due_date' => '2026-12-31',
+            'total_amount' => '100.00',
         ]);
 
         DB::table('payments')->insert([
             'id' => 40,
             'public_id' => 'PAY-PUBLIC-40',
             'reference_number' => 'PAY-000040',
+            'invoice_id' => null,
+            'customer_id' => 7,
+            'status' => 'confirmed',
+            'amount' => '0.00',
+            'settlement_discount_amount' => '0.00',
         ]);
     }
 
@@ -163,6 +180,72 @@ class CustomerLedgerServiceTest extends TestCase
             'id' => 'INV-PUBLIC-30',
             'code' => 'INV-000030',
         ], $ledger['transactions'][0]->source);
+    }
+
+
+    public function test_average_due_date_is_weighted_by_outstanding_invoice_amount(): void
+    {
+        DB::table('invoices')->insert([
+            [
+                'id' => 31,
+                'public_id' => 'INV-PUBLIC-31',
+                'customer_id' => 7,
+                'order_id' => 301,
+                'code' => 'INV-000031',
+                'status' => 'issued',
+                'due_date' => '2027-12-31',
+                'total_amount' => '100.00',
+            ],
+            [
+                'id' => 32,
+                'public_id' => 'INV-PUBLIC-32',
+                'customer_id' => 7,
+                'order_id' => 302,
+                'code' => 'INV-000032',
+                'status' => 'issued',
+                'due_date' => '2029-12-31',
+                'total_amount' => '300.00',
+            ],
+        ]);
+
+        // The 2026 invoice is fully settled and must not affect the average.
+        DB::table('payments')->insert([
+            'id' => 41,
+            'public_id' => 'PAY-PUBLIC-41',
+            'reference_number' => 'PAY-000041',
+            'invoice_id' => 30,
+            'customer_id' => 7,
+            'status' => 'confirmed',
+            'amount' => '100.00',
+            'settlement_discount_amount' => '0.00',
+        ]);
+
+        $firstDue = CarbonImmutable::parse('2027-12-31')->startOfDay()->timestamp;
+        $secondDue = CarbonImmutable::parse('2029-12-31')->startOfDay()->timestamp;
+        $expectedTimestamp = (int) round($firstDue + ($secondDue - $firstDue) * 0.75);
+        $expectedDate = CarbonImmutable::createFromTimestamp($expectedTimestamp)->toDateString();
+
+        $ledger = (new CustomerLedgerService())->build(7);
+
+        $this->assertSame($expectedDate, $ledger['average_due_date']);
+    }
+
+    public function test_average_due_date_is_null_when_all_issued_invoices_are_settled(): void
+    {
+        DB::table('payments')->insert([
+            'id' => 41,
+            'public_id' => 'PAY-PUBLIC-41',
+            'reference_number' => 'PAY-000041',
+            'invoice_id' => 30,
+            'customer_id' => 7,
+            'status' => 'confirmed',
+            'amount' => '100.00',
+            'settlement_discount_amount' => '0.00',
+        ]);
+
+        $ledger = (new CustomerLedgerService())->build(7);
+
+        $this->assertNull($ledger['average_due_date']);
     }
 
     public function test_filtered_ledger_opening_balance_is_calculated_in_minor_units(): void
