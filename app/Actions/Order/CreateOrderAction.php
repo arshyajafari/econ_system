@@ -59,7 +59,7 @@ class CreateOrderAction {
             $order->discount_value = 0;
         }
 
-        if ((float) $order->discount_value > $subtotal) {
+        if ($order->discountExceedsSubtotal($subtotal)) {
             throw new BusinessRuleException('مبلغ تخفیف نمی‌تواند بیشتر از مبلغ کل اقلام سفارش باشد.');
         }
 

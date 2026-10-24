@@ -113,6 +113,15 @@ class Order extends BaseModel {
         return 0.0;
     }
 
+    /**
+     * A fixed discount is denominated in currency and cannot exceed the subtotal.
+     * Percentage discounts are validated against 100%, not against the subtotal.
+     */
+    public function discountExceedsSubtotal(float $subtotal): bool {
+        return $this->discount_type === self::DISCOUNT_TYPE_FIXED
+            && (float) $this->discount_value > $subtotal;
+    }
+
     public function finalAmount(): float {
         return max(0.0, round($this->itemsSubtotal() - $this->calculatedDiscountAmount(), 2));
     }
