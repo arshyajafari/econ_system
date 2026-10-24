@@ -4,6 +4,7 @@ namespace App\Actions\Delivery;
 
 use App\Enums\DeliveryStatus;
 use App\Enums\OrderStatus;
+use App\Enums\InvoiceStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Delivery;
 use App\Models\Order;
@@ -23,12 +24,16 @@ class CreateDeliveryAction
 
             $order = Order::query()
                 ->lockForUpdate()
-                ->with(['delivery', 'customer.defaultAddress'])
+                ->with(['delivery', 'customer.defaultAddress', 'invoice'])
                 ->where('public_id', $data['order_id'])
                 ->firstOrFail();
 
             if (!in_array($order->status, [OrderStatus::CONFIRMED, OrderStatus::COMPLETED], true)) {
                 throw new BusinessRuleException('فقط سفارش تأییدشده یا تکمیل‌شده قابل ثبت برای ارسال است.');
+            }
+
+            if (!$order->invoice || $order->invoice->status !== InvoiceStatus::ISSUED) {
+                throw new BusinessRuleException('ابتدا باید برای سفارش فاکتور صادر شود و سپس ارسال ثبت شود.');
             }
 
             if ($order->delivery) {
