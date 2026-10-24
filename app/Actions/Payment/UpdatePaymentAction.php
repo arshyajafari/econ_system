@@ -3,6 +3,7 @@
 namespace App\Actions\Payment;
 
 use App\Exceptions\BusinessRuleException;
+use App\Models\Customer;
 use App\Models\Payment;
 use App\Services\CustomerPayableBalanceService;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +38,12 @@ class UpdatePaymentAction {
             if ($discountAmount < 0) {
                 throw new BusinessRuleException('مبلغ تخفیف تسویه نمی‌تواند منفی باشد.');
             }
+
+            // Serialize balance-affecting payment changes for the same customer.
+            // Creation and confirmation already lock this row before calculating
+            // the payable balance; without the same lock here, concurrent updates
+            // could each validate against a stale balance and over-allocate it.
+            Customer::query()->lockForUpdate()->findOrFail($payment->customer_id);
 
             $remainingBalance = $this->payableBalanceService->calculate(
                 customerId: $payment->customer_id,
