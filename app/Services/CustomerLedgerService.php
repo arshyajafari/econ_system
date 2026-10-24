@@ -12,7 +12,7 @@ class CustomerLedgerService {
     public function build(int $customerId, ?string $from = null, ?string $to = null): array {
         $baseQuery = CustomerTransaction::query()->where('customer_id', $customerId);
 
-        $openingBalance = $this->calculateOpeningBalance($baseQuery, $from);
+        $openingBalanceMinor = $this->calculateOpeningBalanceMinor($baseQuery, $from);
 
         $query = clone $baseQuery;
 
@@ -30,40 +30,40 @@ class CustomerLedgerService {
             ->orderBy('id')
             ->get();
 
-        $balance = $openingBalance;
-        $totalDebit = 0.0;
-        $totalCredit = 0.0;
+        $balanceMinor = $openingBalanceMinor;
+        $totalDebitMinor = 0;
+        $totalCreditMinor = 0;
 
         $transactions = $transactions->map(function (CustomerTransaction $transaction) use (
-            &$balance, &$totalDebit, &$totalCredit
+            &$balanceMinor, &$totalDebitMinor, &$totalCreditMinor
         ): CustomerTransaction {
-            $amount = (float) $transaction->amount;
+            $amountMinor = $this->toMinorUnits($transaction->amount);
 
             if ($transaction->type === CustomerTransactionType::DEBIT) {
-                $debit = $amount;
-                $credit = 0.0;
-                $balance += $amount;
-                $totalDebit += $amount;
+                $debitMinor = $amountMinor;
+                $creditMinor = 0;
+                $balanceMinor += $amountMinor;
+                $totalDebitMinor += $amountMinor;
             } else {
-                $debit = 0.0;
-                $credit = $amount;
-                $balance -= $amount;
-                $totalCredit += $amount;
+                $debitMinor = 0;
+                $creditMinor = $amountMinor;
+                $balanceMinor -= $amountMinor;
+                $totalCreditMinor += $amountMinor;
             }
 
-            $transaction->debit = $debit;
-            $transaction->credit = $credit;
-            $transaction->balance = $balance;
+            $transaction->debit = $this->fromMinorUnits($debitMinor);
+            $transaction->credit = $this->fromMinorUnits($creditMinor);
+            $transaction->balance = $this->fromMinorUnits($balanceMinor);
             $transaction->source = $this->sourceData($transaction);
 
             return $transaction;
         });
 
         return [
-            'opening_balance' => $openingBalance,
-            'total_debit' => $totalDebit,
-            'total_credit' => $totalCredit,
-            'closing_balance' => $balance,
+            'opening_balance' => $this->fromMinorUnits($openingBalanceMinor),
+            'total_debit' => $this->fromMinorUnits($totalDebitMinor),
+            'total_credit' => $this->fromMinorUnits($totalCreditMinor),
+            'closing_balance' => $this->fromMinorUnits($balanceMinor),
             'average_due_date' => $this->calculateAverageDueDate($customerId),
             'transactions' => $transactions,
         ];
@@ -88,9 +88,9 @@ class CustomerLedgerService {
             ->toDateString();
     }
 
-    protected function calculateOpeningBalance($baseQuery, ?string $from): float {
+    protected function calculateOpeningBalanceMinor($baseQuery, ?string $from): int {
         if (!$from) {
-            return 0.0;
+            return 0;
         }
 
         $fromDate = CarbonImmutable::parse($from)->startOfDay();
@@ -105,7 +105,28 @@ class CustomerLedgerService {
             ->where('transaction_at', '<', $fromDate)
             ->sum('amount');
 
-        return (float) $debit - (float) $credit;
+        return $this->toMinorUnits($debit) - $this->toMinorUnits($credit);
+    }
+
+    /**
+     * Convert a DECIMAL currency amount to integer minor units without float arithmetic.
+     */
+    protected function toMinorUnits(float|int|string|null $amount): int {
+        $value = trim((string) ($amount ?? '0'));
+
+        if (!preg_match('/^([+-]?)(\\d+)(?:\\.(\\d{1,2}))?$/D', $value, $matches)) {
+            throw new \InvalidArgumentException('Invalid currency amount for customer ledger.');
+        }
+
+        $whole = (int) $matches[2];
+        $fraction = (int) str_pad($matches[3] ?? '', 2, '0');
+        $minorUnits = ($whole * 100) + $fraction;
+
+        return ($matches[1] ?? '') === '-' ? -$minorUnits : $minorUnits;
+    }
+
+    protected function fromMinorUnits(int $amount): float {
+        return round($amount / 100, 2);
     }
 
     protected function sourceData(CustomerTransaction $transaction): ?array {
