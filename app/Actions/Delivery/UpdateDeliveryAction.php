@@ -1,11 +1,11 @@
 <?php
 
-namespace App\\Actions\\Delivery;
+namespace App\Actions\Delivery;
 
-use App\\Enums\\DeliveryStatus;
-use App\\Exceptions\\BusinessRuleException;
-use App\\Models\\Delivery;
-use Illuminate\\Support\\Facades\\DB;
+use App\Enums\DeliveryStatus;
+use App\Exceptions\BusinessRuleException;
+use App\Models\Delivery;
+use Illuminate\Support\Facades\DB;
 
 class UpdateDeliveryAction
 {
