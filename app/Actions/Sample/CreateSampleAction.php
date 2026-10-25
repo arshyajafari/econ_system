@@ -68,8 +68,8 @@ class CreateSampleAction
                     throw new BusinessRuleException('موجودی این محصول برای ثبت نمونه کافی نیست.');
                 }
 
-                $inventory->used_quantity += $quantity;
-                $inventory->save();
+                app(\\App\\Actions\\ScientificVisitorInventory\\AdjustScientificVisitorInventoryUsageAction::class)
+                    ->execute($inventory, $quantity);
             }
 
             // A visit can contain a product only once at the database level.
