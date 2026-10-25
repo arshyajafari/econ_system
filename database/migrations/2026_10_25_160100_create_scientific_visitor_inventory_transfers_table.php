@@ -9,12 +9,16 @@ return new class extends Migration {
     {
         Schema::create('scientific_visitor_inventory_transfers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('scientific_visitor_inventory_id')
-                ->constrained('scientific_visitor_inventories')
+            $table->unsignedBigInteger('scientific_visitor_inventory_id');
+            $table->foreign('scientific_visitor_inventory_id', 'svi_transfer_inventory_fk')
+                ->references('id')
+                ->on('scientific_visitor_inventories')
                 ->restrictOnDelete()
                 ->cascadeOnUpdate();
-            $table->foreignId('inventory_batch_id')
-                ->constrained('inventory_batches')
+            $table->unsignedBigInteger('inventory_batch_id');
+            $table->foreign('inventory_batch_id', 'svi_transfer_batch_fk')
+                ->references('id')
+                ->on('inventory_batches')
                 ->restrictOnDelete()
                 ->cascadeOnUpdate();
             $table->unsignedInteger('quantity');
