@@ -2,7 +2,10 @@
 
 namespace App\Actions\ScientificVisitorInventory;
 
+use App\Enums\InventoryMovementType;
 use App\Exceptions\BusinessRuleException;
+use App\Models\InventoryBatch;
+use App\Models\InventoryMovement;
 use App\Models\ScientificVisitorInventory;
 use Illuminate\Support\Facades\DB;
 
@@ -12,18 +15,70 @@ class DeleteScientificVisitorInventoryAction
     {
         DB::transaction(function () use ($inventory) {
             $inventory = ScientificVisitorInventory::query()
+                ->with('employee')
                 ->lockForUpdate()
                 ->findOrFail($inventory->id);
 
-            // This aggregate ledger has no source-batch allocation history. Once
-            // quantities have been received or used, deleting it would hide
-            // operational history and make reconciliation impossible.
-            if ((int) $inventory->received_quantity !== 0 || (int) $inventory->used_quantity !== 0) {
+            if ((int) $inventory->used_quantity !== 0) {
                 throw new BusinessRuleException(
-                    'حذف موجودی ویزیتور دارای سابقه تحویل یا مصرف مجاز نیست؛ برای حفظ سابقه انبار، ابتدا باید مغایرت از مسیر اصلاح و تطبیق موجودی رسیدگی شود.'
+                    'این ویزیتور هنوز نمونه مصرف‌شده و برگشت‌نخورده دارد؛ تا زمان تطبیق یا برگشت آن‌ها، حذف موجودی مجاز نیست.'
                 );
             }
 
+            $transfers = DB::table('scientific_visitor_inventory_transfers')
+                ->where('scientific_visitor_inventory_id', $inventory->id)
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->get();
+
+            $activeTransferred = (int) $transfers->sum(
+                fn ($transfer) => (int) $transfer->quantity - (int) $transfer->returned_quantity
+            );
+            $allocatedUsed = (int) $transfers->sum('used_quantity');
+
+            if ($activeTransferred !== (int) $inventory->received_quantity
+                || $allocatedUsed !== (int) $inventory->used_quantity) {
+                if ((int) $inventory->received_quantity !== 0 || (int) $inventory->used_quantity !== 0) {
+                    throw new BusinessRuleException(
+                        'برای این موجودی سابقه بچ‌های تحویلی کامل نیست؛ حذف خودکار انجام نشد تا موجودی انبار اصلی اشتباه نشود. ابتدا موجودی تاریخی باید تطبیق داده شود.'
+                    );
+                }
+            }
+
+            foreach ($transfers as $transfer) {
+                $activeQuantity = (int) $transfer->quantity - (int) $transfer->returned_quantity;
+                $returnable = $activeQuantity - (int) $transfer->used_quantity;
+                if ($returnable <= 0) {
+                    continue;
+                }
+
+                $batch = InventoryBatch::query()
+                    ->lockForUpdate()
+                    ->findOrFail($transfer->inventory_batch_id);
+
+                $batch->quantity += $returnable;
+                $batch->save();
+
+                DB::table('scientific_visitor_inventory_transfers')
+                    ->where('id', $transfer->id)
+                    ->update([
+                        'returned_quantity' => (int) $transfer->returned_quantity + $returnable,
+                        'updated_at' => now(),
+                    ]);
+
+                InventoryMovement::create([
+                    'inventory_batch_id' => $batch->id,
+                    'type' => InventoryMovementType::IN,
+                    'quantity' => $returnable,
+                    'reason' => 'scientific_visitor_transfer_return',
+                    'description' => "برگشت موجودی ویزیتور علمی {$inventory->employee?->fullName}",
+                    'moved_at' => now(),
+                ]);
+            }
+
+            $inventory->received_quantity = 0;
+            $inventory->used_quantity = 0;
+            $inventory->save();
             $inventory->delete();
         });
     }
