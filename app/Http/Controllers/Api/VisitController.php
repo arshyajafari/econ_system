@@ -35,6 +35,11 @@ class VisitController extends Controller {
         return response()->json(new VisitResource($visit), 201);
     }
 
+    public function storeWithSample(StoreVisitWithSampleRequest $request, CreateVisitWithSampleAction $action): JsonResponse {
+        $visit = $action->execute($request->validated(), $request->user());
+        return response()->json(new VisitResource($visit), 201);
+    }
+
     public function show(Visit $visit, ShowVisitAction $action): VisitResource {
         return new VisitResource($action->execute($visit));
     }
