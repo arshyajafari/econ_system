@@ -70,6 +70,16 @@ class CreateScientificVisitorInventoryAction
             $batch->quantity -= $quantity;
             $batch->save();
 
+            DB::table('scientific_visitor_inventory_transfers')->insert([
+                'scientific_visitor_inventory_id' => $inventory->id,
+                'inventory_batch_id' => $batch->id,
+                'quantity' => $quantity,
+                'used_quantity' => 0,
+                'returned_quantity' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
             InventoryMovement::create([
                 'inventory_batch_id' => $batch->id,
                 'type' => InventoryMovementType::OUT,
