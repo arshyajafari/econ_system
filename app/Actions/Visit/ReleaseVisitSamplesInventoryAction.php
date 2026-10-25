@@ -39,8 +39,8 @@ class ReleaseVisitSamplesInventoryAction
                 );
             }
 
-            $inventory->used_quantity -= (int) $sample->quantity;
-            $inventory->save();
+            app(\\App\\Actions\\ScientificVisitorInventory\\AdjustScientificVisitorInventoryUsageAction::class)
+                ->execute($inventory, -(int) $sample->quantity);
         }
     }
 }
