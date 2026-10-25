@@ -21,9 +21,12 @@ class CancelVisitAction
                 throw new BusinessRuleException('این بازدید قابل لغو نیست.');
             }
 
-            // Reconcile inventory before changing status. A failure rolls back
-            // both the inventory changes and the status change.
-            $releaseInventory->execute($visit);
+            // Inventory is released exactly once. If reconciliation fails, the
+            // transaction rolls back and the visit remains in its old status.
+            if ($visit->inventory_released_at === null) {
+                $releaseInventory->execute($visit);
+                $visit->inventory_released_at = now();
+            }
 
             $visit->status = VisitStatus::CANCELLED;
             $visit->save();
