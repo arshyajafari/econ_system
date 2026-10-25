@@ -8,6 +8,7 @@ use App\Actions\Visit\CreateVisitAction;
 use App\Actions\Visit\CreateVisitWithSampleAction;
 use App\Actions\Visit\ListVisitsAction;
 use App\Actions\Visit\DeleteVisitAction;
+use App\Actions\Visit\ReleaseVisitSamplesInventoryAction;
 use App\Actions\Visit\ShowVisitAction;
 use App\Actions\Visit\UpdateVisitAction;
 use App\Actions\Visit\UpdateVisitWithSamplesAction;
@@ -56,9 +57,9 @@ class VisitController extends Controller {
         return new VisitResource($action->execute($visit, $request->validated(), $request->user()));
     }
 
-    public function destroy(Visit $visit, DeleteVisitAction $action): Response {
+    public function destroy(Visit $visit, DeleteVisitAction $action, ReleaseVisitSamplesInventoryAction $releaseInventory): Response {
         $this->authorize('delete', $visit);
-        $action->execute($visit);
+        $action->execute($visit, $releaseInventory);
         return response()->noContent();
     }
 
