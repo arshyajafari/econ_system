@@ -19,12 +19,6 @@ class DeleteScientificVisitorInventoryAction
                 ->lockForUpdate()
                 ->findOrFail($inventory->id);
 
-            if ((int) $inventory->used_quantity !== 0) {
-                throw new BusinessRuleException(
-                    'این ویزیتور هنوز نمونه مصرف‌شده و برگشت‌نخورده دارد؛ تا زمان تطبیق یا برگشت آن‌ها، حذف موجودی مجاز نیست.'
-                );
-            }
-
             $transfers = DB::table('scientific_visitor_inventory_transfers')
                 ->where('scientific_visitor_inventory_id', $inventory->id)
                 ->orderByDesc('id')
@@ -76,8 +70,9 @@ class DeleteScientificVisitorInventoryAction
                 ]);
             }
 
-            $inventory->received_quantity = 0;
-            $inventory->used_quantity = 0;
+            // Keep consumed quantities as historical usage; only unconsumed
+            // units were returned to the warehouse above.
+            $inventory->received_quantity = (int) $inventory->used_quantity;
             $inventory->save();
             $inventory->delete();
         });
