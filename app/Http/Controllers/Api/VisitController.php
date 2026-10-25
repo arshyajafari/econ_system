@@ -68,8 +68,8 @@ class VisitController extends Controller {
         return new VisitResource($action->execute($visit));
     }
 
-    public function cancel(Visit $visit, CancelVisitAction $action): VisitResource {
+    public function cancel(Visit $visit, CancelVisitAction $action, ReleaseVisitSamplesInventoryAction $releaseInventory): VisitResource {
         $this->authorize('cancel', $visit);
-        return new VisitResource($action->execute($visit));
+        return new VisitResource($action->execute($visit, $releaseInventory));
     }
 }
