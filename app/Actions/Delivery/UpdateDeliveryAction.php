@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Actions\Delivery;
+namespace App\\Actions\\Delivery;
 
-use App\Enums\DeliveryStatus;
-use App\Exceptions\BusinessRuleException;
-use App\Models\Delivery;
-use Illuminate\Support\Facades\DB;
+use App\\Enums\\DeliveryStatus;
+use App\\Exceptions\\BusinessRuleException;
+use App\\Models\\Delivery;
+use Illuminate\\Support\\Facades\\DB;
 
 class UpdateDeliveryAction
 {
@@ -23,17 +23,43 @@ class UpdateDeliveryAction
 
             $customer = $delivery->customer;
             $defaultAddress = $customer?->defaultAddress;
+            $attributes = [];
 
-            $delivery->update([
-                'recipient_name' => $data['recipient_name'],
-                'recipient_phone' => $data['recipient_phone'] ?? $customer?->phone_number,
-                'address' => $data['address'] ?? $defaultAddress?->address,
-                'description' => $data['description'] ?? null,
-                'meta' => array_merge($delivery->meta ?? [], array_filter([
-                    'province' => $data['province'] ?? null,
-                    'city' => $data['city'] ?? null,
-                ], static fn ($value) => $value !== null && $value !== '')),
-            ]);
+            if (array_key_exists('recipient_name', $data)) {
+                $attributes['recipient_name'] = $data['recipient_name'];
+            }
+
+            if (array_key_exists('recipient_phone', $data)) {
+                $attributes['recipient_phone'] = $data['recipient_phone'] ?? $customer?->phone_number;
+            }
+
+            if (array_key_exists('address', $data)) {
+                $attributes['address'] = $data['address'] ?? $defaultAddress?->address;
+            }
+
+            if (array_key_exists('description', $data)) {
+                $attributes['description'] = $data['description'];
+            }
+
+            if (array_key_exists('province', $data) || array_key_exists('city', $data)) {
+                $meta = $delivery->meta ?? [];
+
+                foreach (['province', 'city'] as $field) {
+                    if (array_key_exists($field, $data)) {
+                        if ($data[$field] === null || $data[$field] === '') {
+                            unset($meta[$field]);
+                        } else {
+                            $meta[$field] = $data[$field];
+                        }
+                    }
+                }
+
+                $attributes['meta'] = $meta ?: null;
+            }
+
+            if ($attributes !== []) {
+                $delivery->update($attributes);
+            }
 
             return $delivery->fresh(Delivery::DEFAULT_RELATIONS);
         });
