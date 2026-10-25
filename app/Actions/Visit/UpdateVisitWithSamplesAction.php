@@ -9,6 +9,7 @@ use App\Models\ScientificVisitorInventory;
 use App\Models\User;
 use App\Models\Visit;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class UpdateVisitWithSamplesAction
 {
@@ -42,6 +43,7 @@ class UpdateVisitWithSamplesAction
 
             foreach ($submittedSamples as $change) {
                 $sample = $existingSamples->get($change['id']);
+                Gate::forUser($user)->authorize('update', $sample);
                 $quantity = (int) $change['quantity'];
 
                 if ($quantity <= 0) {
