@@ -90,11 +90,11 @@ class CreatePaymentAction {
 
                 return $payment->fresh(Payment::DEFAULT_RELATIONS);
             });
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             if ($receiptPath !== null) {
                 try {
                     Storage::disk('public')->delete($receiptPath);
-                } catch (\\Throwable $cleanupException) {
+                } catch (\Throwable $cleanupException) {
                     report($cleanupException);
                 }
             }
