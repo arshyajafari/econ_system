@@ -20,7 +20,10 @@ class CreatePaymentAction {
     }
 
     public function execute(array $data, User $user): Payment {
-        return DB::transaction(function () use ($data, $user) {
+        $receiptPath = null;
+
+        try {
+            return DB::transaction(function () use ($data, $user, &$receiptPath) {
             $employee = $user->employee;
 
             if (!$employee) {
@@ -60,8 +63,15 @@ class CreatePaymentAction {
             $meta = [];
 
             if (!empty($data['receipt_image'])) {
-                $meta['receipt_image_path'] = Storage::disk('public')
+                $storedPath = Storage::disk('public')
                     ->putFile('payments/receipts', $data['receipt_image']);
+
+                if (!is_string($storedPath) || $storedPath === '') {
+                    throw new BusinessRuleException('ذخیره تصویر رسید پرداخت ناموفق بود.');
+                }
+
+                $receiptPath = $storedPath;
+                $meta['receipt_image_path'] = $storedPath;
             }
 
             $payment = Payment::create([
@@ -78,8 +88,19 @@ class CreatePaymentAction {
                 'meta' => $meta ?: null,
             ]);
 
-            return $payment->fresh(Payment::DEFAULT_RELATIONS);
-        });
+                return $payment->fresh(Payment::DEFAULT_RELATIONS);
+            });
+        } catch (\\Throwable $exception) {
+            if ($receiptPath !== null) {
+                try {
+                    Storage::disk('public')->delete($receiptPath);
+                } catch (\\Throwable $cleanupException) {
+                    report($cleanupException);
+                }
+            }
+
+            throw $exception;
+        }
     }
 
     private function normalizePaymentDate(string $paymentDate): Carbon
