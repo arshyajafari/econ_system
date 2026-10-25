@@ -20,6 +20,8 @@ class DeleteVisitAction
                 $visit->save();
             }
 
+            // Keep historical rows for audit, but hide samples belonging to a deleted visit.
+            $visit->samples()->get()->each(fn ($sample) => $sample->delete());
             $visit->delete();
         });
     }
