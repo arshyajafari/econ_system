@@ -1,0 +1,126 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Actions\Delivery\CreateDeliveryAction;
+use App\Exceptions\BusinessRuleException;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+class CreateDeliveryContactValidationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_delivery_creation_returns_a_business_error_when_no_address_is_available(): void
+    {
+        [$user, $orderPublicId] = $this->createOrderContext();
+
+        try {
+            app(CreateDeliveryAction::class)->execute([
+                'order_id' => $orderPublicId,
+                'recipient_name' => 'Test recipient',
+                'recipient_phone' => '09120000000',
+                'address' => null,
+            ], $user);
+
+            $this->fail('A delivery without a resolved address must be rejected.');
+        } catch (BusinessRuleException $exception) {
+            $this->assertSame(
+                'نشانی ارسال را وارد کنید یا برای مشتری نشانی پیش‌فرض ثبت کنید.',
+                $exception->getMessage()
+            );
+        }
+    }
+
+    public function test_delivery_creation_returns_a_business_error_when_no_phone_is_available(): void
+    {
+        [$user, $orderPublicId] = $this->createOrderContext(customerPhone: null);
+
+        try {
+            app(CreateDeliveryAction::class)->execute([
+                'order_id' => $orderPublicId,
+                'recipient_name' => 'Test recipient',
+                'recipient_phone' => null,
+                'address' => 'Test delivery address',
+            ], $user);
+
+            $this->fail('A delivery without a resolved recipient phone must be rejected.');
+        } catch (BusinessRuleException $exception) {
+            $this->assertSame(
+                'تلفن گیرنده را وارد کنید یا شماره تلفن مشتری را ثبت کنید.',
+                $exception->getMessage()
+            );
+        }
+    }
+
+    private function createOrderContext(?string $customerPhone = '09121111111'): array
+    {
+        $now = now();
+
+        $customerId = DB::table('customers')->insertGetId([
+            'public_id' => (string) Str::ulid(),
+            'code' => 'CUS-' . Str::upper(Str::random(8)),
+            'customer_name' => 'Delivery contact test customer',
+            'type' => 'pharmacy',
+            'status' => 'active',
+            'phone_number' => $customerPhone,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $employeeId = DB::table('employees')->insertGetId([
+            'public_id' => (string) Str::ulid(),
+            'code' => 'EMP-' . Str::upper(Str::random(8)),
+            'first_name' => 'Test',
+            'last_name' => 'Employee',
+            'national_code' => 'N-' . Str::upper(Str::random(8)),
+            'phone_number' => '09' . random_int(100000000, 999999999),
+            'hire_date' => today()->toDateString(),
+            'status' => 'active',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $userId = DB::table('users')->insertGetId([
+            'public_id' => (string) Str::ulid(),
+            'employee_id' => $employeeId,
+            'login' => 'delivery-test-' . Str::lower(Str::random(8)),
+            'password' => bcrypt('test-password'),
+            'status' => 'active',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $orderPublicId = (string) Str::ulid();
+        $orderId = DB::table('orders')->insertGetId([
+            'public_id' => $orderPublicId,
+            'code' => 'ORD-' . Str::upper(Str::random(8)),
+            'customer_id' => $customerId,
+            'sales_employee_id' => $employeeId,
+            'status' => 'completed',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        DB::table('invoices')->insert([
+            'public_id' => (string) Str::ulid(),
+            'code' => 'INV-' . Str::upper(Str::random(8)),
+            'order_id' => $orderId,
+            'customer_id' => $customerId,
+            'employee_id' => $employeeId,
+            'status' => 'issued',
+            'issued_at' => $now,
+            'subtotal' => 100,
+            'discount_amount' => 0,
+            'tax_amount' => 0,
+            'total_amount' => 100,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return [User::query()->findOrFail($userId), $orderPublicId];
+    }
+}

@@ -41,7 +41,21 @@ class UpdateDeliveryPartialFieldsTest extends TestCase
         $this->assertNull($updated->description);
     }
 
-    private function createDelivery(): Delivery
+    public function test_null_phone_and_address_fallbacks_preserve_existing_values_when_customer_defaults_are_missing(): void
+    {
+        $delivery = $this->createDelivery(customerPhone: null);
+
+        $updated = app(UpdateDeliveryAction::class)->execute($delivery, [
+            'recipient_name' => $delivery->recipient_name,
+            'recipient_phone' => null,
+            'address' => null,
+        ]);
+
+        $this->assertSame('09120000000', $updated->recipient_phone);
+        $this->assertSame('Existing delivery address', $updated->address);
+    }
+
+    private function createDelivery(?string $customerPhone = '09121111111'): Delivery
     {
         $now = now();
 
@@ -51,7 +65,7 @@ class UpdateDeliveryPartialFieldsTest extends TestCase
             'customer_name' => 'Delivery update test customer',
             'type' => 'pharmacy',
             'status' => 'active',
-            'phone_number' => '09121111111',
+            'phone_number' => $customerPhone,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
