@@ -6,6 +6,7 @@ use App\Enums\InventoryMovementType;
 use App\Enums\InvoiceStatus;
 use App\Enums\OrderReturnStatus;
 use App\Exceptions\BusinessRuleException;
+use App\Models\Customer;
 use App\Models\CustomerTransaction;
 use App\Models\InventoryBatch;
 use App\Models\InventoryMovement;
@@ -45,6 +46,13 @@ class CompleteOrderReturnAction
             if (!$invoice) {
                 throw new BusinessRuleException('برای سفارش مربوط به مرجوعی فاکتور وجود ندارد.');
             }
+
+            // Use the customer row as the shared mutex with payment creation,
+            // payment updates/confirmation, and other customer-credit changes.
+            // Acquire it before the invoice lock to keep a consistent lock order
+            // with ConfirmPaymentAction (customer -> invoice) and avoid deadlocks.
+            Customer::query()->lockForUpdate()->findOrFail($orderReturn->customer_id);
+
             $invoice = Invoice::query()->lockForUpdate()->with(['payments', 'creditAllocations'])->findOrFail($invoice->id);
             if ($invoice->status !== InvoiceStatus::ISSUED) {
                 throw new BusinessRuleException('فقط سفارش دارای فاکتور صادرشده قابل تکمیل مرجوعی است.');
