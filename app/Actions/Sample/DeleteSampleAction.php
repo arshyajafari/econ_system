@@ -44,8 +44,8 @@ class DeleteSampleAction
                         throw new BusinessRuleException('موجودی ثبت‌شده این ویزیتور با سابقه نمونه سازگار نیست.');
                     }
 
-                    $inventory->used_quantity -= $sample->quantity;
-                    $inventory->save();
+                    app(\\App\\Actions\\ScientificVisitorInventory\\AdjustScientificVisitorInventoryUsageAction::class)
+                        ->execute($inventory, -(int) $sample->quantity);
                 }
             }
 
