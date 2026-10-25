@@ -17,7 +17,10 @@ class UpdatePaymentAction {
     }
 
     public function execute(Payment $payment, array $data): Payment {
-        return DB::transaction(function () use ($payment, $data) {
+        $newReceiptPath = null;
+
+        try {
+            return DB::transaction(function () use ($payment, $data, &$newReceiptPath) {
             $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
             if ($payment->status->value !== 'pending') {
@@ -90,6 +93,12 @@ class UpdatePaymentAction {
             if (array_key_exists('receipt_image', $data) && $data['receipt_image']) {
                 $oldPath = $payment->meta['receipt_image_path'] ?? null;
                 $newPath = Storage::disk('public')->putFile('payments/receipts', $data['receipt_image']);
+
+                if (!is_string($newPath) || $newPath === '') {
+                    throw new BusinessRuleException('ذخیره تصویر رسید پرداخت ناموفق بود.');
+                }
+
+                $newReceiptPath = $newPath;
                 $meta = $payment->meta ?? [];
                 $meta['receipt_image_path'] = $newPath;
                 $payment->meta = $meta;
@@ -109,7 +118,18 @@ class UpdatePaymentAction {
 
             $payment->save();
 
-            return $payment->fresh(Payment::DEFAULT_RELATIONS);
-        });
+                return $payment->fresh(Payment::DEFAULT_RELATIONS);
+            });
+        } catch (\\Throwable $exception) {
+            if ($newReceiptPath !== null) {
+                try {
+                    Storage::disk('public')->delete($newReceiptPath);
+                } catch (\\Throwable $cleanupException) {
+                    report($cleanupException);
+                }
+            }
+
+            throw $exception;
+        }
     }
 }
