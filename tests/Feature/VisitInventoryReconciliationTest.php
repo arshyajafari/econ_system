@@ -78,6 +78,7 @@ class VisitInventoryReconciliationTest extends TestCase
             'returned_quantity' => 0,
         ]);
         $this->assertSoftDeleted('visits', ['id' => $ids['visit_id']]);
+        $this->assertSoftDeleted('samples', ['id' => $ids['sample_id']]);
         $this->assertDatabaseHas('inventory_batches', [
             'id' => $ids['batch_id'],
             'quantity' => 10,
@@ -180,7 +181,7 @@ class VisitInventoryReconciliationTest extends TestCase
             'created_at' => $now,
             'updated_at' => $now,
         ]);
-        DB::table('samples')->insert([
+        $sampleId = DB::table('samples')->insertGetId([
             'public_id' => (string) Str::ulid(),
             'visit_id' => $visitId,
             'product_id' => $productId,
@@ -189,11 +190,12 @@ class VisitInventoryReconciliationTest extends TestCase
             'updated_at' => $now,
         ]);
 
-        return compact('visitId', 'inventoryId', 'transferId', 'batchId') + [
+        return compact('visitId', 'inventoryId', 'transferId', 'batchId', 'sampleId') + [
             'visit_id' => $visitId,
             'inventory_id' => $inventoryId,
             'transfer_id' => $transferId,
             'batch_id' => $batchId,
+            'sample_id' => $sampleId,
         ];
     }
 }
