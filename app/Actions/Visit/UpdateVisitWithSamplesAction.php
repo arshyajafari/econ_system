@@ -1,14 +1,14 @@
 <?php
 
-namespace App\\Actions\\Visit;
+namespace App\Actions\Visit;
 
-use App\\Enums\\VisitStatus;
-use App\\Exceptions\\BusinessRuleException;
-use App\\Models\\Sample;
-use App\\Models\\ScientificVisitorInventory;
-use App\\Models\\User;
-use App\\Models\\Visit;
-use Illuminate\\Support\\Facades\\DB;
+use App\Enums\VisitStatus;
+use App\Exceptions\BusinessRuleException;
+use App\Models\Sample;
+use App\Models\ScientificVisitorInventory;
+use App\Models\User;
+use App\Models\Visit;
+use Illuminate\Support\Facades\DB;
 
 class UpdateVisitWithSamplesAction
 {
