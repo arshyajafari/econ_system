@@ -14,6 +14,11 @@
             'store'
         ])->name('store');
 
+        Route::post('/with-sample', [
+            VisitController::class,
+            'storeWithSample'
+        ])->name('store-with-sample');
+
         Route::get('/{visit}', [
             VisitController::class,
             'show'

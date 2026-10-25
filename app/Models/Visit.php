@@ -22,7 +22,7 @@ class Visit extends BaseModel
     protected $fillable = [
         'client_operation_id', 'doctor_id', 'employee_id', 'status', 'visit_date',
         'latitude', 'longitude', 'location_accuracy', 'location_captured_at',
-        'purpose', 'description', 'meta',
+        'purpose', 'description', 'meta', 'inventory_released_at',
     ];
 
     protected $casts = [
@@ -32,6 +32,7 @@ class Visit extends BaseModel
         'longitude' => 'decimal:7',
         'location_accuracy' => 'decimal:2',
         'location_captured_at' => 'datetime',
+        'inventory_released_at' => 'datetime',
         'meta' => 'array',
     ];
 
