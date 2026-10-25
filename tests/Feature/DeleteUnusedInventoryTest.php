@@ -268,7 +268,7 @@ class DeleteUnusedInventoryTest extends TestCase
     {
         $product = $this->createProduct();
         $employeeId = $this->createEmployee();
-        $inventoryId = $this->createScientificVisitorInventory($employeeId, $product->id, received: 5, used: 0);
+        $inventoryId = $this->createScientificVisitorInventory($employeeId, $product->id, received: 5, used: 2);
         $inventory = \App\Models\ScientificVisitorInventory::query()->findOrFail($inventoryId);
 
         try {
@@ -289,7 +289,7 @@ class DeleteUnusedInventoryTest extends TestCase
         $product = $this->createProduct();
         $employeeId = $this->createEmployee();
         $batch = $this->createBatch($product, quantity: 10);
-        $inventoryId = $this->createScientificVisitorInventory($employeeId, $product->id, received: 5, used: 2);
+        $inventoryId = $this->createScientificVisitorInventory($employeeId, $product->id, received: 5, used: 0);
 
         $transferId = DB::table('scientific_visitor_inventory_transfers')->insertGetId([
             'scientific_visitor_inventory_id' => $inventoryId,
