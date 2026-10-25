@@ -284,6 +284,41 @@ class DeleteUnusedInventoryTest extends TestCase
         }
     }
 
+    public function test_deleting_tracked_inventory_returns_only_unused_quantity_to_source_batch(): void
+    {
+        $product = $this->createProduct();
+        $employeeId = $this->createEmployee();
+        $batch = $this->createBatch($product, quantity: 10);
+        $inventoryId = $this->createScientificVisitorInventory($employeeId, $product->id, received: 5, used: 2);
+
+        $transferId = DB::table('scientific_visitor_inventory_transfers')->insertGetId([
+            'scientific_visitor_inventory_id' => $inventoryId,
+            'inventory_batch_id' => $batch->id,
+            'quantity' => 5,
+            'used_quantity' => 2,
+            'returned_quantity' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $inventory = \App\Models\ScientificVisitorInventory::query()->findOrFail($inventoryId);
+        app(\App\Actions\ScientificVisitorInventory\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
+
+        $this->assertDatabaseHas('inventory_batches', ['id' => $batch->id, 'quantity' => 13]);
+        $this->assertDatabaseHas('scientific_visitor_inventories', [
+            'id' => $inventoryId,
+            'received_quantity' => 2,
+            'used_quantity' => 2,
+        ]);
+        $this->assertSoftDeleted('scientific_visitor_inventories', ['id' => $inventoryId]);
+        $this->assertDatabaseHas('scientific_visitor_inventory_transfers', [
+            'id' => $transferId,
+            'quantity' => 5,
+            'used_quantity' => 2,
+            'returned_quantity' => 3,
+        ]);
+    }
+
     public function test_empty_scientific_visitor_inventory_can_be_deleted(): void
     {
         $product = $this->createProduct();
