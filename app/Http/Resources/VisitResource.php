@@ -31,7 +31,7 @@
                     $isScientificVisitorVisit = $employee?->user?->hasRole('scientific visitor') ?? false;
                     $isOwner = (int) $request->user()?->employee_id === (int) $this->employee_id;
 
-                    if ($isScientificVisitorVisit && !$isOwner) {
+                    if ($isScientificVisitorVisit && !$isOwner && !($request->user()?->hasRole('admin') ?? false)) {
                         return [];
                     }
 
