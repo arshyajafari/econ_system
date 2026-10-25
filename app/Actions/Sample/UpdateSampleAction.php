@@ -55,8 +55,8 @@ class UpdateSampleAction
                     throw new BusinessRuleException('موجودی این محصول برای مقدار جدید نمونه کافی نیست.');
                 }
 
-                $inventory->used_quantity = $inventory->used_quantity - $sample->quantity + $quantity;
-                $inventory->save();
+                app(\\App\\Actions\\ScientificVisitorInventory\\AdjustScientificVisitorInventoryUsageAction::class)
+                    ->execute($inventory, $quantity - (int) $sample->quantity);
             }
 
             $sample->update([
