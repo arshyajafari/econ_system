@@ -1,13 +1,13 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Actions\\Delivery\\UpdateDeliveryAction;
-use App\\Models\\Delivery;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Str;
-use Tests\\TestCase;
+use App\Actions\Delivery\UpdateDeliveryAction;
+use App\Models\Delivery;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Tests\TestCase;
 
 class UpdateDeliveryPartialFieldsTest extends TestCase
 {
