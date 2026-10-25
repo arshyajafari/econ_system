@@ -12,11 +12,9 @@ class ListScientificVisitorInventoryAction
     {
         $isScientificVisitor = $user->hasRole('scientific visitor');
 
-        if ($isScientificVisitor) {
-            // This is a server-side business rule, not a UI filter.
-            $filters['available_only'] = true;
-        }
-
+        // Scientific visitors are always scoped to their own employee inventory.
+        // Keep depleted rows visible in the inventory table by applying the
+        // available_only filter only when the caller explicitly requests it.
         if ($isScientificVisitor && !$user->employee?->id) {
             return ScientificVisitorInventoryQuery::make()
                 ->apply($filters, -1)
