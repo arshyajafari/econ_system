@@ -9,6 +9,8 @@ use App\Actions\Visit\ListVisitsAction;
 use App\Actions\Visit\DeleteVisitAction;
 use App\Actions\Visit\ShowVisitAction;
 use App\Actions\Visit\UpdateVisitAction;
+use App\Actions\Visit\UpdateVisitWithSamplesAction;
+use App\Http\Requests\Visit\UpdateVisitWithSamplesRequest;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Visit\StoreVisitRequest;
 use App\Http\Requests\Visit\UpdateVisitRequest;
@@ -40,6 +42,11 @@ class VisitController extends Controller {
     public function update(UpdateVisitRequest $request, Visit $visit, UpdateVisitAction $action): VisitResource {
         $this->authorize('update', $visit);
         return new VisitResource($action->execute($visit, $request->validated()));
+    }
+
+    public function updateWithSamples(UpdateVisitWithSamplesRequest $request, Visit $visit, UpdateVisitWithSamplesAction $action): VisitResource {
+        $this->authorize('update', $visit);
+        return new VisitResource($action->execute($visit, $request->validated(), $request->user()));
     }
 
     public function destroy(Visit $visit, DeleteVisitAction $action): Response {
