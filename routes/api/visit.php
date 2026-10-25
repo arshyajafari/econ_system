@@ -19,6 +19,11 @@
             'show'
         ])->name('show');
 
+        Route::put('/{visit}/with-samples', [
+            VisitController::class,
+            'updateWithSamples'
+        ])->name('update-with-samples');
+
         Route::put('/{visit}', [
             VisitController::class,
             'update'
