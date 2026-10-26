@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Database\\Schema\\Blueprint;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void
@@ -23,7 +23,7 @@ return new class extends Migration {
             Schema::hasColumn('deliveries', 'recipient_name')
             && Schema::hasColumn('deliveries', 'recipient_phone')
             && Schema::hasColumn('deliveries', 'address')
-            && !\\Illuminate\\Support\\Facades\\DB::table('deliveries')
+            && !\Illuminate\Support\Facades\DB::table('deliveries')
                 ->whereNull('recipient_name')
                 ->orWhereNull('recipient_phone')
                 ->orWhereNull('address')
