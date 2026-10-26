@@ -220,6 +220,53 @@ class CustomerPayableBalanceServiceTest extends TestCase
         $this->assertSame(0.0, $service->calculate(7));
     }
 
+    public function test_unlinked_customer_ledger_debt_and_credit_are_included_without_double_counting_source_transactions(): void
+    {
+        DB::table('customer_transactions')->insert([
+            [
+                'id' => 410,
+                'customer_id' => 7,
+                'type' => 'debit',
+                'amount' => 500,
+                'transaction_at' => now(),
+            ],
+            [
+                'id' => 411,
+                'customer_id' => 7,
+                'type' => 'credit',
+                'amount' => 100,
+                'transaction_at' => now(),
+            ],
+            [
+                'id' => 412,
+                'customer_id' => 7,
+                'invoice_id' => 30,
+                'type' => 'debit',
+                'amount' => 900,
+                'transaction_at' => now(),
+            ],
+            [
+                'id' => 413,
+                'customer_id' => 7,
+                'payment_id' => 999,
+                'type' => 'credit',
+                'amount' => 800,
+                'transaction_at' => now(),
+            ],
+        ]);
+
+        $credits = Mockery::mock(CustomerCreditService::class);
+        $credits->shouldReceive('availableAmount')->once()->with(7)->andReturn(0.0);
+
+        $service = new CustomerPayableBalanceService($credits);
+
+        $this->assertSame(400.0, $service->customerLevelBalance(7));
+        // 100 invoice debt + (500 debit - 100 credit) standalone ledger balance.
+        // Linked transactions are intentionally ignored because their source records
+        // already participate in the balance calculation.
+        $this->assertSame(500.0, $service->calculate(7));
+    }
+
     public function test_imported_opening_balance_is_included_in_customer_payable_balance(): void
     {
         DB::table('customer_transactions')->insert([
