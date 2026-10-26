@@ -166,6 +166,86 @@ class CustomerPayableBalanceServiceTest extends TestCase
         $this->assertSame(3000000.0, $service->calculate(7));
     }
 
+    public function test_fully_paid_invoice_return_credit_reduces_next_invoice_payable_to_eight_hundred(): void
+    {
+        DB::table('invoices')->where('id', 30)->update(['total_amount' => 1000]);
+        DB::table('invoices')->where('id', 31)->update(['total_amount' => 1000]);
+        DB::table('deliveries')->where('id', 21)->update([
+            'status' => DeliveryStatus::DELIVERED->value,
+        ]);
+
+        DB::table('payments')->insert([
+            'id' => 102,
+            'invoice_id' => 30,
+            'customer_id' => 7,
+            'status' => 'confirmed',
+            'amount' => 1000,
+            'settlement_discount_amount' => 0,
+        ]);
+
+        DB::table('order_returns')->insert([
+            'id' => 202,
+            'order_id' => 10,
+            'status' => 'completed',
+        ]);
+
+        DB::table('customer_transactions')->insert([
+            'id' => 302,
+            'customer_id' => 7,
+            'order_return_id' => 202,
+            'type' => 'credit',
+            'amount' => 200,
+            'transaction_at' => now(),
+        ]);
+
+        $service = new CustomerPayableBalanceService(new CustomerCreditService());
+
+        // Invoice 30 is fully paid, so the 200 return credit remains reusable.
+        // It offsets invoice 31 exactly once: 1,000 - 200 = 800 payable.
+        $this->assertSame(800.0, $service->calculate(7));
+    }
+
+    public function test_imported_opening_debt_and_invoice_return_credit_produce_correct_customer_payable_balance(): void
+    {
+        DB::table('invoices')->where('id', 30)->update(['total_amount' => 1000]);
+        // Keep the unrelated second fixture invoice undelivered so this test
+        // isolates the requested case: opening debt + one invoice - its return.
+
+        DB::table('customer_transactions')->insert([
+            'id' => 320,
+            'customer_id' => 7,
+            'type' => 'debit',
+            'amount' => 2000,
+            'transaction_at' => now()->subDay(),
+            'meta' => json_encode([
+                'source' => \App\Services\CustomerOpeningBalanceImportService::SOURCE,
+                'original_balance' => '2000.00',
+            ]),
+        ]);
+
+        DB::table('order_returns')->insert([
+            'id' => 203,
+            'order_id' => 10,
+            'status' => 'completed',
+        ]);
+
+        DB::table('customer_transactions')->insert([
+            'id' => 303,
+            'customer_id' => 7,
+            'order_return_id' => 203,
+            'type' => 'credit',
+            'amount' => 500,
+            'transaction_at' => now(),
+        ]);
+
+        $service = new CustomerPayableBalanceService(new CustomerCreditService());
+
+        // Imported opening debt 2,000 + invoice 1,000 - return 500 = 2,500.
+        // The return is already reflected in the invoice remaining amount and
+        // must not be deducted again as reusable customer credit.
+        $this->assertSame(2500.0, $service->calculate(7));
+    }
+
     public function test_return_credit_reduces_origin_invoice_without_being_subtracted_twice_from_customer_balance(): void
     {
         DB::table('deliveries')->where('id', 21)->update([
