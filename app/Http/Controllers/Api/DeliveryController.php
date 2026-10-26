@@ -32,7 +32,7 @@ class DeliveryController extends Controller {
     public function availableOrders(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection {
         $this->authorize('create', Delivery::class);
         $orders = Order::query()
-            ->with(['customer'])
+            ->with(['customer', 'invoice'])
             ->whereIn('status', [OrderStatus::CONFIRMED, OrderStatus::COMPLETED])
             ->whereHas('invoice', fn ($query) => $query->where('status', InvoiceStatus::ISSUED))
             ->whereDoesntHave('delivery')
