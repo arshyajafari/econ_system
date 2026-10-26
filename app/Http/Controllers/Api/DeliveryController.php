@@ -58,6 +58,12 @@ class DeliveryController extends Controller {
         return new DeliveryResource($action->execute($delivery, $request->validated()));
     }
 
+    public function destroy(Delivery $delivery, \\App\\Actions\\Delivery\\DeleteDeliveryAction $action): JsonResponse {
+        $this->authorize('delete', $delivery);
+        $action->execute($delivery);
+        return response()->json(null, 204);
+    }
+
     public function prepare(Delivery $delivery, PrepareDeliveryAction $action): DeliveryResource {
         $this->authorize('prepare', $delivery);
         return new DeliveryResource($action->execute($delivery));
