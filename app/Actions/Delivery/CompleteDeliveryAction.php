@@ -13,7 +13,7 @@
             return DB::transaction(function () use ($delivery, $data, $user) {
                 $delivery = Delivery::query()
                     ->lockForUpdate()
-                    ->with(['order.invoice', 'customer'])
+                    ->with(['order.invoice', 'customer.defaultAddress'])
                     ->findOrFail($delivery->id);
 
                 if ($delivery->status !== DeliveryStatus::SHIPPED) {
@@ -33,6 +33,14 @@
                     throw new BusinessRuleException('شماره گیرنده وارد نشده و شماره‌ای هم برای مشتری ثبت نشده است.');
                 }
 
+                $address = trim((string) ($data['address'] ?? ''));
+                if ($address === '') {
+                    $address = trim((string) ($delivery->customer?->defaultAddress?->address ?? ''));
+                }
+                if ($address === '') {
+                    $address = trim((string) ($delivery->address ?? ''));
+                }
+
                 $employee = $user?->employee;
                 if (!$employee) {
                     throw new BusinessRuleException('کاربر مسئول تحویل به پرونده کارمند متصل نیست.');
@@ -42,6 +50,9 @@
                 $delivery->employee_id = $employee->id;
                 $delivery->recipient_name = $recipientName;
                 $delivery->recipient_phone = $recipientPhone;
+                if ($address !== '') {
+                    $delivery->address = $address;
+                }
                 if (array_key_exists('description', $data)) {
                     $delivery->description = $data['description'] ?: null;
                 }
