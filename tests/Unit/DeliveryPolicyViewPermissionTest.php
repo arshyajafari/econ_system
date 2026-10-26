@@ -69,16 +69,20 @@ class DeliveryPolicyViewPermissionTest extends TestCase
         $this->assertFalse($policy->delete($accountant, $delivery));
     }
 
-    public function test_only_delivery_operator_can_confirm_physical_handoff(): void
+    public function test_admin_and_delivery_operator_with_permission_can_confirm_physical_handoff(): void
     {
         $policy = new DeliveryPolicy();
         $delivery = new Delivery();
 
         $admin = $this->userWith(['admin'], ['deliveries.complete']);
+        $adminWithoutPermission = $this->userWith(['admin']);
         $operator = $this->userWith(['delivery operator'], ['deliveries.complete']);
+        $accountant = $this->userWith(['accountant'], ['deliveries.complete']);
 
-        $this->assertFalse($policy->complete($admin, $delivery));
+        $this->assertTrue($policy->complete($admin, $delivery));
+        $this->assertFalse($policy->complete($adminWithoutPermission, $delivery));
         $this->assertTrue($policy->complete($operator, $delivery));
+        $this->assertFalse($policy->complete($accountant, $delivery));
     }
 
     public function test_only_admin_can_cancel_delivery(): void
