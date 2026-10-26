@@ -39,7 +39,7 @@ class DeliveryPolicy {
     }
 
     public function cancel(User $user, Delivery $delivery): bool {
-        return ($this->isAdmin($user) || $this->isAccountant($user)) && $user->can('deliveries.cancel');
+        return $this->isAdmin($user) && $user->can('deliveries.cancel');
     }
 
     public function export(User $user): bool {

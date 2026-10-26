@@ -69,6 +69,18 @@ class DeliveryPolicyViewPermissionTest extends TestCase
         $this->assertTrue($policy->complete($operator, $delivery));
     }
 
+    public function test_only_admin_can_cancel_delivery(): void
+    {
+        $policy = new DeliveryPolicy();
+        $delivery = new Delivery();
+
+        $admin = $this->userWith(['admin'], ['deliveries.cancel']);
+        $accountant = $this->userWith(['accountant'], ['deliveries.cancel']);
+
+        $this->assertTrue($policy->cancel($admin, $delivery));
+        $this->assertFalse($policy->cancel($accountant, $delivery));
+    }
+
     /**
      * @param list<string> $roles
      * @param list<string> $permissions
