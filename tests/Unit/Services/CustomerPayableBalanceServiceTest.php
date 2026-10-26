@@ -226,6 +226,9 @@ class CustomerPayableBalanceServiceTest extends TestCase
             [
                 'id' => 410,
                 'customer_id' => 7,
+                'invoice_id' => null,
+                'payment_id' => null,
+                'order_return_id' => null,
                 'type' => 'debit',
                 'amount' => 500,
                 'transaction_at' => now(),
@@ -233,6 +236,9 @@ class CustomerPayableBalanceServiceTest extends TestCase
             [
                 'id' => 411,
                 'customer_id' => 7,
+                'invoice_id' => null,
+                'payment_id' => null,
+                'order_return_id' => null,
                 'type' => 'credit',
                 'amount' => 100,
                 'transaction_at' => now(),
@@ -241,6 +247,8 @@ class CustomerPayableBalanceServiceTest extends TestCase
                 'id' => 412,
                 'customer_id' => 7,
                 'invoice_id' => 30,
+                'payment_id' => null,
+                'order_return_id' => null,
                 'type' => 'debit',
                 'amount' => 900,
                 'transaction_at' => now(),
@@ -248,7 +256,9 @@ class CustomerPayableBalanceServiceTest extends TestCase
             [
                 'id' => 413,
                 'customer_id' => 7,
+                'invoice_id' => null,
                 'payment_id' => 999,
+                'order_return_id' => null,
                 'type' => 'credit',
                 'amount' => 800,
                 'transaction_at' => now(),
