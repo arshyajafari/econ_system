@@ -20,6 +20,7 @@ class GetCustomerPayableBalanceAction
                 'code' => $customer->code,
                 'name' => $customer->customer_name,
             ],
+            'previous_balance' => $this->payableBalanceService->customerLevelBalance($customer->id),
             'payable_balance' => $this->payableBalanceService->calculate($customer->id),
         ];
     }
