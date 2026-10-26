@@ -37,9 +37,11 @@ class DeliveryPolicy {
         return $this->isAdmin($user) && $user->can('deliveries.ship');
     }
 
-    // Physical hand-off can still be registered by the delivery operator.
+    // Physical hand-off can be registered by either the delivery operator or an admin
+    // who has the explicit completion permission.
     public function complete(User $user, Delivery $delivery): bool {
-        return $this->isDeliveryOperator($user) && $user->can('deliveries.complete');
+        return ($this->isAdmin($user) || $this->isDeliveryOperator($user))
+            && $user->can('deliveries.complete');
     }
 
     public function cancel(User $user, Delivery $delivery): bool {
