@@ -45,20 +45,12 @@ class CreateDeliveryAction
             $recipientPhone = $data['recipient_phone'] ?? $customer?->phone_number;
             $address = $data['address'] ?? $defaultAddress?->address;
 
-            if (blank($recipientPhone)) {
-                throw new BusinessRuleException('تلفن گیرنده را وارد کنید یا شماره تلفن مشتری را ثبت کنید.');
-            }
-
-            if (blank($address)) {
-                throw new BusinessRuleException('نشانی ارسال را وارد کنید یا برای مشتری نشانی پیش‌فرض ثبت کنید.');
-            }
-
             $delivery = Delivery::create([
                 'order_id' => $order->id,
                 'customer_id' => $order->customer_id,
                 'employee_id' => $employee->id,
                 'status' => DeliveryStatus::PENDING,
-                'recipient_name' => $data['recipient_name'],
+                'recipient_name' => $data['recipient_name'] ?? null,
                 'recipient_phone' => $recipientPhone,
                 'address' => $address,
                 'description' => $data['description'] ?? null,
