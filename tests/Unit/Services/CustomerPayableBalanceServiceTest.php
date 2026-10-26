@@ -80,6 +80,7 @@ class CustomerPayableBalanceServiceTest extends TestCase
             $table->unsignedBigInteger('order_return_id')->nullable();
             $table->string('type');
             $table->decimal('amount', 15, 2)->default(0);
+            $table->json('meta')->nullable();
             $table->timestamp('transaction_at')->nullable();
             $table->timestamp('deleted_at')->nullable();
         });
@@ -218,4 +219,27 @@ class CustomerPayableBalanceServiceTest extends TestCase
 
         $this->assertSame(0.0, $service->calculate(7));
     }
+
+    public function test_imported_opening_balance_is_included_in_customer_payable_balance(): void
+    {
+        DB::table('customer_transactions')->insert([
+            'id' => 400,
+            'customer_id' => 7,
+            'type' => 'debit',
+            'amount' => 1250,
+            'transaction_at' => now(),
+            'meta' => json_encode([
+                'source' => \App\Services\CustomerOpeningBalanceImportService::SOURCE,
+                'original_balance' => '1250.00',
+            ]),
+        ]);
+
+        $credits = Mockery::mock(CustomerCreditService::class);
+        $credits->shouldReceive('availableAmount')->once()->with(7)->andReturn(0.0);
+
+        $service = new CustomerPayableBalanceService($credits);
+
+        $this->assertSame(1350.0, $service->calculate(7));
+    }
+
 }

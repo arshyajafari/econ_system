@@ -40,6 +40,20 @@ class CustomerPayableBalanceService
             return max(0.0, round($remaining, 2));
         });
 
+        // Imported opening balances are customer-level receivables and do not
+        // belong to an issued invoice. Include them in the payable balance so
+        // the payment form can collect those debts as well.
+        $openingBalance = (float) \App\Models\CustomerTransaction::query()
+            ->where('customer_id', $customerId)
+            ->whereNull('payment_id')
+            ->whereNull('order_return_id')
+            ->where('meta->source', \App\Services\CustomerOpeningBalanceImportService::SOURCE)
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = ? THEN amount WHEN type = ? THEN -amount ELSE 0 END), 0) as balance", [
+                \App\Enums\CustomerTransactionType::DEBIT->value,
+                \App\Enums\CustomerTransactionType::CREDIT->value,
+            ])
+            ->value('balance');
+
         // Customer-level pending payments have no invoice_id, so they are
         // intentionally not included in Invoice::pendingPaidAmount().
         // They must nevertheless reduce the balance shown to the user;
@@ -87,6 +101,7 @@ class CustomerPayableBalanceService
             0.0,
             round(
                 $invoiceBalance
+                + (float) $openingBalance
                 - (float) $pendingCustomerLevelPayments
                 - $availableCustomerCredit,
                 2,
