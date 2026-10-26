@@ -55,7 +55,7 @@ class DeliveryController extends Controller {
 
     public function update(UpdateDeliveryRequest $request, Delivery $delivery, UpdateDeliveryAction $action): DeliveryResource {
         $this->authorize('update', $delivery);
-        return new DeliveryResource($action->execute($delivery, $request->validated()));
+        return new DeliveryResource($action->execute($delivery, $request->validated(), $request->user()));
     }
 
     public function prepare(Delivery $delivery, PrepareDeliveryAction $action): DeliveryResource {
