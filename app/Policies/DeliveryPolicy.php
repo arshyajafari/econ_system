@@ -17,11 +17,11 @@ class DeliveryPolicy {
     public function view(User $user, Delivery $delivery): bool { return $this->viewAny($user); }
 
     public function create(User $user): bool {
-        return $this->isAdmin($user) || ($this->isDeliveryOperator($user) && $user->can('deliveries.create'));
+        return $this->isAdmin($user) && $user->can('deliveries.create');
     }
 
     public function update(User $user, Delivery $delivery): bool {
-        return $this->isAdmin($user) || ($this->isDeliveryOperator($user) && $user->can('deliveries.update'));
+        return $this->isAdmin($user) && $user->can('deliveries.update');
     }
 
     // Preparation and shipment are approval gates. Only admin may approve them.
@@ -35,7 +35,7 @@ class DeliveryPolicy {
 
     // Physical hand-off can still be registered by the delivery operator.
     public function complete(User $user, Delivery $delivery): bool {
-        return ($this->isAdmin($user) || $this->isDeliveryOperator($user)) && $user->can('deliveries.complete');
+        return $this->isDeliveryOperator($user) && $user->can('deliveries.complete');
     }
 
     public function cancel(User $user, Delivery $delivery): bool {
