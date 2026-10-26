@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Actions\Delivery\CancelDeliveryAction;
 use App\Actions\Delivery\CompleteDeliveryAction;
 use App\Actions\Delivery\CreateDeliveryAction;
+use App\Actions\Delivery\DeleteDeliveryAction;
 use App\Actions\Delivery\PrepareDeliveryAction;
 use App\Actions\Delivery\ShipDeliveryAction;
 use App\Actions\Delivery\UpdateDeliveryAction;
@@ -58,7 +59,7 @@ class DeliveryController extends Controller {
         return new DeliveryResource($action->execute($delivery, $request->validated()));
     }
 
-    public function destroy(Delivery $delivery, \\App\\Actions\\Delivery\\DeleteDeliveryAction $action): JsonResponse {
+    public function destroy(Delivery $delivery, DeleteDeliveryAction $action): JsonResponse {
         $this->authorize('delete', $delivery);
         $action->execute($delivery);
         return response()->json(null, 204);
