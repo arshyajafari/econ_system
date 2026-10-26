@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Http\\Requests\\Delivery;
+namespace App\Http\Requests\Delivery;
 
-use App\\Http\\Requests\\CrudRequest;
-use App\\Validation\\ValidationRules;
+use App\Http\Requests\CrudRequest;
+use App\Validation\ValidationRules;
 
 class CompleteDeliveryRequest extends CrudRequest
 {
