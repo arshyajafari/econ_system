@@ -42,8 +42,17 @@ class CreateDeliveryAction
 
             $customer = $order->customer;
             $defaultAddress = $customer?->defaultAddress;
-            $recipientPhone = $data['recipient_phone'] ?? $customer?->phone_number;
-            $address = $data['address'] ?? $defaultAddress?->address;
+            $recipientPhone = trim((string) ($data['recipient_phone'] ?? ''));
+            if ($recipientPhone === '') {
+                $recipientPhone = trim((string) ($customer?->phone_number ?? ''));
+            }
+            $recipientPhone = $recipientPhone !== '' ? $recipientPhone : null;
+
+            $address = trim((string) ($data['address'] ?? ''));
+            if ($address === '') {
+                $address = trim((string) ($defaultAddress?->address ?? ''));
+            }
+            $address = $address !== '' ? $address : null;
 
             $delivery = Delivery::create([
                 'order_id' => $order->id,

@@ -24,6 +24,10 @@ class DeliveryPolicy {
         return $this->isAdmin($user) && $user->can('deliveries.update');
     }
 
+    public function delete(User $user, Delivery $delivery): bool {
+        return $this->isAdmin($user) && $user->can('deliveries.delete');
+    }
+
     // Preparation and shipment are approval gates. Only admin may approve them.
     public function prepare(User $user, Delivery $delivery): bool {
         return $this->isAdmin($user) && $user->can('deliveries.prepare');

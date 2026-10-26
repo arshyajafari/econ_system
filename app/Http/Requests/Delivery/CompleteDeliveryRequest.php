@@ -12,6 +12,7 @@ class CompleteDeliveryRequest extends CrudRequest
         return [
             'recipient_name' => ['required', 'string', 'max:150'],
             'recipient_phone' => ['nullable', 'string', 'max:30'],
+            'address' => ['nullable', 'string', 'max:2000'],
             ...ValidationRules::description(),
         ];
     }

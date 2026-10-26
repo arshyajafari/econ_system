@@ -30,15 +30,21 @@ class UpdateDeliveryAction
             }
 
             if (array_key_exists('recipient_phone', $data)) {
-                $attributes['recipient_phone'] = $data['recipient_phone']
-                    ?? $customer?->phone_number
-                    ?? $delivery->recipient_phone;
+                $recipientPhone = trim((string) ($data['recipient_phone'] ?? ''));
+                if ($recipientPhone === '') {
+                    $recipientPhone = trim((string) ($customer?->phone_number ?? ''));
+                }
+                $attributes['recipient_phone'] = $recipientPhone !== ''
+                    ? $recipientPhone
+                    : $delivery->recipient_phone;
             }
 
             if (array_key_exists('address', $data)) {
-                $attributes['address'] = $data['address']
-                    ?? $defaultAddress?->address
-                    ?? $delivery->address;
+                $address = trim((string) ($data['address'] ?? ''));
+                if ($address === '') {
+                    $address = trim((string) ($defaultAddress?->address ?? ''));
+                }
+                $attributes['address'] = $address !== '' ? $address : $delivery->address;
             }
 
             if (array_key_exists('description', $data)) {

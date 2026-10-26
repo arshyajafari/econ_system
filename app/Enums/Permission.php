@@ -95,6 +95,7 @@ enum Permission: string
     case DELIVERY_VIEW = 'deliveries.view';
     case DELIVERY_CREATE = 'deliveries.create';
     case DELIVERY_UPDATE = 'deliveries.update';
+    case DELIVERY_DELETE = 'deliveries.delete';
     case DELIVERY_PREPARE = 'deliveries.prepare';
     case DELIVERY_SHIP = 'deliveries.ship';
     case DELIVERY_COMPLETE = 'deliveries.complete';

@@ -23,7 +23,7 @@ class PermissionRegistry
             'invoices' => ['view','create','update','issue','cancel'],
             'payments' => ['view','create','update','delete','confirm','cancel'],
             'expenses' => ['view','create','update','delete'],
-            'deliveries' => ['view','create','update','prepare','ship','complete','cancel','export'],
+            'deliveries' => ['view','create','update','delete','prepare','ship','complete','cancel','export'],
             'visits' => ['view','create','update','delete','complete','cancel','export'],
             'samples' => ['view','create','update','delete','export'],
         ];
