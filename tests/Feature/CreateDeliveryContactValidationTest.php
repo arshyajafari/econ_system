@@ -14,46 +14,34 @@ class CreateDeliveryContactValidationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_delivery_creation_returns_a_business_error_when_no_address_is_available(): void
+    public function test_admin_can_register_delivery_without_knowing_receiver_or_address_yet(): void
     {
         [$user, $orderPublicId] = $this->createOrderContext();
 
-        try {
-            app(CreateDeliveryAction::class)->execute([
-                'order_id' => $orderPublicId,
-                'recipient_name' => 'Test recipient',
-                'recipient_phone' => '09120000000',
-                'address' => null,
-            ], $user);
+        $delivery = app(CreateDeliveryAction::class)->execute([
+            'order_id' => $orderPublicId,
+            'recipient_name' => null,
+            'recipient_phone' => null,
+            'address' => null,
+        ], $user);
 
-            $this->fail('A delivery without a resolved address must be rejected.');
-        } catch (BusinessRuleException $exception) {
-            $this->assertSame(
-                'نشانی ارسال را وارد کنید یا برای مشتری نشانی پیش‌فرض ثبت کنید.',
-                $exception->getMessage()
-            );
-        }
+        $this->assertNull($delivery->recipient_name);
+        $this->assertSame('09121111111', $delivery->recipient_phone);
+        $this->assertNull($delivery->address);
     }
 
-    public function test_delivery_creation_returns_a_business_error_when_no_phone_is_available(): void
+    public function test_delivery_can_be_registered_without_a_phone_when_customer_has_no_phone(): void
     {
         [$user, $orderPublicId] = $this->createOrderContext(customerPhone: null);
 
-        try {
-            app(CreateDeliveryAction::class)->execute([
-                'order_id' => $orderPublicId,
-                'recipient_name' => 'Test recipient',
-                'recipient_phone' => null,
-                'address' => 'Test delivery address',
-            ], $user);
+        $delivery = app(CreateDeliveryAction::class)->execute([
+            'order_id' => $orderPublicId,
+            'recipient_name' => null,
+            'recipient_phone' => null,
+            'address' => null,
+        ], $user);
 
-            $this->fail('A delivery without a resolved recipient phone must be rejected.');
-        } catch (BusinessRuleException $exception) {
-            $this->assertSame(
-                'تلفن گیرنده را وارد کنید یا شماره تلفن مشتری را ثبت کنید.',
-                $exception->getMessage()
-            );
-        }
+        $this->assertNull($delivery->recipient_phone);
     }
 
     private function createOrderContext(?string $customerPhone = '09121111111'): array
