@@ -205,6 +205,48 @@ class CustomerPayableBalanceServiceTest extends TestCase
         $this->assertSame(800.0, $service->calculate(7));
     }
 
+    public function test_imported_opening_debt_and_invoice_return_credit_produce_correct_customer_payable_balance(): void
+    {
+        DB::table('invoices')->where('id', 30)->update(['total_amount' => 1000]);
+        DB::table('deliveries')->where('id', 21)->update([
+            'status' => DeliveryStatus::DELIVERED->value,
+        ]);
+
+        DB::table('customer_transactions')->insert([
+            'id' => 320,
+            'customer_id' => 7,
+            'type' => 'debit',
+            'amount' => 2000,
+            'transaction_at' => now()->subDay(),
+            'meta' => json_encode([
+                'source' => \\App\\Services\\CustomerOpeningBalanceImportService::SOURCE,
+                'original_balance' => '2000.00',
+            ]),
+        ]);
+
+        DB::table('order_returns')->insert([
+            'id' => 203,
+            'order_id' => 10,
+            'status' => 'completed',
+        ]);
+
+        DB::table('customer_transactions')->insert([
+            'id' => 303,
+            'customer_id' => 7,
+            'order_return_id' => 203,
+            'type' => 'credit',
+            'amount' => 500,
+            'transaction_at' => now(),
+        ]);
+
+        $service = new CustomerPayableBalanceService(new CustomerCreditService());
+
+        // Imported opening debt 2,000 + invoice 1,000 - return 500 = 2,500.
+        // The return is already reflected in the invoice remaining amount and
+        // must not be deducted again as reusable customer credit.
+        $this->assertSame(2500.0, $service->calculate(7));
+    }
+
     public function test_return_credit_reduces_origin_invoice_without_being_subtracted_twice_from_customer_balance(): void
     {
         DB::table('deliveries')->where('id', 21)->update([
