@@ -219,7 +219,7 @@ class CustomerPayableBalanceServiceTest extends TestCase
             'amount' => 2000,
             'transaction_at' => now()->subDay(),
             'meta' => json_encode([
-                'source' => \\App\\Services\\CustomerOpeningBalanceImportService::SOURCE,
+                'source' => \App\Services\CustomerOpeningBalanceImportService::SOURCE,
                 'original_balance' => '2000.00',
             ]),
         ]);
