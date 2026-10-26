@@ -12,6 +12,7 @@ class DeliveryOrderSourceResource extends JsonResource
         return [
             'id' => $this->public_id,
             'code' => $this->code,
+            'invoice_code' => $this->invoice?->code,
             'status' => $this->status?->value,
             'customer' => $this->whenLoaded('customer', fn () => [
                 'id' => $this->customer->public_id,

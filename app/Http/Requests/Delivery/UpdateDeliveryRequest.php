@@ -10,7 +10,7 @@ class UpdateDeliveryRequest extends CrudRequest
     public function rules(): array
     {
         return [
-            'recipient_name' => ['required', 'string', 'max:150'],
+            'recipient_name' => ['nullable', 'string', 'max:150'],
             'recipient_phone' => ['nullable', 'string', 'max:30'],
             'province' => ['nullable', 'string', 'max:100'],
             'city' => ['nullable', 'string', 'max:100'],

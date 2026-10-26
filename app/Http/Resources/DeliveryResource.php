@@ -20,6 +20,7 @@ class DeliveryResource extends JsonResource
                 'id' => $this->customer->public_id,
                 'code' => $this->customer->code,
                 'name' => $this->customer->customer_name,
+                'phone' => $this->customer->phone_number,
             ]),
             'employee' => $this->whenLoaded('employee', fn() => [
                 'id' => $this->employee->public_id,

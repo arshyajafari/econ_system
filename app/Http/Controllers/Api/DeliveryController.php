@@ -10,6 +10,7 @@ use App\Actions\Delivery\ShipDeliveryAction;
 use App\Actions\Delivery\UpdateDeliveryAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Delivery\DeliveryIndexRequest;
+use App\Http\Requests\Delivery\CompleteDeliveryRequest;
 use App\Http\Requests\Delivery\StoreDeliveryRequest;
 use App\Http\Requests\Delivery\UpdateDeliveryRequest;
 use App\Http\Resources\DeliveryResource;
@@ -31,7 +32,7 @@ class DeliveryController extends Controller {
     public function availableOrders(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection {
         $this->authorize('create', Delivery::class);
         $orders = Order::query()
-            ->with(['customer'])
+            ->with(['customer', 'invoice'])
             ->whereIn('status', [OrderStatus::CONFIRMED, OrderStatus::COMPLETED])
             ->whereHas('invoice', fn ($query) => $query->where('status', InvoiceStatus::ISSUED))
             ->whereDoesntHave('delivery')
@@ -67,9 +68,9 @@ class DeliveryController extends Controller {
         return new DeliveryResource($action->execute($delivery));
     }
 
-    public function complete(Delivery $delivery, CompleteDeliveryAction $action): DeliveryResource {
+    public function complete(CompleteDeliveryRequest $request, Delivery $delivery, CompleteDeliveryAction $action): DeliveryResource {
         $this->authorize('complete', $delivery);
-        return new DeliveryResource($action->execute($delivery));
+        return new DeliveryResource($action->execute($delivery, $request->validated(), $request->user()));
     }
 
     public function cancel(Delivery $delivery, CancelDeliveryAction $action): DeliveryResource {

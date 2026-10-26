@@ -43,6 +43,32 @@ class DeliveryPolicyViewPermissionTest extends TestCase
         $this->assertTrue((new DeliveryPolicy())->viewAny($user));
     }
 
+    public function test_only_admin_can_create_or_update_delivery_records(): void
+    {
+        $policy = new DeliveryPolicy();
+        $delivery = new Delivery();
+
+        $admin = $this->userWith(['admin'], ['deliveries.create', 'deliveries.update']);
+        $operator = $this->userWith(['delivery operator'], ['deliveries.create', 'deliveries.update']);
+
+        $this->assertTrue($policy->create($admin));
+        $this->assertTrue($policy->update($admin, $delivery));
+        $this->assertFalse($policy->create($operator));
+        $this->assertFalse($policy->update($operator, $delivery));
+    }
+
+    public function test_only_delivery_operator_can_confirm_physical_handoff(): void
+    {
+        $policy = new DeliveryPolicy();
+        $delivery = new Delivery();
+
+        $admin = $this->userWith(['admin'], ['deliveries.complete']);
+        $operator = $this->userWith(['delivery operator'], ['deliveries.complete']);
+
+        $this->assertFalse($policy->complete($admin, $delivery));
+        $this->assertTrue($policy->complete($operator, $delivery));
+    }
+
     /**
      * @param list<string> $roles
      * @param list<string> $permissions
