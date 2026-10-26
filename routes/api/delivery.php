@@ -29,6 +29,11 @@
             'update'
         ])->name('update');
 
+        Route::delete('/{delivery}', [
+            DeliveryController::class,
+            'destroy'
+        ])->name('destroy');
+
         Route::post('/{delivery}/prepare', [
             DeliveryController::class,
             'prepare'
