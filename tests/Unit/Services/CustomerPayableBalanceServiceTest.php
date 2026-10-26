@@ -208,9 +208,8 @@ class CustomerPayableBalanceServiceTest extends TestCase
     public function test_imported_opening_debt_and_invoice_return_credit_produce_correct_customer_payable_balance(): void
     {
         DB::table('invoices')->where('id', 30)->update(['total_amount' => 1000]);
-        DB::table('deliveries')->where('id', 21)->update([
-            'status' => DeliveryStatus::DELIVERED->value,
-        ]);
+        // Keep the unrelated second fixture invoice undelivered so this test
+        // isolates the requested case: opening debt + one invoice - its return.
 
         DB::table('customer_transactions')->insert([
             'id' => 320,
