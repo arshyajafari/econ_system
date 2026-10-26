@@ -11,7 +11,7 @@ class StoreDeliveryRequest extends CrudRequest
     {
         return [
             'order_id' => ['required', 'string', 'exists:orders,public_id'],
-            'recipient_name' => ['required', 'string', 'max:150'],
+            'recipient_name' => ['nullable', 'string', 'max:150'],
             'recipient_phone' => ['nullable', 'string', 'max:30'],
             'province' => ['nullable', 'string', 'max:100'],
             'city' => ['nullable', 'string', 'max:100'],
