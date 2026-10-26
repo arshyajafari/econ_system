@@ -5,11 +5,12 @@
     use App\Enums\DeliveryStatus;
     use App\Exceptions\BusinessRuleException;
     use App\Models\Delivery;
+    use App\Models\User;
     use Illuminate\Support\Facades\DB;
 
     class CompleteDeliveryAction {
-        public function execute(Delivery $delivery, array $data = []): Delivery {
-            return DB::transaction(function () use ($delivery, $data) {
+        public function execute(Delivery $delivery, array $data = [], ?User $user = null): Delivery {
+            return DB::transaction(function () use ($delivery, $data, $user) {
                 $delivery = Delivery::query()
                     ->lockForUpdate()
                     ->with(['order.invoice', 'customer'])
@@ -32,7 +33,13 @@
                     throw new BusinessRuleException('شماره گیرنده وارد نشده و شماره‌ای هم برای مشتری ثبت نشده است.');
                 }
 
+                $employee = $user?->employee;
+                if (!$employee) {
+                    throw new BusinessRuleException('کاربر مسئول تحویل به پرونده کارمند متصل نیست.');
+                }
+
                 $deliveredAt = now();
+                $delivery->employee_id = $employee->id;
                 $delivery->recipient_name = $recipientName;
                 $delivery->recipient_phone = $recipientPhone;
                 if (array_key_exists('description', $data)) {
