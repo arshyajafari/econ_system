@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Delivery\CompleteDeliveryAction;
 use App\Actions\Delivery\CreateDeliveryAction;
+use App\Enums\DeliveryStatus;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +29,74 @@ class CreateDeliveryContactValidationTest extends TestCase
         $this->assertNull($delivery->recipient_name);
         $this->assertSame('09121111111', $delivery->recipient_phone);
         $this->assertNull($delivery->address);
+    }
+
+    public function test_handoff_uses_customer_default_address_when_address_is_not_entered(): void
+    {
+        [$user, $orderPublicId] = $this->createOrderContext();
+
+        $delivery = app(CreateDeliveryAction::class)->execute([
+            'order_id' => $orderPublicId,
+            'recipient_name' => null,
+            'recipient_phone' => null,
+            'address' => null,
+        ], $user);
+
+        DB::table('customer_addresses')->insert([
+            'customer_id' => $delivery->customer_id,
+            'province' => 'Mazandaran',
+            'city' => 'Sari',
+            'address' => 'Customer default delivery address',
+            'is_default' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $delivery->status = DeliveryStatus::SHIPPED;
+        $delivery->save();
+
+        $completed = app(CompleteDeliveryAction::class)->execute($delivery, [
+            'recipient_name' => 'Receiver Name',
+            'recipient_phone' => '',
+            'address' => '',
+        ], $user);
+
+        $this->assertSame('Customer default delivery address', $completed->address);
+        $this->assertSame('09121111111', $completed->recipient_phone);
+        $this->assertSame('Receiver Name', $completed->recipient_name);
+    }
+
+    public function test_handoff_prefers_explicit_address_over_customer_default_address(): void
+    {
+        [$user, $orderPublicId] = $this->createOrderContext();
+
+        $delivery = app(CreateDeliveryAction::class)->execute([
+            'order_id' => $orderPublicId,
+            'recipient_name' => null,
+            'recipient_phone' => null,
+            'address' => null,
+        ], $user);
+
+        DB::table('customer_addresses')->insert([
+            'customer_id' => $delivery->customer_id,
+            'province' => 'Mazandaran',
+            'city' => 'Sari',
+            'address' => 'Customer default delivery address',
+            'is_default' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $delivery->status = DeliveryStatus::SHIPPED;
+        $delivery->save();
+
+        $completed = app(CompleteDeliveryAction::class)->execute($delivery, [
+            'recipient_name' => 'Receiver Name',
+            'recipient_phone' => '',
+            'address' => 'Specific handoff address',
+        ], $user);
+
+        $this->assertSame('Specific handoff address', $completed->address);
     }
 
     public function test_delivery_can_be_registered_without_a_phone_when_customer_has_no_phone(): void
