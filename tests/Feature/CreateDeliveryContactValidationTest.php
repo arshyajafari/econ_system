@@ -31,6 +31,32 @@ class CreateDeliveryContactValidationTest extends TestCase
         $this->assertNull($delivery->address);
     }
 
+    public function test_creating_delivery_uses_customer_defaults_when_contact_fields_are_blank(): void
+    {
+        [$user, $orderPublicId] = $this->createOrderContext();
+
+        $order = DB::table('orders')->where('public_id', $orderPublicId)->first();
+        DB::table('customer_addresses')->insert([
+            'customer_id' => $order->customer_id,
+            'province' => 'Mazandaran',
+            'city' => 'Sari',
+            'address' => 'Customer default delivery address',
+            'is_default' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $delivery = app(CreateDeliveryAction::class)->execute([
+            'order_id' => $orderPublicId,
+            'recipient_name' => '',
+            'recipient_phone' => '',
+            'address' => '',
+        ], $user);
+
+        $this->assertSame('09121111111', $delivery->recipient_phone);
+        $this->assertSame('Customer default delivery address', $delivery->address);
+    }
+
     public function test_handoff_uses_customer_default_address_when_address_is_not_entered(): void
     {
         [$user, $orderPublicId] = $this->createOrderContext();
