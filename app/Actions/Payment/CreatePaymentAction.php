@@ -66,7 +66,7 @@ class CreatePaymentAction {
                     $meta['cheque_details'] = [
                         'issue_date' => $data['payment_date'] ?? null,
                         'due_date' => $data['cheque_due_date'] ?? null,
-                        'number' => trim((string) ($data['cheque_number'] ?? '')),
+                        'number' => trim((string) ($data['reference_number'] ?? $data['cheque_number'] ?? '')),
                         'bank_name' => trim((string) ($data['cheque_bank_name'] ?? '')),
                         'sayad_id' => isset($data['cheque_sayad_id']) ? trim((string) $data['cheque_sayad_id']) : null,
                         // A cheque is only counted as payment after an authorized confirmation.
