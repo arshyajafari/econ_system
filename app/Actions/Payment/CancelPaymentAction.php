@@ -25,6 +25,13 @@
                 }
 
                 $payment->status = PaymentStatus::CANCELLED;
+                if ($payment->method?->value === 'cheque') {
+                    $meta = $payment->meta ?? [];
+                    $chequeDetails = $meta['cheque_details'] ?? [];
+                    $chequeDetails['status'] = 'cancelled';
+                    $meta['cheque_details'] = $chequeDetails;
+                    $payment->meta = $meta;
+                }
                 $payment->save();
 
                 return $payment->fresh(Payment::DEFAULT_RELATIONS);

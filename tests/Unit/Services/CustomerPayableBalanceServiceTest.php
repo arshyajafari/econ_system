@@ -60,6 +60,7 @@ class CustomerPayableBalanceServiceTest extends TestCase
             $table->unsignedBigInteger('invoice_id')->nullable();
             $table->unsignedBigInteger('customer_id');
             $table->string('status');
+            $table->string('method')->default('cash');
             $table->decimal('amount', 15, 2)->default(0);
             $table->decimal('settlement_discount_amount', 15, 2)->default(0);
             $table->timestamp('deleted_at')->nullable();
@@ -355,6 +356,26 @@ class CustomerPayableBalanceServiceTest extends TestCase
         // Linked transactions are intentionally ignored because their source records
         // already participate in the balance calculation.
         $this->assertSame(500.0, $service->calculate(7));
+    }
+
+    public function test_pending_cheque_does_not_reduce_customer_payable_balance_until_cleared(): void
+    {
+        DB::table('payments')->insert([
+            'id' => 150,
+            'invoice_id' => null,
+            'customer_id' => 7,
+            'status' => 'pending',
+            'method' => 'cheque',
+            'amount' => 60,
+            'settlement_discount_amount' => 0,
+        ]);
+
+        $credits = Mockery::mock(CustomerCreditService::class);
+        $credits->shouldReceive('availableAmount')->once()->with(7)->andReturn(0.0);
+        $service = new CustomerPayableBalanceService($credits);
+
+        // The cheque is only a promise to pay until clearance is confirmed.
+        $this->assertSame(100.0, $service->calculate(7));
     }
 
     public function test_imported_opening_balance_is_included_in_customer_payable_balance(): void

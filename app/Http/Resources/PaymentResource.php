@@ -32,6 +32,7 @@ class PaymentResource extends JsonResource {
             'amount' => $this->amount,
             'settlement_discount_amount' => $this->settlement_discount_amount,
             'reference_number' => $this->reference_number,
+            'cheque_details' => $this->when($this->method?->value === 'cheque', $this->meta['cheque_details'] ?? null),
             'payment_date' => $this->payment_date?->toISOString(),
             'description' => $this->description,
             'receipt_image_url' => $receiptPath ? Storage::disk('public')->url($receiptPath) : null,
