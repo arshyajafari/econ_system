@@ -84,7 +84,6 @@ class UpdatePaymentAction {
 
                 $meta = $payment->meta ?? [];
                 $chequeFields = [
-                    'cheque_issue_date' => 'issue_date',
                     'cheque_due_date' => 'due_date',
                     'cheque_number' => 'number',
                     'cheque_bank_name' => 'bank_name',
@@ -103,6 +102,10 @@ class UpdatePaymentAction {
                                 : $value;
                         }
                     }
+                    // The existing payment date is also the cheque issue date.
+                    $chequeDetails['issue_date'] = isset($data['payment_date'])
+                        ? $data['payment_date']
+                        : $payment->payment_date?->toDateString();
                     $chequeDetails['status'] ??= 'awaiting_clearance';
                     $meta['cheque_details'] = $chequeDetails;
                 } else {
