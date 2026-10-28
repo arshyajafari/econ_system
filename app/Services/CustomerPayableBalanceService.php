@@ -68,6 +68,7 @@ class CustomerPayableBalanceService
             ->where('customer_id', $customerId)
             ->whereNull('invoice_id')
             ->where('status', PaymentStatus::PENDING)
+            ->where('method', '!=', 'cheque')
             ->when(
                 $excludePaymentId !== null,
                 fn ($query) => $query->where('id', '!=', $excludePaymentId),
