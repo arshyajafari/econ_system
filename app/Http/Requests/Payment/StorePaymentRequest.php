@@ -15,6 +15,11 @@ class StorePaymentRequest extends CrudRequest {
             'amount' => ['required', 'numeric', 'gt:0'],
             'settlement_discount_amount' => ['nullable', 'numeric', 'gte:0'],
             'reference_number' => ['nullable', 'string', 'max:100'],
+            'cheque_issue_date' => ['nullable', 'date'],
+            'cheque_due_date' => ['required_if:method,cheque', 'nullable', 'date', 'after_or_equal:cheque_issue_date'],
+            'cheque_number' => ['required_if:method,cheque', 'nullable', 'string', 'max:100'],
+            'cheque_bank_name' => ['required_if:method,cheque', 'nullable', 'string', 'max:150'],
+            'cheque_sayad_id' => ['nullable', 'regex:/^[0-9]{16}$/'],
             'payment_date' => ['required', 'date'],
             'receipt_image' => [
                 'nullable',
