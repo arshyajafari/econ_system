@@ -31,10 +31,14 @@ class CustomerPayableBalanceService
             if ($excludePaymentId !== null) {
                 $remaining -= (float) $invoice->payments
                     ->where('status', PaymentStatus::PENDING)
+                    ->where('method', '!=', 'cheque')
                     ->reject(fn ($payment) => (int) $payment->id === $excludePaymentId)
                     ->sum(fn ($payment) => (float) $payment->amount + (float) $payment->settlement_discount_amount);
             } else {
-                $remaining -= $invoice->pendingPaidAmount();
+                $remaining -= (float) $invoice->payments
+                    ->where('status', PaymentStatus::PENDING)
+                    ->where('method', '!=', 'cheque')
+                    ->sum(fn ($payment) => (float) $payment->amount + (float) $payment->settlement_discount_amount);
             }
 
             return max(0.0, round($remaining, 2));
@@ -53,6 +57,7 @@ class CustomerPayableBalanceService
             ->where('customer_id', $customerId)
             ->whereNull('invoice_id')
             ->where('status', PaymentStatus::PENDING)
+            ->where('method', '!=', 'cheque')
             ->when(
                 $excludePaymentId !== null,
                 fn ($query) => $query->where('id', '!=', $excludePaymentId),
