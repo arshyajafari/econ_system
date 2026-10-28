@@ -64,7 +64,7 @@ class CreatePaymentAction {
 
                 if (($data['method'] ?? null) === 'cheque') {
                     $meta['cheque_details'] = [
-                        'issue_date' => $data['cheque_issue_date'] ?? null,
+                        'issue_date' => $data['payment_date'] ?? null,
                         'due_date' => $data['cheque_due_date'] ?? null,
                         'number' => trim((string) ($data['cheque_number'] ?? '')),
                         'bank_name' => trim((string) ($data['cheque_bank_name'] ?? '')),
