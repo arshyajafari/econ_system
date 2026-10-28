@@ -81,6 +81,34 @@ class UpdatePaymentAction {
                 if (array_key_exists('reference_number', $data)) {
                     $payment->reference_number = $data['reference_number'];
                 }
+
+                $meta = $payment->meta ?? [];
+                $chequeFields = [
+                    'cheque_issue_date' => 'issue_date',
+                    'cheque_due_date' => 'due_date',
+                    'cheque_number' => 'number',
+                    'cheque_bank_name' => 'bank_name',
+                    'cheque_sayad_id' => 'sayad_id',
+                ];
+                if (($data['method'] ?? $payment->method->value) === 'cheque') {
+                    $chequeDetails = $meta['cheque_details'] ?? [
+                        'issue_date' => null, 'due_date' => null, 'number' => null,
+                        'bank_name' => null, 'sayad_id' => null, 'status' => 'awaiting_clearance',
+                    ];
+                    foreach ($chequeFields as $input => $field) {
+                        if (array_key_exists($input, $data)) {
+                            $value = $data[$input];
+                            $chequeDetails[$field] = in_array($field, ['number', 'bank_name', 'sayad_id'], true)
+                                ? (is_string($value) ? trim($value) : $value)
+                                : $value;
+                        }
+                    }
+                    $chequeDetails['status'] ??= 'awaiting_clearance';
+                    $meta['cheque_details'] = $chequeDetails;
+                } else {
+                    unset($meta['cheque_details']);
+                }
+                $payment->meta = $meta ?: null;
     
                 if (array_key_exists('payment_date', $data)) {
                     $payment->payment_date = $data['payment_date'];
