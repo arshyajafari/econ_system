@@ -17,6 +17,7 @@ use App\Http\Resources\PaymentResource;
 use App\Models\Customer;
 use App\Models\Payment;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class PaymentController extends Controller
@@ -34,11 +35,14 @@ class PaymentController extends Controller
         return new PaymentResource($action->execute($payment));
     }
 
-    public function customerPayableBalance(Customer $customer, GetCustomerPayableBalanceAction $action): JsonResponse
+    public function customerPayableBalance(Request $request, Customer $customer, GetCustomerPayableBalanceAction $action): JsonResponse
     {
         $this->authorize('view', $customer);
 
-        return response()->json($action->execute($customer));
+        return response()->json($action->execute(
+            $customer,
+            $request->query('exclude_payment_id'),
+        ));
     }
 
     public function store(StorePaymentRequest $request, CreatePaymentAction $action): PaymentResource
