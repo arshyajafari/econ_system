@@ -99,6 +99,9 @@ class UpdatePaymentAction {
                         $chequeDetails['number'] = trim((string) ($data['reference_number'] ?? ''));
                     }
                     foreach ($chequeFields as $input => $field) {
+                        if ($input === 'cheque_number' && array_key_exists('reference_number', $data)) {
+                            continue;
+                        }
                         if (array_key_exists($input, $data)) {
                             $value = $data[$input];
                             $chequeDetails[$field] = in_array($field, ['number', 'bank_name', 'sayad_id'], true)
