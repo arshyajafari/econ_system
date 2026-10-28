@@ -5,6 +5,7 @@ namespace App\Http\Requests\Payment;
 use App\Enums\PaymentMethod;
 use App\Http\Requests\CrudRequest;
 use App\Validation\ValidationRules;
+use App\Support\IranianBankOptions;
 use Illuminate\Validation\Rule;
 
 class StorePaymentRequest extends CrudRequest {
@@ -14,10 +15,10 @@ class StorePaymentRequest extends CrudRequest {
             'method' => ['required', Rule::enum(PaymentMethod::class)],
             'amount' => ['required', 'numeric', 'gt:0'],
             'settlement_discount_amount' => ['nullable', 'numeric', 'gte:0'],
-            'reference_number' => ['nullable', 'string', 'max:100'],
+            'reference_number' => [Rule::requiredIf(fn () => $this->input('method') === 'cheque' && blank($this->input('reference_number')) && blank($this->input('cheque_number'))), 'nullable', 'string', 'max:100'],
             'cheque_due_date' => ['required_if:method,cheque', 'nullable', 'date', 'after_or_equal:payment_date'],
-            'cheque_number' => ['required_if:method,cheque', 'nullable', 'string', 'max:100'],
-            'cheque_bank_name' => ['required_if:method,cheque', 'nullable', 'string', 'max:150'],
+            'cheque_number' => ['nullable', 'string', 'max:100'], // Legacy API compatibility; new clients use reference_number.
+            'cheque_bank_name' => ['required_if:method,cheque', 'nullable', Rule::in(IranianBankOptions::all())],
             'cheque_sayad_id' => ['nullable', 'regex:/^[0-9]{16}$/'],
             'payment_date' => ['required', 'date'],
             'receipt_image' => [
