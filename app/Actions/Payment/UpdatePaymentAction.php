@@ -94,6 +94,10 @@ class UpdatePaymentAction {
                         'issue_date' => null, 'due_date' => null, 'number' => null,
                         'bank_name' => null, 'sayad_id' => null, 'status' => 'awaiting_clearance',
                     ];
+                    // New clients store the cheque number in the canonical reference_number field.
+                    if (array_key_exists('reference_number', $data)) {
+                        $chequeDetails['number'] = trim((string) ($data['reference_number'] ?? ''));
+                    }
                     foreach ($chequeFields as $input => $field) {
                         if (array_key_exists($input, $data)) {
                             $value = $data[$input];
