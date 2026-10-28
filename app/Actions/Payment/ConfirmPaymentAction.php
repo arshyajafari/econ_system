@@ -114,6 +114,14 @@ class ConfirmPaymentAction {
             }
 
             $payment->status = PaymentStatus::CONFIRMED;
+            if ($payment->method?->value === 'cheque') {
+                $meta = $payment->meta ?? [];
+                $chequeDetails = $meta['cheque_details'] ?? [];
+                $chequeDetails['status'] = 'cleared';
+                $chequeDetails['cleared_at'] = now()->toISOString();
+                $meta['cheque_details'] = $chequeDetails;
+                $payment->meta = $meta;
+            }
             $payment->save();
 
             $customerCredit = Money::add($paymentAmount, $discountAmount);
