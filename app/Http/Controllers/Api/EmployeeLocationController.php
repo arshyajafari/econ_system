@@ -28,6 +28,19 @@ class EmployeeLocationController extends Controller {
         $data['captured_at'] = $data['captured_at'] ?? now();
         $data['source'] = $data['source'] ?? 'browser';
 
+        // Make retries safe when the client loses the response after the row was committed.
+        // The unique database index remains the final guard against duplicate operation IDs.
+        if (!empty($data['client_operation_id'])) {
+            $existing = EmployeeLocation::query()
+                ->where('employee_id', $employee->id)
+                ->where('client_operation_id', $data['client_operation_id'])
+                ->first();
+
+            if ($existing) {
+                return EmployeeLocationResource::make($existing->load('employee'));
+            }
+        }
+
         $location = EmployeeLocation::create($data)->load('employee');
         return EmployeeLocationResource::make($location);
     }
