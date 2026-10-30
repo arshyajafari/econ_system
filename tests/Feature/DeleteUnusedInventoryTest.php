@@ -27,7 +27,7 @@ class DeleteUnusedInventoryTest extends TestCase
 
         app(DeleteInventoryBatchAction::class)->execute($batch);
 
-        $this->assertSoftDeleted('inventory_batches', ['id' => $batch->id]);
+        $this->assertDatabaseHas('inventory_batches', ['id' => $batch->id, 'deleted_at' => null]);
         $this->assertDatabaseHas('inventory_movements', ['id' => $movement->id]);
         $this->assertTrue(
             InventoryMovement::query()->findOrFail($movement->id)->inventoryBatch()->withTrashed()->exists()
@@ -51,7 +51,7 @@ class DeleteUnusedInventoryTest extends TestCase
         }
     }
 
-    public function test_product_deletion_soft_deletes_its_unused_batches_and_keeps_receipt_history(): void
+    public function test_product_deletion_hides_product_and_preserves_batch_and_receipt_history(): void
     {
         $product = $this->createProduct();
         $batch = $this->createBatch($product, quantity: 5);
@@ -64,7 +64,7 @@ class DeleteUnusedInventoryTest extends TestCase
         $this->assertDatabaseHas('inventory_movements', ['id' => $movement->id]);
     }
 
-    public function test_product_with_a_soft_deleted_doctor_visit_sample_cannot_be_deleted(): void
+    public function test_product_with_a_soft_deleted_doctor_visit_sample_can_be_removed_from_active_products(): void
     {
         $product = $this->createProduct();
         $now = now();
@@ -112,40 +112,30 @@ class DeleteUnusedInventoryTest extends TestCase
             'deleted_at' => $now,
         ]);
 
-        try {
-            app(DeleteProductAction::class)->execute($product);
-            $this->fail('A product referenced by a doctor-visit sample must not be deleted.');
-        } catch (BusinessRuleException) {
-            $this->assertDatabaseHas('products', [
-                'id' => $product->id,
-                'deleted_at' => null,
-            ]);
-            $this->assertDatabaseHas('samples', [
-                'id' => $sampleId,
-                'deleted_at' => $now,
-            ]);
-        }
+        app(DeleteProductAction::class)->execute($product);
+
+        $this->assertSoftDeleted('products', ['id' => $product->id]);
+        $this->assertDatabaseHas('samples', [
+            'id' => $sampleId,
+            'product_id' => $product->id,
+            'deleted_at' => $now,
+        ]);
     }
 
-    public function test_product_with_a_batch_that_has_operational_history_cannot_be_deleted(): void
+    public function test_product_with_a_batch_that_has_operational_history_can_be_removed_without_deleting_ledger(): void
     {
         $product = $this->createProduct();
         $batch = $this->createBatch($product, quantity: 5);
         $this->createMovement($batch, 'scientific_visitor_transfer');
 
-        try {
-            app(DeleteProductAction::class)->execute($product);
-            $this->fail('A product with operational batch history must not be deleted.');
-        } catch (BusinessRuleException) {
-            $this->assertDatabaseHas('products', [
-                'id' => $product->id,
-                'deleted_at' => null,
-            ]);
-            $this->assertDatabaseHas('inventory_batches', [
-                'id' => $batch->id,
-                'deleted_at' => null,
-            ]);
-        }
+        app(DeleteProductAction::class)->execute($product);
+
+        $this->assertSoftDeleted('products', ['id' => $product->id]);
+        $this->assertDatabaseHas('inventory_batches', [
+            'id' => $batch->id,
+            'product_id' => $product->id,
+            'deleted_at' => null,
+        ]);
     }
 
     private function createProduct(): Product
