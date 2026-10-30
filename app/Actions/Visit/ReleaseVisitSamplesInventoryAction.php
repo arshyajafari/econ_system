@@ -24,7 +24,13 @@ class ReleaseVisitSamplesInventoryAction
             return;
         }
 
-        $samples = $visit->samples()->orderBy('id')->get();
+        // Aggregate by product so the adjustment is calculated once against
+        // the full visit sample quantity for each product.
+        $samples = $visit->samples()
+            ->selectRaw('product_id, SUM(quantity) as quantity')
+            ->groupBy('product_id')
+            ->orderBy('product_id')
+            ->get();
 
         foreach ($samples as $sample) {
             $inventory = ScientificVisitorInventory::query()
@@ -33,9 +39,9 @@ class ReleaseVisitSamplesInventoryAction
                 ->lockForUpdate()
                 ->first();
 
-            if (!$inventory || (int) $inventory->used_quantity < (int) $sample->quantity) {
+            if (!$inventory) {
                 throw new BusinessRuleException(
-                    'موجودی ثبت‌شده ویزیتور با سابقه نمونه‌ها سازگار نیست؛ لغو یا حذف انجام نشد تا موجودی اشتباه نشود.'
+                    'موجودی ویزیتور برای یکی از محصولات این بازدید پیدا نشد؛ لغو یا حذف انجام نشد.'
                 );
             }
 
