@@ -42,8 +42,8 @@ class DeleteSampleAction
                     ->lockForUpdate()
                     ->first();
 
-                if (!$inventory || (int) $inventory->used_quantity < (int) $sample->quantity) {
-                    throw new BusinessRuleException('موجودی ثبت‌شده این ویزیتور با سابقه نمونه سازگار نیست؛ حذف انجام نشد.');
+                if (!$inventory) {
+                    throw new BusinessRuleException('موجودی ویزیتور برای این محصول پیدا نشد؛ حذف نمونه انجام نشد.');
                 }
 
                 app(\App\Actions\ScientificVisitorInventory\AdjustScientificVisitorInventoryUsageAction::class)

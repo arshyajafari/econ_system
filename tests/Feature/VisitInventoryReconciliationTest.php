@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Actions\ScientificVisitorInventory\AdjustScientificVisitorInventoryUsageAction;
+use App\Actions\ScientificVisitorInventory\ReconcileScientificVisitorInventoryUsageAction;
 use App\Actions\Visit\CancelVisitAction;
 use App\Actions\Visit\DeleteVisitAction;
 use App\Actions\Visit\ReleaseVisitSamplesInventoryAction;
@@ -82,6 +84,71 @@ class VisitInventoryReconciliationTest extends TestCase
         $this->assertDatabaseHas('inventory_batches', [
             'id' => $ids['batch_id'],
             'quantity' => 10,
+        ]);
+    }
+
+
+    public function test_transfer_usage_is_rebuilt_when_legacy_allocation_is_stale(): void
+    {
+        $ids = $this->createScientificVisitorVisit();
+
+        // Reproduce old rows where aggregate usage is correct but delivery rows
+        // still report zero consumption and therefore show the original quantity.
+        DB::table('scientific_visitor_inventories')
+            ->where('id', $ids['inventory_id'])
+            ->update(['used_quantity' => 0]);
+        DB::table('scientific_visitor_inventory_transfers')
+            ->where('id', $ids['transfer_id'])
+            ->update(['used_quantity' => 0]);
+
+        DB::transaction(function () use ($ids) {
+            $inventory = \App\Models\ScientificVisitorInventory::query()
+                ->lockForUpdate()
+                ->findOrFail($ids['inventory_id']);
+
+            app(AdjustScientificVisitorInventoryUsageAction::class)->execute($inventory, 1);
+        });
+
+        $this->assertDatabaseHas('scientific_visitor_inventories', [
+            'id' => $ids['inventory_id'],
+            'received_quantity' => 5,
+            'used_quantity' => 3,
+        ]);
+        $this->assertDatabaseHas('scientific_visitor_inventory_transfers', [
+            'id' => $ids['transfer_id'],
+            'quantity' => 5,
+            'used_quantity' => 3,
+            'returned_quantity' => 0,
+        ]);
+        $transfer = DB::table('scientific_visitor_inventory_transfers')->where('id', $ids['transfer_id'])->first();
+        $this->assertSame(2, (int) $transfer->quantity - (int) $transfer->used_quantity - (int) $transfer->returned_quantity);
+    }
+
+    public function test_reconciliation_repairs_existing_usage_from_active_visit_samples(): void
+    {
+        $ids = $this->createScientificVisitorVisit();
+
+        DB::table('scientific_visitor_inventories')
+            ->where('id', $ids['inventory_id'])
+            ->update(['used_quantity' => 0]);
+        DB::table('scientific_visitor_inventory_transfers')
+            ->where('id', $ids['transfer_id'])
+            ->update(['used_quantity' => 0]);
+
+        $summary = app(ReconcileScientificVisitorInventoryUsageAction::class)->execute();
+
+        $this->assertSame(1, $summary['updated']);
+        $this->assertSame([], $summary['skipped']);
+        $this->assertDatabaseHas('scientific_visitor_inventories', [
+            'id' => $ids['inventory_id'],
+            'received_quantity' => 5,
+            'used_quantity' => 2,
+        ]);
+        $this->assertDatabaseHas('scientific_visitor_inventory_transfers', [
+            'id' => $ids['transfer_id'],
+            'quantity' => 5,
+            'used_quantity' => 2,
+            'returned_quantity' => 0,
         ]);
     }
 
