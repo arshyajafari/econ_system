@@ -79,6 +79,10 @@ class DeleteScientificVisitorInventoryAction
                 ]);
             }
 
+            // Keep the soft-deleted aggregate numerically empty while transfer rows
+            // retain the full audit trail of the original deliveries and returns.
+            $inventory->received_quantity = 0;
+            $inventory->save();
             $inventory->delete();
         });
     }
