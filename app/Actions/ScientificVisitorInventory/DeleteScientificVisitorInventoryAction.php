@@ -1,10 +1,10 @@
 <?php
 
-namespace App\\Actions\\ScientificVisitorInventory;
+namespace App\Actions\ScientificVisitorInventory;
 
-use App\\Exceptions\\BusinessRuleException;
-use App\\Models\\ScientificVisitorInventory;
-use Illuminate\\Support\\Facades\\DB;
+use App\Exceptions\BusinessRuleException;
+use App\Models\ScientificVisitorInventory;
+use Illuminate\Support\Facades\DB;
 
 class DeleteScientificVisitorInventoryAction
 {
