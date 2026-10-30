@@ -79,8 +79,9 @@ class ReconcileScientificVisitorInventoryUsageAction
                         foreach ($transfers as $transfer) {
                             $activeQuantity = max(0, (int) $transfer->quantity - (int) $transfer->returned_quantity);
                             $allocated = min($remainingUsage, $activeQuantity);
-                            $allocations[] = ['id' => $transfer->id, 'used_quantity' => $allocated];
-                            $changed = $changed || (int) $transfer->used_quantity !== $allocated;
+                            $allocationChanged = (int) $transfer->used_quantity !== $allocated;
+                            $allocations[] = ['id' => $transfer->id, 'used_quantity' => $allocated, 'changed' => $allocationChanged];
+                            $changed = $changed || $allocationChanged;
                             $remainingUsage -= $allocated;
                         }
 
@@ -93,6 +94,10 @@ class ReconcileScientificVisitorInventoryUsageAction
 
                         if (!$dryRun && $changed) {
                             foreach ($allocations as $allocation) {
+                                if (!$allocation['changed']) {
+                                    continue;
+                                }
+
                                 DB::table('scientific_visitor_inventory_transfers')
                                     ->where('id', $allocation['id'])
                                     ->update([
