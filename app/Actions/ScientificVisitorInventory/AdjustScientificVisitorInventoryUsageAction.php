@@ -32,6 +32,7 @@ class AdjustScientificVisitorInventoryUsageAction
 
         $transfers = DB::table('scientific_visitor_inventory_transfers')
             ->where('scientific_visitor_inventory_id', $inventory->id)
+            ->orderByRaw('COALESCE(delivered_at, DATE(created_at)) ASC')
             ->orderBy('id')
             ->lockForUpdate()
             ->get();
