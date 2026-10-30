@@ -99,7 +99,7 @@ class VisitInventoryReconciliationTest extends TestCase
             ->update(['used_quantity' => 0]);
 
         DB::transaction(function () use ($ids) {
-            $inventory = \\App\\Models\\ScientificVisitorInventory::query()
+            $inventory = \App\Models\ScientificVisitorInventory::query()
                 ->lockForUpdate()
                 ->findOrFail($ids['inventory_id']);
 
