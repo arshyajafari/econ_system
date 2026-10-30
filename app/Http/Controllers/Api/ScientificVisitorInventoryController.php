@@ -63,6 +63,11 @@ class ScientificVisitorInventoryController extends Controller
             ->join('scientific_visitor_inventories as svi', 'svi.id', '=', 't.scientific_visitor_inventory_id')
             ->join('employees as e', 'e.id', '=', 'svi.employee_id')
             ->join('products as p', 'p.id', '=', 'svi.product_id')
+            ->whereNull('svi.deleted_at')
+            ->where(function ($filter) {
+                $filter->whereRaw('(t.quantity - t.returned_quantity - t.used_quantity) > 0')
+                    ->orWhere('t.updated_at', '>=', now()->subDays(30));
+            })
             ->select(['t.id', 't.quantity', 't.used_quantity', 't.returned_quantity', 't.created_at as delivered_at', 't.updated_at', 'svi.public_id as inventory_id', 'e.public_id as employee_id', 'e.code as employee_code', 'p.public_id as product_id', 'p.code as product_code', 'p.title as product_title']);
         $query->addSelect(DB::raw("TRIM(CONCAT(e.first_name, ' ', e.last_name)) as employee_name"));
         if ($request->user()->hasRole('scientific visitor')) { $query->where('svi.employee_id', $request->user()->employee?->id ?? -1); }
