@@ -9,11 +9,12 @@ use Illuminate\Support\Facades\DB;
 class AdjustScientificVisitorInventoryUsageAction
 {
     /**
-     * Adjust consumption in the visitor ledger and, when source-batch history
-     * is complete, mirror the same delta into its transfer allocations.
-     * Positive delta consumes visitor stock; negative delta releases it.
+     * Apply a sample-consumption delta to the aggregate visitor ledger and
+     * deterministically rebuild its per-delivery allocation.
      *
-     * The caller must hold a database transaction and lock the inventory row.
+     * The caller must own a transaction and lock the aggregate inventory row.
+     * Consumption is allocated oldest-delivery-first. When usage is released,
+     * the same deterministic allocation is recalculated from the new total.
      */
     public function execute(ScientificVisitorInventory $inventory, int $delta): void
     {
@@ -23,8 +24,9 @@ class AdjustScientificVisitorInventoryUsageAction
 
         $currentUsed = (int) $inventory->used_quantity;
         $newUsed = $currentUsed + $delta;
+        $received = (int) $inventory->received_quantity;
 
-        if ($newUsed < 0 || $newUsed > (int) $inventory->received_quantity) {
+        if ($newUsed < 0 || $newUsed > $received) {
             throw new BusinessRuleException('تغییر مصرف با موجودی ثبت‌شده ویزیتور سازگار نیست.');
         }
 
@@ -34,43 +36,41 @@ class AdjustScientificVisitorInventoryUsageAction
             ->lockForUpdate()
             ->get();
 
-        $activeTransferred = (int) $transfers->sum(
-            fn ($transfer) => (int) $transfer->quantity - (int) $transfer->returned_quantity
-        );
-        $allocatedUsed = (int) $transfers->sum('used_quantity');
-        $isFullyTracked = $activeTransferred === (int) $inventory->received_quantity
-            && $allocatedUsed === $currentUsed;
+        if ($transfers->isNotEmpty()) {
+            $activeTransferred = (int) $transfers->sum(
+                fn ($transfer) => max(0, (int) $transfer->quantity - (int) $transfer->returned_quantity)
+            );
 
-        // Old ledgers predate source-batch tracking. Preserve aggregate accounting
-        // for them, but do not invent a batch allocation that cannot be proven.
-        if ($isFullyTracked && $transfers->isNotEmpty()) {
-            $remaining = abs($delta);
-            $ordered = $delta > 0 ? $transfers : $transfers->sortByDesc('id');
-
-            foreach ($ordered as $transfer) {
-                $activeQuantity = (int) $transfer->quantity - (int) $transfer->returned_quantity;
-                $used = (int) $transfer->used_quantity;
-                $capacity = $delta > 0 ? $activeQuantity - $used : $used;
-                if ($capacity <= 0) {
-                    continue;
-                }
-
-                $adjustment = min($remaining, $capacity);
-                DB::table('scientific_visitor_inventory_transfers')
-                    ->where('id', $transfer->id)
-                    ->update([
-                        'used_quantity' => $delta > 0 ? $used + $adjustment : $used - $adjustment,
-                        'updated_at' => now(),
-                    ]);
-
-                $remaining -= $adjustment;
-                if ($remaining === 0) {
-                    break;
-                }
+            // Never silently update only the aggregate while the delivery ledger
+            // would continue to show a different available quantity.
+            if ($activeTransferred !== $received) {
+                throw new BusinessRuleException(
+                    'جمع تحویل‌های ثبت‌شده با موجودی ویزیتور برابر نیست؛ ابتدا سوابق تحویل باید تطبیق داده شوند. هیچ تغییری اعمال نشد.'
+                );
             }
 
-            if ($remaining !== 0) {
-                throw new BusinessRuleException('ردیابی بچ‌های تحویلی با مصرف ثبت‌شده سازگار نیست؛ عملیات انجام نشد.');
+            $remainingUsage = $newUsed;
+
+            foreach ($transfers as $transfer) {
+                $activeQuantity = max(0, (int) $transfer->quantity - (int) $transfer->returned_quantity);
+                $allocatedUsage = min($remainingUsage, $activeQuantity);
+
+                if ((int) $transfer->used_quantity !== $allocatedUsage) {
+                    DB::table('scientific_visitor_inventory_transfers')
+                        ->where('id', $transfer->id)
+                        ->update([
+                            'used_quantity' => $allocatedUsage,
+                            'updated_at' => now(),
+                        ]);
+                }
+
+                $remainingUsage -= $allocatedUsage;
+            }
+
+            if ($remainingUsage !== 0) {
+                throw new BusinessRuleException(
+                    'مصرف نمونه‌ها از مجموع تحویل‌های فعال بیشتر است؛ عملیات برای جلوگیری از مغایرت لغو شد.'
+                );
             }
         }
 
