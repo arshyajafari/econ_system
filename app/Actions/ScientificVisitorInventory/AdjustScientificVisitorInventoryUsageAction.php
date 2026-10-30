@@ -22,8 +22,21 @@ class AdjustScientificVisitorInventoryUsageAction
             return;
         }
 
-        $currentUsed = (int) $inventory->used_quantity;
-        $newUsed = $currentUsed + $delta;
+        // The sample ledger is the source of truth. Never build the new balance
+        // on a possibly stale aggregate used_quantity value.
+        $sampleUsage = (int) DB::table('samples as s')
+            ->join('visits as v', 'v.id', '=', 's.visit_id')
+            ->where('v.employee_id', $inventory->employee_id)
+            ->where('s.product_id', $inventory->product_id)
+            ->whereNull('s.deleted_at')
+            ->whereNull('v.deleted_at')
+            ->where(function ($query) {
+                $query->where('v.status', '!=', 'cancelled')
+                    ->orWhereNull('v.inventory_released_at');
+            })
+            ->sum('s.quantity');
+
+        $newUsed = $sampleUsage + $delta;
         $received = (int) $inventory->received_quantity;
 
         if ($newUsed < 0 || $newUsed > $received) {
