@@ -62,6 +62,43 @@ class EmployeeLocationController extends Controller {
         return EmployeeLocationResource::collection($locations);
     }
 
+    public function live(Request $request) {
+        abort_unless($request->user()->hasRole('admin'), 403);
+
+        $validated = $request->validate([
+            'employee_id' => ['required', 'string', 'max:100'],
+            'after' => ['nullable', 'date'],
+        ]);
+
+        $employee = Employee::query()
+            ->where('public_id', $validated['employee_id'])
+            ->firstOrFail();
+
+        $timezone = config('app.timezone', 'Asia/Tehran');
+        $query = EmployeeLocation::query()
+            ->where('employee_id', $employee->id)
+            ->with('employee');
+
+        if (!empty($validated['after'])) {
+            // Include the boundary timestamp; the client de-duplicates by public ID
+            // so points sharing the same timestamp are not lost between polls.
+            $query->where('captured_at', '>=', Carbon::parse($validated['after'])->timezone($timezone));
+        } else {
+            $query->whereBetween('captured_at', [
+                Carbon::now($timezone)->startOfDay(),
+                Carbon::now($timezone)->endOfDay(),
+            ]);
+        }
+
+        $locations = $query
+            ->orderBy('captured_at')
+            ->orderBy('id')
+            ->limit(self::DAILY_POINT_LIMIT)
+            ->get();
+
+        return EmployeeLocationResource::collection($locations);
+    }
+
     public function history(Request $request) {
         abort_unless($request->user()->hasRole('admin'), 403);
 
