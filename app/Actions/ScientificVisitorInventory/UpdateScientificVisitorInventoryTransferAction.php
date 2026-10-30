@@ -54,7 +54,7 @@ class UpdateScientificVisitorInventoryTransferAction
                 'updated_at' => now(),
             ];
             if (!empty($data['delivered_at'])) {
-                $updates['delivered_at'] = \\Carbon\\Carbon::parse($data['delivered_at'])->toDateString();
+                $updates['delivered_at'] = \Carbon\Carbon::parse($data['delivered_at'])->toDateString();
             }
             DB::table('scientific_visitor_inventory_transfers')->where('id', $transferId)->update($updates);
 
