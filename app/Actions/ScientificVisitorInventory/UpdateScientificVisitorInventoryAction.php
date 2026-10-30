@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Actions\ScientificVisitorInventory;
+namespace App\\Actions\\ScientificVisitorInventory;
 
-use App\Enums\InventoryMovementType;
-use App\Exceptions\BusinessRuleException;
-use App\Models\InventoryBatch;
-use App\Models\InventoryMovement;
-use App\Models\ScientificVisitorInventory;
-use Illuminate\Support\Facades\DB;
+use App\\Enums\\InventoryMovementType;
+use App\\Exceptions\\BusinessRuleException;
+use App\\Models\\InventoryBatch;
+use App\\Models\\InventoryMovement;
+use App\\Models\\ScientificVisitorInventory;
+use Illuminate\\Support\\Facades\\DB;
 
 class UpdateScientificVisitorInventoryAction
 {
@@ -22,6 +22,7 @@ class UpdateScientificVisitorInventoryAction
             $newQuantity = (int) $data['quantity'];
             $oldQuantity = (int) $inventory->received_quantity;
             $usedQuantity = (int) $inventory->used_quantity;
+            $availableQuantity = max(0, $oldQuantity - $usedQuantity);
 
             if ($newQuantity < $usedQuantity) {
                 throw new BusinessRuleException(
@@ -29,22 +30,15 @@ class UpdateScientificVisitorInventoryAction
                 );
             }
 
-            $transfers = DB::table('scientific_visitor_inventory_transfers')
-                ->where('scientific_visitor_inventory_id', $inventory->id)
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get();
+            if ($newQuantity < 0 || $newQuantity > $oldQuantity + 1000000) {
+                throw new BusinessRuleException('تعداد واردشده معتبر نیست.');
+            }
 
-            $activeTransferred = (int) $transfers->sum(
-                fn ($transfer) => (int) $transfer->quantity - (int) $transfer->returned_quantity
-            );
-            $allocatedUsed = (int) $transfers->sum('used_quantity');
-            $isFullyTracked = $activeTransferred === $oldQuantity && $allocatedUsed === $usedQuantity;
-
-            if ($newQuantity !== $oldQuantity && !$isFullyTracked) {
-                throw new BusinessRuleException(
-                    'برای این موجودی سابقه بچ‌های تحویلی کامل نیست؛ تغییر تعداد به‌صورت خودکار انجام نشد تا موجودی انبار اصلی اشتباه نشود. ابتدا موجودی تاریخی باید تطبیق داده شود.'
-                );
+            // Decreases are limited to the currently unused quantity. This
+            // aggregate is the source of truth for visitor inventory; editing
+            // or deleting it must not depend on the transfer-history table.
+            if ($newQuantity < $oldQuantity && ($oldQuantity - $newQuantity) > $availableQuantity) {
+                throw new BusinessRuleException('کاهش تعداد فقط از موجودی استفاده‌نشده امکان‌پذیر است.');
             }
 
             if ($newQuantity > $oldQuantity) {
@@ -73,16 +67,6 @@ class UpdateScientificVisitorInventoryAction
                 $batch->quantity -= $delta;
                 $batch->save();
 
-                DB::table('scientific_visitor_inventory_transfers')->insert([
-                    'scientific_visitor_inventory_id' => $inventory->id,
-                    'inventory_batch_id' => $batch->id,
-                    'quantity' => $delta,
-                    'used_quantity' => 0,
-                    'returned_quantity' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
                 InventoryMovement::create([
                     'inventory_batch_id' => $batch->id,
                     'type' => InventoryMovementType::OUT,
@@ -91,52 +75,6 @@ class UpdateScientificVisitorInventoryAction
                     'description' => $data['description'] ?? "افزایش موجودی ویزیتور علمی {$inventory->employee?->fullName}",
                     'moved_at' => now(),
                 ]);
-            } elseif ($newQuantity < $oldQuantity) {
-                $toReturn = $oldQuantity - $newQuantity;
-                $reverseTransfers = $transfers->sortByDesc('id');
-
-                foreach ($reverseTransfers as $transfer) {
-                    $activeQuantity = (int) $transfer->quantity - (int) $transfer->returned_quantity;
-                    $returnable = $activeQuantity - (int) $transfer->used_quantity;
-                    if ($returnable <= 0) {
-                        continue;
-                    }
-
-                    $quantity = min($toReturn, $returnable);
-                    $batch = InventoryBatch::query()
-                        ->lockForUpdate()
-                        ->findOrFail($transfer->inventory_batch_id);
-
-                    $batch->quantity += $quantity;
-                    $batch->save();
-
-                    DB::table('scientific_visitor_inventory_transfers')
-                        ->where('id', $transfer->id)
-                        ->update([
-                            'returned_quantity' => (int) $transfer->returned_quantity + $quantity,
-                            'updated_at' => now(),
-                        ]);
-
-                    InventoryMovement::create([
-                        'inventory_batch_id' => $batch->id,
-                        'type' => InventoryMovementType::IN,
-                        'quantity' => $quantity,
-                        'reason' => 'scientific_visitor_transfer_return',
-                        'description' => $data['description'] ?? "برگشت موجودی ویزیتور علمی {$inventory->employee?->fullName}",
-                        'moved_at' => now(),
-                    ]);
-
-                    $toReturn -= $quantity;
-                    if ($toReturn === 0) {
-                        break;
-                    }
-                }
-
-                if ($toReturn !== 0) {
-                    throw new BusinessRuleException(
-                        'کاهش تعداد از موجودی باقی‌مانده ویزیتور بیشتر است؛ ابتدا نمونه‌های ثبت‌شده را اصلاح کنید.'
-                    );
-                }
             }
 
             $inventory->received_quantity = $newQuantity;
