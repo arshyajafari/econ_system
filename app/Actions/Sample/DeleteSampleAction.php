@@ -23,8 +23,11 @@ class DeleteSampleAction
                 throw new BusinessRuleException('بازدید مربوط به نمونه پیدا نشد.');
             }
 
-            if ($sample->visit->status !== VisitStatus::COMPLETED) {
-                throw new BusinessRuleException('فقط نمونه مربوط به بازدید تکمیل‌شده قابل حذف است.');
+            // Samples can be corrected while a visit is active or completed.
+            // A cancelled visit has already released its inventory and must not
+            // release it a second time through sample deletion.
+            if ($sample->visit->status === VisitStatus::CANCELLED) {
+                throw new BusinessRuleException('نمونه مربوط به بازدید لغوشده قابل حذف نیست؛ موجودی آن قبلاً آزاد شده است.');
             }
 
             if ($user->hasRole('scientific visitor') && (int) $sample->visit->employee_id !== (int) $user->employee?->id) {
@@ -39,14 +42,12 @@ class DeleteSampleAction
                     ->lockForUpdate()
                     ->first();
 
-                if ($inventory) {
-                    if ($inventory->used_quantity < $sample->quantity) {
-                        throw new BusinessRuleException('موجودی ثبت‌شده این ویزیتور با سابقه نمونه سازگار نیست.');
-                    }
-
-                    app(\App\Actions\ScientificVisitorInventory\AdjustScientificVisitorInventoryUsageAction::class)
-                        ->execute($inventory, -(int) $sample->quantity);
+                if (!$inventory || (int) $inventory->used_quantity < (int) $sample->quantity) {
+                    throw new BusinessRuleException('موجودی ثبت‌شده این ویزیتور با سابقه نمونه سازگار نیست؛ حذف انجام نشد.');
                 }
+
+                app(\App\Actions\ScientificVisitorInventory\AdjustScientificVisitorInventoryUsageAction::class)
+                    ->execute($inventory, -(int) $sample->quantity);
             }
 
             $sample->delete();

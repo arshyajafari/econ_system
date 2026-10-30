@@ -27,8 +27,10 @@ class UpdateSampleAction
                 throw new BusinessRuleException('این نمونه متعلق به کارمند فعلی نیست.');
             }
 
-            if ($sample->visit->status !== VisitStatus::COMPLETED) {
-                throw new BusinessRuleException('فقط نمونه مربوط به بازدید تکمیل‌شده قابل ویرایش است.');
+            // Active visits are editable. Cancelled visits are immutable because
+            // their inventory has already been reconciled.
+            if ($sample->visit->status === VisitStatus::CANCELLED) {
+                throw new BusinessRuleException('نمونه مربوط به بازدید لغوشده قابل ویرایش نیست؛ موجودی آن قبلاً آزاد شده است.');
             }
 
             $quantity = (int) $data['quantity'];
@@ -46,11 +48,11 @@ class UpdateSampleAction
                     ->lockForUpdate()
                     ->first();
 
-                if (!$inventory || $inventory->used_quantity < $sample->quantity) {
+                if (!$inventory || (int) $inventory->used_quantity < (int) $sample->quantity) {
                     throw new BusinessRuleException('موجودی ثبت‌شده این ویزیتور با سابقه نمونه سازگار نیست.');
                 }
 
-                $availableAfterRestoring = $inventory->available_quantity + $sample->quantity;
+                $availableAfterRestoring = $inventory->available_quantity + (int) $sample->quantity;
                 if ($availableAfterRestoring < $quantity) {
                     throw new BusinessRuleException('موجودی این محصول برای مقدار جدید نمونه کافی نیست.');
                 }
