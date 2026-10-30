@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Product\DeleteProductAction;
 use App\Models\InventoryBatch;
 use App\Models\Product;
 use App\Queries\Product\ProductQuery;
@@ -57,6 +58,19 @@ class ProductZeroStockVisibilityTest extends TestCase
 
         $this->assertSame(1, $results->total());
         $this->assertSame($stockedProduct->id, $results->first()->id);
+    }
+
+
+    public function test_used_product_can_be_removed_from_product_list_without_deleting_inventory_history(): void
+    {
+        $product = $this->createProduct();
+        $batch = $this->createBatch($product, 5);
+
+        app(DeleteProductAction::class)->execute($product);
+
+        $this->assertSoftDeleted('products', ['id' => $product->id]);
+        $this->assertDatabaseHas('inventory_batches', ['id' => $batch->id, 'product_id' => $product->id]);
+        $this->assertNotNull(Product::withTrashed()->findOrFail($product->id));
     }
 
     private function createProduct(): Product
