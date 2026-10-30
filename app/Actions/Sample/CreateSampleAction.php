@@ -84,9 +84,11 @@ class CreateSampleAction
                     ->where('public_id', $data['product_id'])
                     ->firstOrFail();
 
-                if ($user->hasRole('scientific visitor')) {
+                $visit->loadMissing('employee.user');
+                $visitOwner = $visit->employee;
+                if ($visitOwner?->user?->hasRole('scientific visitor')) {
                     $inventory = ScientificVisitorInventory::query()
-                        ->where('employee_id', $employee->id)
+                        ->where('employee_id', $visitOwner->id)
                         ->where('product_id', $product->id)
                         ->lockForUpdate()
                         ->first();
