@@ -85,7 +85,7 @@ class ScientificVisitorInventoryController extends Controller
     public function updateTransfer(Request $request, ScientificVisitorInventory $scientificVisitorInventory, int $transfer, UpdateScientificVisitorInventoryTransferAction $action): JsonResponse
     {
         $this->authorize('update', $scientificVisitorInventory);
-        $data = $request->validate(['quantity' => ['required', 'integer', 'min:0', 'max:1000000'], 'inventory_batch_id' => ['nullable', 'string', 'exists:inventory_batches,public_id'], 'description' => ['nullable', 'string']]);
+        $data = $request->validate(['quantity' => ['required', 'integer', 'min:0', 'max:1000000'], 'delivered_at' => ['nullable', 'date'], 'inventory_batch_id' => ['nullable', 'string', 'exists:inventory_batches,public_id'], 'description' => ['nullable', 'string']]);
         return response()->json($action->execute($scientificVisitorInventory, $transfer, $data));
     }
 
