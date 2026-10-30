@@ -85,6 +85,66 @@ class VisitInventoryReconciliationTest extends TestCase
         ]);
     }
 
+
+    public function test_transfer_usage_is_rebuilt_when_legacy_allocation_is_stale(): void
+    {
+        $ids = $this->createScientificVisitorVisit();
+
+        // Reproduce old rows where aggregate usage is correct but delivery rows
+        // still report zero consumption and therefore show the original quantity.
+        DB::table('scientific_visitor_inventory_transfers')
+            ->where('id', $ids['transfer_id'])
+            ->update(['used_quantity' => 0]);
+
+        DB::transaction(function () use ($ids) {
+            $inventory = \\App\\Models\\ScientificVisitorInventory::query()
+                ->lockForUpdate()
+                ->findOrFail($ids['inventory_id']);
+
+            app(AdjustScientificVisitorInventoryUsageAction::class)->execute($inventory, 1);
+        });
+
+        $this->assertDatabaseHas('scientific_visitor_inventories', [
+            'id' => $ids['inventory_id'],
+            'received_quantity' => 5,
+            'used_quantity' => 3,
+        ]);
+        $this->assertDatabaseHas('scientific_visitor_inventory_transfers', [
+            'id' => $ids['transfer_id'],
+            'quantity' => 5,
+            'used_quantity' => 3,
+            'returned_quantity' => 0,
+        ]);
+    }
+
+    public function test_reconciliation_repairs_existing_usage_from_active_visit_samples(): void
+    {
+        $ids = $this->createScientificVisitorVisit();
+
+        DB::table('scientific_visitor_inventories')
+            ->where('id', $ids['inventory_id'])
+            ->update(['used_quantity' => 0]);
+        DB::table('scientific_visitor_inventory_transfers')
+            ->where('id', $ids['transfer_id'])
+            ->update(['used_quantity' => 0]);
+
+        $summary = app(ReconcileScientificVisitorInventoryUsageAction::class)->execute();
+
+        $this->assertSame(1, $summary['updated']);
+        $this->assertSame([], $summary['skipped']);
+        $this->assertDatabaseHas('scientific_visitor_inventories', [
+            'id' => $ids['inventory_id'],
+            'received_quantity' => 5,
+            'used_quantity' => 2,
+        ]);
+        $this->assertDatabaseHas('scientific_visitor_inventory_transfers', [
+            'id' => $ids['transfer_id'],
+            'quantity' => 5,
+            'used_quantity' => 2,
+            'returned_quantity' => 0,
+        ]);
+    }
+
     private function createScientificVisitorVisit(): array
     {
         $now = now();
