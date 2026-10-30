@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Actions\ScientificVisitorInventory\AdjustScientificVisitorInventoryUsageAction;
+use App\Actions\ScientificVisitorInventory\ReconcileScientificVisitorInventoryUsageAction;
 use App\Actions\Visit\CancelVisitAction;
 use App\Actions\Visit\DeleteVisitAction;
 use App\Actions\Visit\ReleaseVisitSamplesInventoryAction;
