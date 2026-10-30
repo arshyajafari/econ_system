@@ -94,6 +94,9 @@ class VisitInventoryReconciliationTest extends TestCase
 
         // Reproduce old rows where aggregate usage is correct but delivery rows
         // still report zero consumption and therefore show the original quantity.
+        DB::table('scientific_visitor_inventories')
+            ->where('id', $ids['inventory_id'])
+            ->update(['used_quantity' => 0]);
         DB::table('scientific_visitor_inventory_transfers')
             ->where('id', $ids['transfer_id'])
             ->update(['used_quantity' => 0]);
@@ -117,6 +120,8 @@ class VisitInventoryReconciliationTest extends TestCase
             'used_quantity' => 3,
             'returned_quantity' => 0,
         ]);
+        $transfer = DB::table('scientific_visitor_inventory_transfers')->where('id', $ids['transfer_id'])->first();
+        $this->assertSame(2, (int) $transfer->quantity - (int) $transfer->used_quantity - (int) $transfer->returned_quantity);
     }
 
     public function test_reconciliation_repairs_existing_usage_from_active_visit_samples(): void
