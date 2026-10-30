@@ -63,7 +63,8 @@ class ScientificVisitorInventoryController extends Controller
             ->join('scientific_visitor_inventories as svi', 'svi.id', '=', 't.scientific_visitor_inventory_id')
             ->join('employees as e', 'e.id', '=', 'svi.employee_id')
             ->join('products as p', 'p.id', '=', 'svi.product_id')
-            ->select(['t.id', 't.quantity', 't.used_quantity', 't.returned_quantity', 't.created_at as delivered_at', 't.updated_at', 'svi.public_id as inventory_id', 'e.public_id as employee_id', 'e.code as employee_code', 'e.full_name as employee_name', 'p.public_id as product_id', 'p.code as product_code', 'p.title as product_title']);
+            ->select(['t.id', 't.quantity', 't.used_quantity', 't.returned_quantity', 't.created_at as delivered_at', 't.updated_at', 'svi.public_id as inventory_id', 'e.public_id as employee_id', 'e.code as employee_code', 'p.public_id as product_id', 'p.code as product_code', 'p.title as product_title']);
+        $query->addSelect(DB::raw("TRIM(CONCAT(e.first_name, ' ', e.last_name)) as employee_name"));
         if ($request->user()->hasRole('scientific visitor')) { $query->where('svi.employee_id', $request->user()->employee?->id ?? -1); }
         elseif ($request->filled('employee_id')) { $query->where('e.public_id', $request->input('employee_id')); }
         if ($request->filled('product_id')) $query->where('p.public_id', $request->input('product_id'));
