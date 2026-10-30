@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Actions\Sample\DeleteSampleAction;
+namespace App\Actions\Sample;
 
 use App\Enums\VisitStatus;
 use App\Exceptions\BusinessRuleException;
