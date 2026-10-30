@@ -4,7 +4,6 @@ namespace App\Queries\ScientificVisitorInventory;
 
 use App\Models\ScientificVisitorInventory;
 use App\Queries\BaseQuery;
-use Illuminate\Support\Facades\DB;
 
 class ScientificVisitorInventoryQuery extends BaseQuery
 {
@@ -12,15 +11,12 @@ class ScientificVisitorInventoryQuery extends BaseQuery
     {
         $this->query = ScientificVisitorInventory::query()
             ->with(ScientificVisitorInventory::DEFAULT_RELATIONS)
-            // Keep exhausted inventory visible for 30 days after the last
-            // delivery, then hide it from the regular ledger list. Records and
-            // sample history remain in the database; this is not a hard delete.
+            // Keep exhausted inventory visible for 30 days after its last ledger
+            // update (normally the transaction that consumes the final unit),
+            // then hide it from this list without deleting its audit history.
             ->where(function ($query) {
                 $query->whereColumn('received_quantity', '>', 'used_quantity')
-                    ->orWhereRaw(
-                        'COALESCE(last_received_at, created_at) >= ?',
-                        [now()->subDays(30)]
-                    );
+                    ->orWhere('updated_at', '>=', now()->subDays(30));
             });
     }
 
