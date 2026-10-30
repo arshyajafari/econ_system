@@ -66,7 +66,7 @@ class ScientificVisitorInventoryController extends Controller
             ->whereNull('svi.deleted_at')
             ->where(function ($filter) {
                 $filter->whereRaw('(t.quantity - t.returned_quantity - t.used_quantity) > 0')
-                    ->orWhere('t.updated_at', '>=', now()->subDays(30));
+                    ->orWhereRaw('COALESCE(t.delivered_at, DATE(t.created_at)) >= ?', [now()->subDays(30)->toDateString()]);
             })
             ->select(['t.id', 't.quantity', 't.used_quantity', 't.returned_quantity', DB::raw('COALESCE(t.delivered_at, DATE(t.created_at)) as delivered_at'), 't.updated_at', 'svi.public_id as inventory_id', 'e.public_id as employee_id', 'e.code as employee_code', 'p.public_id as product_id', 'p.code as product_code', 'p.title as product_title']);
         $query->addSelect(DB::raw("TRIM(CONCAT(e.first_name, ' ', e.last_name)) as employee_name"));
