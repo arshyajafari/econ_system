@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Actions\\Product;
+namespace App\Actions\Product;
 
-use App\\Models\\Product;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\Product;
+use Illuminate\Support\Facades\DB;
 
 class DeleteProductAction
 {
