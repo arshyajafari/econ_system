@@ -10,14 +10,7 @@ class ScientificVisitorInventoryQuery extends BaseQuery
     protected function initialize(): void
     {
         $this->query = ScientificVisitorInventory::query()
-            ->with(ScientificVisitorInventory::DEFAULT_RELATIONS)
-            // Keep exhausted inventory visible for 30 days after its last ledger
-            // update (normally the transaction that consumes the final unit),
-            // then hide it from this list without deleting its audit history.
-            ->where(function ($query) {
-                $query->whereColumn('received_quantity', '>', 'used_quantity')
-                    ->orWhere('updated_at', '>=', now()->subDays(30));
-            });
+            ->with(ScientificVisitorInventory::DEFAULT_RELATIONS);
     }
 
     public function apply(array $filters, ?int $employeeId = null): static
