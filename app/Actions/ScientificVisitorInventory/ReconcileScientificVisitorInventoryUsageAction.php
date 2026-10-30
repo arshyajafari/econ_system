@@ -42,7 +42,12 @@ class ReconcileScientificVisitorInventoryUsageAction
                             ->where('s.product_id', $inventory->product_id)
                             ->whereNull('s.deleted_at')
                             ->whereNull('v.deleted_at')
-                            ->where('v.status', '!=', 'cancelled')
+                            ->where(function ($query) {
+                                // A legacy cancelled visit with no release timestamp
+                                // still holds its usage; otherwise a later delete could release it twice.
+                                $query->where('v.status', '!=', 'cancelled')
+                                    ->orWhereNull('v.inventory_released_at');
+                            })
                             ->sum('s.quantity');
 
                         $received = (int) $inventory->received_quantity;
