@@ -48,15 +48,20 @@ class UpdateScientificVisitorInventoryTransferAction
                 ]);
             }
 
-            DB::table('scientific_visitor_inventory_transfers')->where('id', $transferId)->update([
+            $updates = [
                 'quantity' => (int) $transfer->quantity + max(0, $delta),
                 'returned_quantity' => (int) $transfer->returned_quantity + max(0, -$delta),
                 'updated_at' => now(),
-            ]);
+            ];
+            if (!empty($data['delivered_at'])) {
+                $updates['delivered_at'] = \Carbon\Carbon::parse($data['delivered_at'])->toDateString();
+            }
+            DB::table('scientific_visitor_inventory_transfers')->where('id', $transferId)->update($updates);
+
             $ledger->received_quantity += $delta;
             $ledger->save();
 
-            return DB::table('scientific_visitor_inventory_transfers')->where('id', $transferId)->first();
+            return (array) DB::table('scientific_visitor_inventory_transfers')->where('id', $transferId)->first();
         });
     }
 }

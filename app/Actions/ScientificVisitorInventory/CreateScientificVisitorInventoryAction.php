@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\InventoryBatch;
 use App\Models\InventoryMovement;
 use App\Models\ScientificVisitorInventory;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class CreateScientificVisitorInventoryAction
@@ -30,19 +31,16 @@ class CreateScientificVisitorInventoryAction
             }
 
             $quantity = (int) $data['quantity'];
-
             if ($quantity <= 0) {
                 throw new BusinessRuleException('تعداد تحویلی باید بیشتر از صفر باشد.');
             }
 
-            $available = (int) $batch->available_quantity;
-            if ($quantity > $available) {
+            if ($quantity > (int) $batch->available_quantity) {
                 throw new BusinessRuleException('موجودی قابل تحویل این بچ کافی نیست.');
             }
 
-            // The employee/product pair has a unique constraint even for soft-deleted
-            // rows. Reuse and restore an existing ledger instead of attempting an
-            // insert that would fail after an empty ledger was deleted.
+            $deliveredAt = Carbon::parse($data['delivered_at'] ?? now())->toDateString();
+
             $inventory = ScientificVisitorInventory::withTrashed()
                 ->where('employee_id', $employee->id)
                 ->where('product_id', $batch->product_id)
@@ -57,8 +55,6 @@ class CreateScientificVisitorInventoryAction
                     'used_quantity' => 0,
                 ]);
             } elseif ($inventory->trashed()) {
-                // Older deployments may contain deleted ledgers with history.
-                // Restore that history; never create a competing aggregate row.
                 $inventory->restore();
             }
 
@@ -70,15 +66,31 @@ class CreateScientificVisitorInventoryAction
             $batch->quantity -= $quantity;
             $batch->save();
 
-            DB::table('scientific_visitor_inventory_transfers')->insert([
-                'scientific_visitor_inventory_id' => $inventory->id,
-                'inventory_batch_id' => $batch->id,
-                'quantity' => $quantity,
-                'used_quantity' => 0,
-                'returned_quantity' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            // Same visitor + product + source batch + delivery day is one
+            // logical delivery row. A different day remains a separate row.
+            $transfer = DB::table('scientific_visitor_inventory_transfers')
+                ->where('scientific_visitor_inventory_id', $inventory->id)
+                ->where('inventory_batch_id', $batch->id)
+                ->whereDate('delivered_at', $deliveredAt)
+                ->lockForUpdate()
+                ->first();
+
+            if ($transfer) {
+                DB::table('scientific_visitor_inventory_transfers')
+                    ->where('id', $transfer->id)
+                    ->increment('quantity', $quantity, ['updated_at' => now()]);
+            } else {
+                DB::table('scientific_visitor_inventory_transfers')->insert([
+                    'scientific_visitor_inventory_id' => $inventory->id,
+                    'inventory_batch_id' => $batch->id,
+                    'quantity' => $quantity,
+                    'used_quantity' => 0,
+                    'returned_quantity' => 0,
+                    'delivered_at' => $deliveredAt,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
             InventoryMovement::create([
                 'inventory_batch_id' => $batch->id,
