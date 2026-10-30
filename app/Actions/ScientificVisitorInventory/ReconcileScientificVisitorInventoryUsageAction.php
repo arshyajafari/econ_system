@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 class ReconcileScientificVisitorInventoryUsageAction
 {
     /**
-     * Rebuild usage from non-deleted samples belonging to non-cancelled visits.
+     * Rebuild usage from non-deleted samples belonging to active visits and cancelled visits not yet released.
      * Delivery rows are allocated oldest-first to keep their displayed balances
      * consistent with the aggregate visitor inventory.
      */
@@ -60,6 +60,7 @@ class ReconcileScientificVisitorInventoryUsageAction
 
                         $transfers = DB::table('scientific_visitor_inventory_transfers')
                             ->where('scientific_visitor_inventory_id', $inventory->id)
+                            ->orderByRaw('COALESCE(delivered_at, DATE(created_at)) ASC')
                             ->orderBy('id')
                             ->lockForUpdate()
                             ->get();
