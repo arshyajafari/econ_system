@@ -56,7 +56,7 @@ class UpdateScientificVisitorInventoryTransferAction
             $ledger->received_quantity += $delta;
             $ledger->save();
 
-            return DB::table('scientific_visitor_inventory_transfers')->where('id', $transferId)->first();
+            return (array) DB::table('scientific_visitor_inventory_transfers')->where('id', $transferId)->first();
         });
     }
 }
