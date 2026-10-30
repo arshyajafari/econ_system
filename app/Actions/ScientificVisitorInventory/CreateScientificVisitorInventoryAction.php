@@ -1,15 +1,15 @@
 <?php
 
-namespace App\\Actions\\ScientificVisitorInventory;
+namespace App\Actions\ScientificVisitorInventory;
 
-use App\\Enums\\InventoryMovementType;
-use App\\Exceptions\\BusinessRuleException;
-use App\\Models\\Employee;
-use App\\Models\\InventoryBatch;
-use App\\Models\\InventoryMovement;
-use App\\Models\\ScientificVisitorInventory;
-use Carbon\\Carbon;
-use Illuminate\\Support\\Facades\\DB;
+use App\Enums\InventoryMovementType;
+use App\Exceptions\BusinessRuleException;
+use App\Models\Employee;
+use App\Models\InventoryBatch;
+use App\Models\InventoryMovement;
+use App\Models\ScientificVisitorInventory;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class CreateScientificVisitorInventoryAction
 {
