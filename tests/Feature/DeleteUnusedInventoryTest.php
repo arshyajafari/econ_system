@@ -27,7 +27,7 @@ class DeleteUnusedInventoryTest extends TestCase
 
         app(DeleteInventoryBatchAction::class)->execute($batch);
 
-        $this->assertDatabaseHas('inventory_batches', ['id' => $batch->id, 'deleted_at' => null]);
+        $this->assertSoftDeleted('inventory_batches', ['id' => $batch->id]);
         $this->assertDatabaseHas('inventory_movements', ['id' => $movement->id]);
         $this->assertTrue(
             InventoryMovement::query()->findOrFail($movement->id)->inventoryBatch()->withTrashed()->exists()
@@ -60,7 +60,7 @@ class DeleteUnusedInventoryTest extends TestCase
         app(DeleteProductAction::class)->execute($product);
 
         $this->assertSoftDeleted('products', ['id' => $product->id]);
-        $this->assertSoftDeleted('inventory_batches', ['id' => $batch->id]);
+        $this->assertDatabaseHas('inventory_batches', ['id' => $batch->id, 'deleted_at' => null]);
         $this->assertDatabaseHas('inventory_movements', ['id' => $movement->id]);
     }
 
