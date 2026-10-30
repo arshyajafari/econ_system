@@ -31,6 +31,6 @@ class ReconcileScientificVisitorInventoryUsage extends Command
             $this->warn("{$item['inventory_id']}: {$item['reason']}");
         }
 
-        return self::SUCCESS;
+        return count($summary['skipped']) > 0 ? self::FAILURE : self::SUCCESS;
     }
 }
