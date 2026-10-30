@@ -399,9 +399,18 @@ class DeleteUnusedInventoryTest extends TestCase
             ->where('id', $partialInventoryId)
             ->update(['updated_at' => now()->subDays(45)]);
 
-        $rows = \App\Queries\ScientificVisitorInventory\ScientificVisitorInventoryQuery::make()
-            ->apply([])
-            ->get();
+        $user = User::query()->create([
+            'employee_id' => $employeeId,
+            'login' => 'scientific-' . Str::lower(Str::random(10)),
+            'password' => 'password',
+            'status' => 'active',
+        ]);
+        \Spatie\Permission\Models\Role::findOrCreate('scientific visitor', 'web');
+        $user->assignRole('scientific visitor');
+
+        $rows = app(\App\Actions\ScientificVisitorInventory\ListScientificVisitorInventoryAction::class)
+            ->execute([], $user)
+            ->getCollection();
 
         $this->assertTrue($rows->contains('id', $partialInventoryId));
         $this->assertFalse($rows->contains('id', $emptyInventoryId));
