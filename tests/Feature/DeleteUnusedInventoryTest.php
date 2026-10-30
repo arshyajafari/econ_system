@@ -319,6 +319,43 @@ class DeleteUnusedInventoryTest extends TestCase
         ]);
     }
 
+    public function test_tracked_inventory_with_consumed_samples_cannot_be_deleted(): void
+    {
+        $product = $this->createProduct();
+        $employeeId = $this->createEmployee();
+        $batch = $this->createBatch($product, quantity: 10);
+        $inventoryId = $this->createScientificVisitorInventory($employeeId, $product->id, received: 5, used: 2);
+
+        DB::table('scientific_visitor_inventory_transfers')->insert([
+            'scientific_visitor_inventory_id' => $inventoryId,
+            'inventory_batch_id' => $batch->id,
+            'quantity' => 5,
+            'used_quantity' => 2,
+            'returned_quantity' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $inventory = \\App\\Models\\ScientificVisitorInventory::query()->findOrFail($inventoryId);
+
+        try {
+            app(\\App\\Actions\\ScientificVisitorInventory\\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
+            $this->fail('Tracked inventory with consumed samples must not be deletable.');
+        } catch (\\App\\Exceptions\\BusinessRuleException $exception) {
+            $this->assertStringContainsString('مصرف‌شده', $exception->getMessage());
+            $this->assertDatabaseHas('scientific_visitor_inventories', [
+                'id' => $inventoryId,
+                'received_quantity' => 5,
+                'used_quantity' => 2,
+                'deleted_at' => null,
+            ]);
+            $this->assertDatabaseHas('inventory_batches', [
+                'id' => $batch->id,
+                'quantity' => 10,
+            ]);
+        }
+    }
+
     public function test_empty_scientific_visitor_inventory_can_be_deleted(): void
     {
         $product = $this->createProduct();

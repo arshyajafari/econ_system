@@ -19,6 +19,19 @@ class DeleteScientificVisitorInventoryAction
                 ->lockForUpdate()
                 ->findOrFail($inventory->id);
 
+            $receivedQuantity = (int) $inventory->received_quantity;
+            $usedQuantity = (int) $inventory->used_quantity;
+            $availableQuantity = (int) $inventory->available_quantity;
+
+            // Deletion is only allowed when the entire received quantity is still
+            // available. Consumed quantities are historical usage and must never
+            // be silently removed or treated as stock that can be returned.
+            if ($receivedQuantity !== $availableQuantity || $usedQuantity !== 0) {
+                throw new BusinessRuleException(
+                    "حذف این موجودی فقط زمانی مجاز است که تعداد دریافتی و موجودی قابل استفاده برابر باشند. دریافتی: {$receivedQuantity}، مصرف‌شده: {$usedQuantity}، قابل استفاده: {$availableQuantity}."
+                );
+            }
+
             $transfers = DB::table('scientific_visitor_inventory_transfers')
                 ->where('scientific_visitor_inventory_id', $inventory->id)
                 ->orderByDesc('id')
@@ -30,21 +43,15 @@ class DeleteScientificVisitorInventoryAction
             );
             $allocatedUsed = (int) $transfers->sum('used_quantity');
 
-            if ($activeTransferred !== (int) $inventory->received_quantity
-                || $allocatedUsed !== (int) $inventory->used_quantity) {
-                if ((int) $inventory->received_quantity !== 0 || (int) $inventory->used_quantity !== 0) {
-                    throw new BusinessRuleException(
-                        'برای این موجودی سابقه بچ‌های تحویلی کامل نیست؛ حذف خودکار انجام نشد تا موجودی انبار اصلی اشتباه نشود. ابتدا موجودی تاریخی باید تطبیق داده شود.'
-                    );
-                }
+            if ($activeTransferred !== $receivedQuantity || $allocatedUsed !== 0) {
+                throw new BusinessRuleException(
+                    'برای این موجودی سابقه بچ‌های تحویلی کامل نیست؛ حذف انجام نشد تا موجودی انبار اصلی اشتباه نشود. ابتدا موجودی تاریخی باید تطبیق داده شود.'
+                );
             }
-
-            $returnedTotal = 0;
 
             foreach ($transfers as $transfer) {
                 $activeQuantity = (int) $transfer->quantity - (int) $transfer->returned_quantity;
-                $returnable = $activeQuantity - (int) $transfer->used_quantity;
-                if ($returnable <= 0) {
+                if ($activeQuantity <= 0) {
                     continue;
                 }
 
@@ -52,39 +59,31 @@ class DeleteScientificVisitorInventoryAction
                     ->lockForUpdate()
                     ->findOrFail($transfer->inventory_batch_id);
 
-                $batch->quantity += $returnable;
+                $batch->quantity += $activeQuantity;
                 $batch->save();
 
                 DB::table('scientific_visitor_inventory_transfers')
                     ->where('id', $transfer->id)
                     ->update([
-                        'returned_quantity' => (int) $transfer->returned_quantity + $returnable,
+                        'returned_quantity' => (int) $transfer->returned_quantity + $activeQuantity,
                         'updated_at' => now(),
                     ]);
 
                 InventoryMovement::create([
                     'inventory_batch_id' => $batch->id,
                     'type' => InventoryMovementType::IN,
-                    'quantity' => $returnable,
+                    'quantity' => $activeQuantity,
                     'reason' => 'scientific_visitor_transfer_return',
                     'description' => "برگشت موجودی ویزیتور علمی {$inventory->employee?->fullName}",
                     'moved_at' => now(),
                 ]);
-
-                $returnedTotal += $returnable;
             }
 
-            // Retain a live ledger when any quantity was already used. This keeps
-            // historical samples linked to an active inventory record and allows
-            // later corrections without losing the consumption history.
-            $usedQuantity = (int) $inventory->used_quantity;
-            $inventory->received_quantity = $usedQuantity;
-            $inventory->last_received_at = now();
+            // Keep the soft-deleted aggregate numerically empty while transfer rows
+            // retain the full audit trail of the original deliveries and returns.
+            $inventory->received_quantity = 0;
             $inventory->save();
-
-            if ($usedQuantity === 0) {
-                $inventory->delete();
-            }
+            $inventory->delete();
         });
     }
 }
