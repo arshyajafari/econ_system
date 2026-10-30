@@ -25,6 +25,15 @@ class DeleteScientificVisitorInventoryAction
                 ->lockForUpdate()
                 ->get();
 
+            // A delivery that has any consumption is not deletable. Keeping a
+            // zero-available aggregate row is not equivalent to deleting a delivery:
+            // deletion would erase the provenance of historical sample consumption.
+            if ((int) $inventory->used_quantity > 0) {
+                throw new BusinessRuleException(
+                    'این موجودی دارای نمونه مصرف‌شده است و قابل حذف نیست. برای اصلاح، فقط تعداد تحویل را تا حد مصرف‌شده کاهش دهید.'
+                );
+            }
+
             $activeTransferred = (int) $transfers->sum(
                 fn ($transfer) => (int) $transfer->quantity - (int) $transfer->returned_quantity
             );
