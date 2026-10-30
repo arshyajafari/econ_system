@@ -32,20 +32,7 @@ class UpdateScientificVisitorInventoryTransferAction
 
             $delta = $newQuantity - $oldActive;
             if ($delta > 0) {
-                if (empty($data['inventory_batch_id'])) {
-                    throw new BusinessRuleException('برای افزایش تعداد، بچ انبار اصلی را انتخاب کنید.');
-                }
-                $batch = InventoryBatch::query()->where('public_id', $data['inventory_batch_id'])->lockForUpdate()->firstOrFail();
-                if ((int) $batch->product_id !== (int) $ledger->product_id || $batch->is_expired || (int) $batch->available_quantity < $delta) {
-                    throw new BusinessRuleException('بچ انتخاب‌شده معتبر نیست یا موجودی کافی ندارد.');
-                }
-                $batch->quantity -= $delta;
-                $batch->save();
-                InventoryMovement::create([
-                    'inventory_batch_id' => $batch->id, 'type' => InventoryMovementType::OUT,
-                    'quantity' => $delta, 'reason' => 'scientific_visitor_transfer',
-                    'description' => $data['description'] ?? 'اصلاح مقدار تحویل ویزیتور علمی', 'moved_at' => now(),
-                ]);
+                throw new BusinessRuleException('افزایش مقدار این ردیف مجاز نیست؛ برای ثبت مقدار بیشتر، یک تحویل جدید ثبت کنید تا سابقه بچ و تاریخ دقیق حفظ شود.');
             } elseif ($delta < 0) {
                 $return = abs($delta);
                 if ($return > ($oldActive - $used)) {
