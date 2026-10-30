@@ -19,12 +19,6 @@ class DeleteScientificVisitorInventoryAction
                 ->lockForUpdate()
                 ->findOrFail($inventory->id);
 
-            if ((int) $inventory->used_quantity !== 0) {
-                throw new BusinessRuleException(
-                    'حذف ردیف موجودی دارای نمونه مصرف‌شده مجاز نیست؛ برای حفظ سوابق، ابتدا باید نمونه‌ها از مسیر اصلاح/لغو تعیین تکلیف شوند.'
-                );
-            }
-
             $transfers = DB::table('scientific_visitor_inventory_transfers')
                 ->where('scientific_visitor_inventory_id', $inventory->id)
                 ->orderByDesc('id')
@@ -44,6 +38,8 @@ class DeleteScientificVisitorInventoryAction
                     );
                 }
             }
+
+            $returnedTotal = 0;
 
             foreach ($transfers as $transfer) {
                 $activeQuantity = (int) $transfer->quantity - (int) $transfer->returned_quantity;
@@ -74,14 +70,21 @@ class DeleteScientificVisitorInventoryAction
                     'description' => "برگشت موجودی ویزیتور علمی {$inventory->employee?->fullName}",
                     'moved_at' => now(),
                 ]);
+
+                $returnedTotal += $returnable;
             }
 
-            // Keep consumed quantities as historical usage; only unconsumed
-            // units were returned to the warehouse above.
-            $inventory->received_quantity = 0;
-            $inventory->used_quantity = 0;
+            // Retain a live ledger when any quantity was already used. This keeps
+            // historical samples linked to an active inventory record and allows
+            // later corrections without losing the consumption history.
+            $usedQuantity = (int) $inventory->used_quantity;
+            $inventory->received_quantity = $usedQuantity;
+            $inventory->last_received_at = now();
             $inventory->save();
-            $inventory->delete();
+
+            if ($usedQuantity === 0) {
+                $inventory->delete();
+            }
         });
     }
 }
