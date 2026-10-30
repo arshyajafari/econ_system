@@ -386,4 +386,25 @@ class DeleteUnusedInventoryTest extends TestCase
         }
     }
 
+    public function test_inventory_list_shows_every_positive_balance_and_hides_zero_balance_immediately(): void
+    {
+        $employeeId = $this->createEmployee();
+        $partialProduct = $this->createProduct();
+        $emptyProduct = $this->createProduct();
+
+        $partialInventoryId = $this->createScientificVisitorInventory($employeeId, $partialProduct->id, received: 5, used: 3);
+        $emptyInventoryId = $this->createScientificVisitorInventory($employeeId, $emptyProduct->id, received: 5, used: 5);
+
+        DB::table('scientific_visitor_inventories')
+            ->where('id', $partialInventoryId)
+            ->update(['updated_at' => now()->subDays(45)]);
+
+        $rows = \App\Queries\ScientificVisitorInventory\ScientificVisitorInventoryQuery::make()
+            ->apply([])
+            ->get();
+
+        $this->assertTrue($rows->contains('id', $partialInventoryId));
+        $this->assertFalse($rows->contains('id', $emptyInventoryId));
+    }
+
 }
