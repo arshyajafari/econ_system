@@ -45,9 +45,6 @@ class UpdateScientificVisitorInventoryTransferAction
                 ->lockForUpdate()
                 ->get();
 
-            $trackedReceived = 0;
-            $trackedUsed = 0;
-
             foreach ($allTransfers as $row) {
                 $rowQuantity = (int) $row->quantity;
                 $rowReturned = (int) $row->returned_quantity;
@@ -64,8 +61,6 @@ class UpdateScientificVisitorInventoryTransferAction
                     throw new BusinessRuleException('سوابق یکی از بچ‌های تحویلی نامعتبر است؛ هیچ تغییری در انبار اعمال نشد.');
                 }
 
-                $trackedReceived += $rowActive;
-                $trackedUsed += $rowUsed;
             }
 
             // The aggregate ledger can legitimately contain historical quantities
