@@ -13,23 +13,17 @@ class DeleteScientificVisitorInventoryAction
 {
     public function execute(ScientificVisitorInventory $inventory): void
     {
-        DB::transaction(function () use ($inventory) {
+        DB::transaction(function () use ($inventory): void {
             $inventory = ScientificVisitorInventory::query()
                 ->with('employee')
                 ->lockForUpdate()
                 ->findOrFail($inventory->id);
 
-            $receivedQuantity = (int) $inventory->received_quantity;
-            $usedQuantity = (int) $inventory->used_quantity;
-            $availableQuantity = (int) $inventory->available_quantity;
+            $received = (int) $inventory->received_quantity;
+            $used = (int) $inventory->used_quantity;
 
-            // Deletion is only allowed when the entire received quantity is still
-            // available. Consumed quantities are historical usage and must never
-            // be silently removed or treated as stock that can be returned.
-            if ($receivedQuantity !== $availableQuantity || $usedQuantity !== 0) {
-                throw new BusinessRuleException(
-                    "حذف این موجودی فقط زمانی مجاز است که تعداد دریافتی و موجودی قابل استفاده برابر باشند. دریافتی: {$receivedQuantity}، مصرف‌شده: {$usedQuantity}، قابل استفاده: {$availableQuantity}."
-                );
+            if ($received < 0 || $used < 0 || $used > $received) {
+                throw new BusinessRuleException('اطلاعات موجودی ویزیتور نامعتبر است؛ حذف انجام نشد.');
             }
 
             $transfers = DB::table('scientific_visitor_inventory_transfers')
@@ -38,52 +32,75 @@ class DeleteScientificVisitorInventoryAction
                 ->lockForUpdate()
                 ->get();
 
-            $activeTransferred = (int) $transfers->sum(
-                fn ($transfer) => (int) $transfer->quantity - (int) $transfer->returned_quantity
-            );
-            $allocatedUsed = (int) $transfers->sum('used_quantity');
+            $activeTotal = 0;
+            $allocatedUsed = 0;
 
-            if ($activeTransferred !== $receivedQuantity || $allocatedUsed !== 0) {
+            foreach ($transfers as $transfer) {
+                $quantity = (int) $transfer->quantity;
+                $returned = (int) $transfer->returned_quantity;
+                $transferUsed = (int) $transfer->used_quantity;
+                $active = $quantity - $returned;
+
+                if ($quantity < 0 || $returned < 0 || $returned > $quantity
+                    || $transferUsed < 0 || $transferUsed > $active) {
+                    throw new BusinessRuleException('سوابق یکی از بچ‌های تحویلی نامعتبر است؛ هیچ تغییری در انبار اعمال نشد.');
+                }
+
+                $activeTotal += $active;
+                $allocatedUsed += $transferUsed;
+            }
+
+            // Never reconcile stock from incomplete or contradictory historical ledgers.
+            if ($activeTotal !== $received || $allocatedUsed !== $used) {
                 throw new BusinessRuleException(
-                    'برای این موجودی سابقه بچ‌های تحویلی کامل نیست؛ حذف انجام نشد تا موجودی انبار اصلی اشتباه نشود. ابتدا موجودی تاریخی باید تطبیق داده شود.'
+                    'سوابق بچ‌های تحویلی با موجودی و مصرف ثبت‌شده تطبیق ندارد؛ حذف انجام نشد تا موجودی انبار اصلی اشتباه نشود.'
                 );
             }
 
             foreach ($transfers as $transfer) {
-                $activeQuantity = (int) $transfer->quantity - (int) $transfer->returned_quantity;
-                if ($activeQuantity <= 0) {
+                $active = (int) $transfer->quantity - (int) $transfer->returned_quantity;
+                $returnable = $active - (int) $transfer->used_quantity;
+
+                if ($returnable === 0) {
                     continue;
                 }
 
                 $batch = InventoryBatch::query()
                     ->lockForUpdate()
-                    ->findOrFail($transfer->inventory_batch_id);
+                    ->find($transfer->inventory_batch_id);
 
-                $batch->quantity += $activeQuantity;
+                if (!$batch) {
+                    throw new BusinessRuleException('بچ اصلی یکی از تحویل‌ها پیدا نشد؛ حذف انجام نشد.');
+                }
+
+                $batch->quantity += $returnable;
                 $batch->save();
 
                 DB::table('scientific_visitor_inventory_transfers')
                     ->where('id', $transfer->id)
                     ->update([
-                        'returned_quantity' => (int) $transfer->returned_quantity + $activeQuantity,
+                        'returned_quantity' => (int) $transfer->returned_quantity + $returnable,
                         'updated_at' => now(),
                     ]);
 
                 InventoryMovement::create([
                     'inventory_batch_id' => $batch->id,
                     'type' => InventoryMovementType::IN,
-                    'quantity' => $activeQuantity,
+                    'quantity' => $returnable,
                     'reason' => 'scientific_visitor_transfer_return',
-                    'description' => "برگشت موجودی ویزیتور علمی {$inventory->employee?->fullName}",
+                    'description' => "برگشت موجودی استفاده‌نشده ویزیتور علمی {$inventory->employee?->fullName}",
                     'moved_at' => now(),
                 ]);
             }
 
-            // Keep the soft-deleted aggregate numerically empty while transfer rows
-            // retain the full audit trail of the original deliveries and returns.
-            $inventory->received_quantity = 0;
+            // Consumed units remain on the aggregate so sample history and future
+            // inventory reconciliation continue to reference a live ledger.
+            $inventory->received_quantity = $used;
             $inventory->save();
-            $inventory->delete();
+
+            if ($used === 0) {
+                $inventory->delete();
+            }
         });
     }
 }
