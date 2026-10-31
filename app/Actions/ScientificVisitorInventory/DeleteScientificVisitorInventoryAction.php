@@ -66,7 +66,6 @@ class DeleteScientificVisitorInventoryAction
                 }
 
                 $batch = InventoryBatch::query()
-                    ->withTrashed()
                     ->lockForUpdate()
                     ->find($transfer->inventory_batch_id);
 
