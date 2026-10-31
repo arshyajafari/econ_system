@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Queries\\ScientificVisitorInventory;
+namespace App\Queries\ScientificVisitorInventory;
 
-use App\\Models\\ScientificVisitorInventory;
-use App\\Queries\\BaseQuery;
+use App\Models\ScientificVisitorInventory;
+use App\Queries\BaseQuery;
 
 class ScientificVisitorInventoryQuery extends BaseQuery
 {
