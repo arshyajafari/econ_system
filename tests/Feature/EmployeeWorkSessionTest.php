@@ -18,7 +18,7 @@ class EmployeeWorkSessionTest extends TestCase {
             'latitude' => 36.5658,
             'longitude' => 53.0586,
             'accuracy' => 12.5,
-            'client_operation_id' => 'start-operation-0001',
+            'client_operation_id' => '6d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0001',
         ];
 
         $first = $this->actingAs($user)->postJson('/api/v1/employees/locations/work-sessions/start', $start);
@@ -30,7 +30,7 @@ class EmployeeWorkSessionTest extends TestCase {
 
         $duplicateStart = $this->postJson('/api/v1/employees/locations/work-sessions/start', [
             ...$start,
-            'client_operation_id' => 'start-operation-0002',
+            'client_operation_id' => '6d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0002',
         ]);
         $duplicateStart->assertUnprocessable();
         $this->assertDatabaseCount('employee_work_sessions', 1);
@@ -39,7 +39,7 @@ class EmployeeWorkSessionTest extends TestCase {
             'latitude' => 36.5700,
             'longitude' => 53.0600,
             'accuracy' => 18,
-            'client_operation_id' => 'end-operation-0001',
+            'client_operation_id' => '6d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0003',
         ];
         $finished = $this->postJson('/api/v1/employees/locations/work-sessions/end', $end);
         $finished->assertOk()->assertJsonPath('data.status', 'completed');
@@ -50,7 +50,7 @@ class EmployeeWorkSessionTest extends TestCase {
 
         $secondEnd = $this->postJson('/api/v1/employees/locations/work-sessions/end', [
             ...$end,
-            'client_operation_id' => 'end-operation-0002',
+            'client_operation_id' => '6d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0004',
         ]);
         $secondEnd->assertUnprocessable();
         $this->assertDatabaseCount('employee_work_sessions', 1);
@@ -63,7 +63,7 @@ class EmployeeWorkSessionTest extends TestCase {
             'latitude' => 36.5658,
             'longitude' => 53.0586,
             'accuracy' => 10,
-            'client_operation_id' => 'end-before-start-001',
+            'client_operation_id' => '6d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0005',
         ])->assertUnprocessable();
 
         $this->assertDatabaseCount('employee_work_sessions', 0);
