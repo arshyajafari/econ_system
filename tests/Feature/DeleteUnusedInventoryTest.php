@@ -336,12 +336,12 @@ class DeleteUnusedInventoryTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $inventory = \\App\\Models\\ScientificVisitorInventory::query()->findOrFail($inventoryId);
+        $inventory = \App\Models\ScientificVisitorInventory::query()->findOrFail($inventoryId);
 
         try {
-            app(\\App\\Actions\\ScientificVisitorInventory\\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
+            app(\App\Actions\ScientificVisitorInventory\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
             $this->fail('Tracked inventory with consumed samples must not be deletable.');
-        } catch (\\App\\Exceptions\\BusinessRuleException $exception) {
+        } catch (\App\Exceptions\BusinessRuleException $exception) {
             $this->assertStringContainsString('مصرف‌شده', $exception->getMessage());
             $this->assertDatabaseHas('scientific_visitor_inventories', [
                 'id' => $inventoryId,
