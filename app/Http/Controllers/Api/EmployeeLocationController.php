@@ -19,9 +19,10 @@ class EmployeeLocationController extends Controller {
     private const DAILY_POINT_LIMIT = 5000;
 
     public function store(StoreEmployeeLocationRequest $request): EmployeeLocationResource {
-        abort_unless(!$request->user()->hasRole('accountant'), 403, 'حسابدار نیازی به اشتراک موقعیت مکانی ندارد.');
-        $employee = $request->user()->employee;
-        abort_unless($employee && $employee->status->value === 'active', 422, 'کاربر به کارمند فعال متصل نیست.');
+        // Continuous browser polling has been replaced by explicit daily work sessions.
+        // Keep historical employee_locations intact, but reject stale clients that still
+        // try to append background tracking points.
+        abort(410, 'ثبت پیوسته موقعیت غیرفعال شده است؛ از دکمه شروع و پایان کار استفاده کنید.');
 
         $data = $request->validated();
         $data['employee_id'] = $employee->id;
