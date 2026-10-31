@@ -14,7 +14,10 @@ class UpdateScientificVisitorInventoryTransferAction
     public function execute(ScientificVisitorInventory $inventory, int $transferId, array $data): array
     {
         return DB::transaction(function () use ($inventory, $transferId, $data) {
-            $ledger = ScientificVisitorInventory::query()->lockForUpdate()->findOrFail($inventory->id);
+            $ledger = ScientificVisitorInventory::query()
+                ->lockForUpdate()
+                ->findOrFail($inventory->id);
+
             $transfer = DB::table('scientific_visitor_inventory_transfers')
                 ->where('scientific_visitor_inventory_id', $ledger->id)
                 ->where('id', $transferId)
@@ -34,77 +37,90 @@ class UpdateScientificVisitorInventoryTransferAction
                 throw new BusinessRuleException('سوابق این ردیف تحویل ناسازگار است؛ ویرایش برای جلوگیری از خطای انبار متوقف شد.');
             }
 
-            // Reconcile the entire delivery ledger before changing any stock.
+            // Reconcile tracked batches while allowing a legitimate legacy remainder.
+            // Older inventory rows may contain quantities recorded before batch-level
+            // tracking was introduced; those quantities must remain untouched.
             $allTransfers = DB::table('scientific_visitor_inventory_transfers')
                 ->where('scientific_visitor_inventory_id', $ledger->id)
                 ->lockForUpdate()
                 ->get();
+
             $trackedReceived = 0;
             $trackedUsed = 0;
+
             foreach ($allTransfers as $row) {
                 $rowQuantity = (int) $row->quantity;
                 $rowReturned = (int) $row->returned_quantity;
                 $rowUsed = (int) $row->used_quantity;
                 $rowActive = $rowQuantity - $rowReturned;
-                if ($rowQuantity < 0 || $rowReturned < 0 || $rowReturned > $rowQuantity || $rowUsed < 0 || $rowUsed > $rowActive) {
+
+                if (
+                    $rowQuantity < 0 ||
+                    $rowReturned < 0 ||
+                    $rowReturned > $rowQuantity ||
+                    $rowUsed < 0 ||
+                    $rowUsed > $rowActive
+                ) {
                     throw new BusinessRuleException('سوابق یکی از بچ‌های تحویلی نامعتبر است؛ هیچ تغییری در انبار اعمال نشد.');
                 }
+
                 $trackedReceived += $rowActive;
                 $trackedUsed += $rowUsed;
             }
 
-            if ($trackedReceived !== (int) $ledger->received_quantity || $trackedUsed !== (int) $ledger->used_quantity) {
-                throw new BusinessRuleException('سوابق تحویل با موجودی و مصرف ثبت‌شده تطبیق ندارد؛ ابتدا باید مغایرت بررسی شود.');
+            $legacyReceived = (int) $ledger->received_quantity - $trackedReceived;
+            $legacyUsed = (int) $ledger->used_quantity - $trackedUsed;
+
+            if (
+                $legacyReceived < 0 ||
+                $legacyUsed < 0 ||
+                $legacyUsed > $legacyReceived
+            ) {
+                throw new BusinessRuleException('سوابق تحویل و مصرف با موجودی کل ویزیتور سازگار نیست؛ ابتدا مغایرت واقعی باید بررسی شود.');
             }
 
-            $newQuantity = (int) $data['quantity'];
-            if ($newQuantity < $used) {
-                throw new BusinessRuleException("تعداد تحویل نمی‌تواند کمتر از مصرف این ردیف ({$used}) باشد.");
+            $newActiveQuantity = (int) $data['quantity'];
+            if ($newActiveQuantity < $used) {
+                throw new BusinessRuleException("تعداد تحویل نمی‌تواند کمتر از مصرف این بچ ({$used}) باشد.");
             }
 
-            $delta = $newQuantity - $oldActive;
+            $delta = $newActiveQuantity - $oldActive;
+
             if ($delta > 0) {
-                $batchPublicId = $data['inventory_batch_id'] ?? null;
-                if (!$batchPublicId) {
-                    throw new BusinessRuleException('برای افزایش تعداد، بچ انبار اصلی را انتخاب کنید.');
-                }
-
+                // An edit always remains attached to its original source batch.
+                // A different batch must be registered as a separate delivery.
                 $batch = InventoryBatch::query()
-                    ->where('public_id', $batchPublicId)
                     ->lockForUpdate()
-                    ->first();
+                    ->find($transfer->inventory_batch_id);
 
                 if (!$batch || (int) $batch->product_id !== (int) $ledger->product_id) {
-                    throw new BusinessRuleException('بچ انتخاب‌شده متعلق به همین محصول نیست.');
+                    throw new BusinessRuleException('بچ اصلی این تحویل پیدا نشد یا متعلق به محصول ویزیتور نیست؛ برای بچ جدید یک تحویل جداگانه ثبت کنید.');
                 }
+
                 if ($batch->is_expired) {
                     throw new BusinessRuleException('افزایش موجودی از بچ منقضی‌شده مجاز نیست.');
                 }
-                if ($delta > (int) $batch->available_quantity) {
-                    throw new BusinessRuleException('موجودی قابل تحویل بچ انتخاب‌شده کافی نیست.');
-                }
 
-                // Preserve source-batch provenance: an increase is a new delivery row,
-                // never a mutation of the original row's batch or delivery date.
-                DB::table('scientific_visitor_inventory_transfers')->insert([
-                    'scientific_visitor_inventory_id' => $ledger->id,
-                    'inventory_batch_id' => $batch->id,
-                    'quantity' => $delta,
-                    'used_quantity' => 0,
-                    'returned_quantity' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                if ($delta > (int) $batch->available_quantity) {
+                    throw new BusinessRuleException('موجودی قابل تحویل بچ اصلی کافی نیست؛ برای استفاده از بچ دیگر، تحویل جدید ثبت کنید.');
+                }
 
                 $batch->quantity -= $delta;
                 $batch->save();
+
+                DB::table('scientific_visitor_inventory_transfers')
+                    ->where('id', $transferId)
+                    ->update([
+                        'quantity' => $quantity + $delta,
+                        'updated_at' => now(),
+                    ]);
 
                 InventoryMovement::create([
                     'inventory_batch_id' => $batch->id,
                     'type' => InventoryMovementType::OUT,
                     'quantity' => $delta,
                     'reason' => 'scientific_visitor_transfer',
-                    'description' => $data['description'] ?? 'افزایش موجودی ویزیتور علمی از طریق ویرایش',
+                    'description' => $data['description'] ?? 'افزایش مقدار همان بچ تحویل ویزیتور علمی از طریق ویرایش',
                     'moved_at' => now(),
                 ]);
 
@@ -112,11 +128,16 @@ class UpdateScientificVisitorInventoryTransferAction
                 $ledger->last_received_at = now();
             } elseif ($delta < 0) {
                 $return = abs($delta);
-                if ($return > ($oldActive - $used)) {
-                    throw new BusinessRuleException('مقدار کاهش از موجودی استفاده‌نشده این ردیف بیشتر است.');
+                $returnable = $oldActive - $used;
+
+                if ($return > $returnable) {
+                    throw new BusinessRuleException('مقدار کاهش از موجودی استفاده‌نشده همین بچ بیشتر است؛ مقدار مصرف‌شده قابل کاهش یا برگشت نیست.');
                 }
 
-                $batch = InventoryBatch::query()->lockForUpdate()->find($transfer->inventory_batch_id);
+                $batch = InventoryBatch::query()
+                    ->lockForUpdate()
+                    ->find($transfer->inventory_batch_id);
+
                 if (!$batch) {
                     throw new BusinessRuleException('بچ اصلی این تحویل پیدا نشد؛ برای جلوگیری از مغایرت، کاهش انجام نشد.');
                 }
@@ -136,7 +157,7 @@ class UpdateScientificVisitorInventoryTransferAction
                     'type' => InventoryMovementType::IN,
                     'quantity' => $return,
                     'reason' => 'scientific_visitor_transfer_return',
-                    'description' => $data['description'] ?? 'برگشت اصلاح مقدار تحویل ویزیتور علمی',
+                    'description' => $data['description'] ?? 'برگشت اصلاح مقدار تحویل ویزیتور علمی به همان بچ',
                     'moved_at' => now(),
                 ]);
 
@@ -146,9 +167,12 @@ class UpdateScientificVisitorInventoryTransferAction
             if (array_key_exists('description', $data)) {
                 $ledger->description = $data['description'];
             }
+
             $ledger->save();
 
-            return DB::table('scientific_visitor_inventory_transfers')->where('id', $transferId)->first();
+            return DB::table('scientific_visitor_inventory_transfers')
+                ->where('id', $transferId)
+                ->first();
         });
     }
 }
