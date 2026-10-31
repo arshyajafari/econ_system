@@ -169,9 +169,11 @@ class UpdateScientificVisitorInventoryTransferAction
 
             $ledger->save();
 
-            return DB::table('scientific_visitor_inventory_transfers')
+            $updatedTransfer = DB::table('scientific_visitor_inventory_transfers')
                 ->where('id', $transferId)
                 ->first();
+
+            return $updatedTransfer ? (array) $updatedTransfer : [];
         });
     }
 }
