@@ -92,8 +92,9 @@ class ListScientificVisitorInventoryTransfersAction
                 'received_quantity' => $legacyReceived,
                 'used_quantity' => $legacyUsed,
                 'available_quantity' => $available,
-                // No transfer timestamp exists for legacy stock; never infer its delivery date.
-                'last_received_at' => null,
+                // Legacy ledger retains the original registration date even when
+                // batch-level transfer tracking was introduced later.
+                'last_received_at' => $ledger->last_received_at?->toISOString(),
                 'description' => 'موجودی تاریخی؛ تاریخ و بچ تحویل در سیستم قدیمی ثبت نشده است.',
                 'batch_number' => null,
             ]);
