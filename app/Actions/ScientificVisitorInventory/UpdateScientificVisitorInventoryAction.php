@@ -35,10 +35,25 @@ class UpdateScientificVisitorInventoryAction
                 ->lockForUpdate()
                 ->get();
 
-            $activeTransferred = (int) $transfers->sum(
-                fn ($transfer) => (int) $transfer->quantity - (int) $transfer->returned_quantity
-            );
-            $allocatedUsed = (int) $transfers->sum('used_quantity');
+            $activeTransferred = 0;
+            $allocatedUsed = 0;
+            foreach ($transfers as $transfer) {
+                $transferQuantity = (int) $transfer->quantity;
+                $returnedQuantity = (int) $transfer->returned_quantity;
+                $transferUsed = (int) $transfer->used_quantity;
+                $activeQuantity = $transferQuantity - $returnedQuantity;
+
+                if ($transferQuantity < 0 || $returnedQuantity < 0
+                    || $returnedQuantity > $transferQuantity || $transferUsed < 0
+                    || $transferUsed > $activeQuantity) {
+                    throw new BusinessRuleException(
+                        'سوابق یکی از بچ‌های تحویلی نامعتبر است؛ ویرایش انجام نشد تا موجودی انبار اصلی اشتباه نشود.'
+                    );
+                }
+
+                $activeTransferred += $activeQuantity;
+                $allocatedUsed += $transferUsed;
+            }
             $isFullyTracked = $activeTransferred === $oldQuantity && $allocatedUsed === $usedQuantity;
 
             if ($newQuantity !== $oldQuantity && !$isFullyTracked) {
@@ -140,6 +155,9 @@ class UpdateScientificVisitorInventoryAction
             }
 
             $inventory->received_quantity = $newQuantity;
+            if ($newQuantity === 0 && $usedQuantity === 0) {
+                $inventory->delete();
+            }
             if (array_key_exists('description', $data)) {
                 $inventory->description = $data['description'];
             }
