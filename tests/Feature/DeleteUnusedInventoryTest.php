@@ -336,8 +336,8 @@ class DeleteUnusedInventoryTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $inventory = \\App\\Models\\ScientificVisitorInventory::query()->findOrFail($inventoryId);
-        app(\\App\\Actions\\ScientificVisitorInventory\\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
+        $inventory = \App\Models\ScientificVisitorInventory::query()->findOrFail($inventoryId);
+        app(\App\Actions\ScientificVisitorInventory\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
 
         $this->assertDatabaseHas('inventory_batches', ['id' => $batch->id, 'quantity' => 13]);
         $this->assertDatabaseHas('scientific_visitor_inventories', [
@@ -377,12 +377,12 @@ class DeleteUnusedInventoryTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $inventory = \\App\\Models\\ScientificVisitorInventory::query()->findOrFail($inventoryId);
+        $inventory = \App\Models\ScientificVisitorInventory::query()->findOrFail($inventoryId);
 
         try {
-            app(\\App\\Actions\\ScientificVisitorInventory\\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
+            app(\App\Actions\ScientificVisitorInventory\DeleteScientificVisitorInventoryAction::class)->execute($inventory);
             $this->fail('Inconsistent transfer history must block deletion.');
-        } catch (\\App\\Exceptions\\BusinessRuleException) {
+        } catch (\App\Exceptions\BusinessRuleException) {
             $this->assertDatabaseHas('scientific_visitor_inventories', [
                 'id' => $inventoryId,
                 'received_quantity' => 5,
