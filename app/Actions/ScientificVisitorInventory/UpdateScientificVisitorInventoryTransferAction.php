@@ -68,15 +68,16 @@ class UpdateScientificVisitorInventoryTransferAction
                 $trackedUsed += $rowUsed;
             }
 
-            $legacyReceived = (int) $ledger->received_quantity - $trackedReceived;
-            $legacyUsed = (int) $ledger->used_quantity - $trackedUsed;
+            // The aggregate ledger can legitimately contain historical quantities
+            // that were created before per-batch transfer tracking. Do not block a
+            // safe edit merely because those legacy totals are not represented by
+            // transfer rows. Keep every legacy difference unchanged by applying
+            // the same delta to this transfer and to the aggregate ledger.
+            $ledgerReceived = (int) $ledger->received_quantity;
+            $ledgerUsed = (int) $ledger->used_quantity;
 
-            if (
-                $legacyReceived < 0 ||
-                $legacyUsed < 0 ||
-                $legacyUsed > $legacyReceived
-            ) {
-                throw new BusinessRuleException('سوابق تحویل و مصرف با موجودی کل ویزیتور سازگار نیست؛ ابتدا مغایرت واقعی باید بررسی شود.');
+            if ($ledgerReceived < 0 || $ledgerUsed < 0 || $ledgerUsed > $ledgerReceived) {
+                throw new BusinessRuleException('موجودی کل و مصرف ویزیتور معتبر نیست؛ برای جلوگیری از ثبت موجودی منفی، ویرایش انجام نشد.');
             }
 
             $newActiveQuantity = (int) $data['quantity'];
@@ -130,8 +131,11 @@ class UpdateScientificVisitorInventoryTransferAction
                 $return = abs($delta);
                 $returnable = $oldActive - $used;
 
-                if ($return > $returnable) {
-                    throw new BusinessRuleException('مقدار کاهش از موجودی استفاده‌نشده همین بچ بیشتر است؛ مقدار مصرف‌شده قابل کاهش یا برگشت نیست.');
+                $aggregateAvailable = $ledgerReceived - $ledgerUsed;
+                $safeReturnable = min($returnable, $aggregateAvailable);
+
+                if ($return > $safeReturnable) {
+                    throw new BusinessRuleException('مقدار کاهش از موجودی قابل استفاده این بچ یا موجودی کل ویزیتور بیشتر است؛ مقدار مصرف‌شده قابل کاهش یا برگشت نیست.');
                 }
 
                 $batch = InventoryBatch::query()
