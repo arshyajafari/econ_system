@@ -155,9 +155,6 @@ class UpdateScientificVisitorInventoryAction
             }
 
             $inventory->received_quantity = $newQuantity;
-            if ($newQuantity === 0 && $usedQuantity === 0) {
-                $inventory->delete();
-            }
             if (array_key_exists('description', $data)) {
                 $inventory->description = $data['description'];
             }
