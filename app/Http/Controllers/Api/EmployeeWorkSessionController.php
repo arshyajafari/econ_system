@@ -17,7 +17,11 @@ class EmployeeWorkSessionController extends Controller {
 
         $session = EmployeeWorkSession::query()
             ->where('employee_id', $employee->id)
-            ->where('work_date', $today)
+            ->where(function ($query) use ($today) {
+                $query->where('work_date', $today)->orWhereNull('ended_at');
+            })
+            ->orderByRaw('CASE WHEN ended_at IS NULL THEN 0 ELSE 1 END')
+            ->orderByDesc('started_at')
             ->first();
 
         return response()->json(['data' => $this->serialize($session)]);
@@ -33,24 +37,37 @@ class EmployeeWorkSessionController extends Controller {
             Employee::query()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
 
             $replayed = EmployeeWorkSession::query()
-                ->where('employee_id', $employee->id)
                 ->where('start_operation_id', $operationId)
                 ->first();
             if ($replayed) {
+                if ((int) $replayed->employee_id !== (int) $employee->id
+                    || abs((float) $replayed->start_latitude - (float) $data['latitude']) > 0.0000001
+                    || abs((float) $replayed->start_longitude - (float) $data['longitude']) > 0.0000001) {
+                    throw ValidationException::withMessages([
+                        'client_operation_id' => ['شناسه این عملیات قبلاً برای اطلاعات دیگری استفاده شده است.'],
+                    ]);
+                }
                 return $replayed;
             }
 
             $today = Carbon::now(config('app.timezone', 'Asia/Tehran'))->toDateString();
+            $openSession = EmployeeWorkSession::query()
+                ->where('employee_id', $employee->id)
+                ->whereNull('ended_at')
+                ->first();
+            if ($openSession) {
+                throw ValidationException::withMessages([
+                    'work_session' => ['نوبت کاری قبلی هنوز پایان نیافته است؛ ابتدا پایان آن را ثبت کنید.'],
+                ]);
+            }
+
             $existing = EmployeeWorkSession::query()
                 ->where('employee_id', $employee->id)
                 ->where('work_date', $today)
                 ->first();
-
             if ($existing) {
                 throw ValidationException::withMessages([
-                    'work_session' => [$existing->ended_at
-                        ? 'برای امروز یک نوبت کاری ثبت شده و پایان یافته است.'
-                        : 'شروع کار امروز قبلاً ثبت شده است.'],
+                    'work_session' => ['برای امروز قبلاً یک نوبت کاری ثبت شده است.'],
                 ]);
             }
 
@@ -77,17 +94,23 @@ class EmployeeWorkSessionController extends Controller {
             Employee::query()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
 
             $replayed = EmployeeWorkSession::query()
-                ->where('employee_id', $employee->id)
                 ->where('end_operation_id', $operationId)
                 ->first();
             if ($replayed) {
+                if ((int) $replayed->employee_id !== (int) $employee->id
+                    || abs((float) $replayed->end_latitude - (float) $data['latitude']) > 0.0000001
+                    || abs((float) $replayed->end_longitude - (float) $data['longitude']) > 0.0000001) {
+                    throw ValidationException::withMessages([
+                        'client_operation_id' => ['شناسه این عملیات قبلاً برای اطلاعات دیگری استفاده شده است.'],
+                    ]);
+                }
                 return $replayed;
             }
 
-            $today = Carbon::now(config('app.timezone', 'Asia/Tehran'))->toDateString();
             $session = EmployeeWorkSession::query()
                 ->where('employee_id', $employee->id)
-                ->where('work_date', $today)
+                ->whereNull('ended_at')
+                ->orderByDesc('started_at')
                 ->lockForUpdate()
                 ->first();
 
@@ -141,13 +164,13 @@ class EmployeeWorkSessionController extends Controller {
         return $request->validate([
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
-            'accuracy' => ['nullable', 'numeric', 'min:0', 'max:100000'],
+            'accuracy' => ['nullable', 'numeric', 'min:0', 'max:200'],
         ]);
     }
 
     private function operationId(Request $request): string {
         return $request->validate([
-            'client_operation_id' => ['required', 'string', 'min:16', 'max:64'],
+            'client_operation_id' => ['required', 'uuid'],
         ])['client_operation_id'];
     }
 
