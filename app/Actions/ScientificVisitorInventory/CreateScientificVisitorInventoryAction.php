@@ -9,12 +9,14 @@ use App\Models\InventoryBatch;
 use App\Models\InventoryMovement;
 use App\Models\ScientificVisitorInventory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 
 class CreateScientificVisitorInventoryAction
 {
     public function execute(array $data): ScientificVisitorInventory
     {
         return DB::transaction(function () use ($data) {
+            $receivedAt = isset($data['received_at']) ? Carbon::parse($data['received_at'])->startOfDay() : now();
             $employee = Employee::query()
                 ->where('public_id', $data['employee_id'])
                 ->whereHas('user', fn ($q) => $q->role('scientific visitor'))
@@ -63,7 +65,7 @@ class CreateScientificVisitorInventoryAction
             }
 
             $inventory->received_quantity += $quantity;
-            $inventory->last_received_at = now();
+            $inventory->last_received_at = $receivedAt;
             $inventory->description = $data['description'] ?? $inventory->description;
             $inventory->save();
 
@@ -76,7 +78,7 @@ class CreateScientificVisitorInventoryAction
                 'quantity' => $quantity,
                 'used_quantity' => 0,
                 'returned_quantity' => 0,
-                'created_at' => now(),
+                'created_at' => $receivedAt,
                 'updated_at' => now(),
             ]);
 
@@ -86,7 +88,7 @@ class CreateScientificVisitorInventoryAction
                 'quantity' => $quantity,
                 'reason' => 'scientific_visitor_transfer',
                 'description' => $data['description'] ?? "تحویل به ویزیتور علمی {$employee->fullName}",
-                'moved_at' => now(),
+                'moved_at' => $receivedAt,
             ]);
 
             return $inventory->fresh(ScientificVisitorInventory::DEFAULT_RELATIONS);
