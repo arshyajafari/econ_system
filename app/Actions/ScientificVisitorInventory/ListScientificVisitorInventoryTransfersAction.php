@@ -1,12 +1,12 @@
 <?php
 
-namespace App\\Actions\\ScientificVisitorInventory;
+namespace App\Actions\ScientificVisitorInventory;
 
-use App\\Models\\ScientificVisitorInventory;
-use App\\Models\\User;
-use Illuminate\\Pagination\\LengthAwarePaginator;
-use Illuminate\\Support\\Collection;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\ScientificVisitorInventory;
+use App\Models\User;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ListScientificVisitorInventoryTransfersAction
 {
