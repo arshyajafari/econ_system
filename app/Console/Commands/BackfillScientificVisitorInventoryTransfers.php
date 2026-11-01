@@ -10,10 +10,10 @@ use Throwable;
 class BackfillScientificVisitorInventoryTransfers extends Command
 {
     protected $signature = 'scientific-inventory:backfill-transfers
-        {--batch-map= : Explicit mapping of internal ledger ID to batch ID, e.g. 12:8,13:9}
+        {--batch-map= : Explicit mapping for products with multiple active batches, e.g. 12:8,13:9}
         {--apply : Persist the generated transfer rows; without this option the command is dry-run only}';
 
-    protected $description = 'Backfill legacy scientific visitor inventory into batch-linked transfers using each ledger created_at; dry-run by default.';
+    protected $description = 'Backfill legacy scientific visitor inventory into batch-linked transfers; uniquely batched products are inferred safely and the command is dry-run by default.';
 
     public function handle(): int
     {
@@ -55,7 +55,24 @@ class BackfillScientificVisitorInventoryTransfers extends Command
 
             $status = 'needs_batch_mapping';
             $batchId = $batchMap[$ledger->id] ?? null;
-            $reason = 'No explicit source batch mapping supplied.';
+            $reason = 'Product has multiple active batches; an explicit verified mapping is required.';
+
+            // If the operator did not provide a mapping, infer only when the
+            // product has exactly one non-deleted batch. Never guess between batches.
+            if ($batchId === null) {
+                $productBatches = DB::table('inventory_batches')
+                    ->where('product_id', $ledger->product_id)
+                    ->whereNull('deleted_at')
+                    ->orderBy('id')
+                    ->pluck('id');
+
+                if ($productBatches->count() === 1) {
+                    $batchId = (int) $productBatches->first();
+                    $reason = 'Automatically resolved: product has exactly one active batch.';
+                } elseif ($productBatches->isEmpty()) {
+                    $reason = 'No active inventory batch exists for this product.';
+                }
+            }
 
             if ($remainingReceived < 0 || $remainingUsed < 0 || $remainingUsed > $remainingReceived) {
                 $status = 'quantity_mismatch';
@@ -80,7 +97,9 @@ class BackfillScientificVisitorInventoryTransfers extends Command
                         'quantity' => $remainingReceived,
                         'used_quantity' => $remainingUsed,
                         'created_at' => $ledger->created_at,
-                        'updated_at' => $ledger->updated_at ?? $ledger->created_at,
+                        // This is a historical delivery record; its event timestamp
+                        // is the ledger creation time, not the ledger's last edit time.
+                        'updated_at' => $ledger->created_at,
                     ];
                 }
             }
@@ -116,7 +135,8 @@ class BackfillScientificVisitorInventoryTransfers extends Command
 
         if (!$apply) {
             $this->warn('DRY RUN ONLY: no database rows were changed.');
-            $this->line('Supply --batch-map=ledgerId:batchId,... after verifying the original source batches.');
+            $this->line('Products with exactly one active batch are resolved automatically.');
+            $this->line('For products with multiple active batches, supply --batch-map=ledgerId:batchId after verifying the original batch.');
             $this->line('Then rerun with --apply to insert only validated rows.');
             return self::SUCCESS;
         }
@@ -164,7 +184,7 @@ class BackfillScientificVisitorInventoryTransfers extends Command
                         'used_quantity' => $row['used_quantity'],
                         'returned_quantity' => 0,
                         'created_at' => $ledger->created_at,
-                        'updated_at' => $ledger->updated_at ?? $ledger->created_at,
+                        'updated_at' => $ledger->created_at,
                     ]);
                 }
             });
