@@ -10,7 +10,7 @@ use Throwable;
 class BackfillScientificVisitorInventoryTransfers extends Command
 {
     protected $signature = 'scientific-inventory:backfill-transfers
-        {--batch-map= : Explicit mapping for ambiguous ledgers, e.g. ledgerId:batchId or ledgerId:batch_number (12:8,13:111408)}
+        {--batch-map= : Explicit mapping for ambiguous ledgers, e.g. ledgerId:batchId or ledgerId:batch_number (2:111408)}
         {--apply : Persist the generated transfer rows; without this option the command is dry-run only}';
 
     protected $description = 'Backfill legacy scientific visitor inventory into batch-linked transfers; uniquely batched products are inferred safely and the command is dry-run by default.';
@@ -26,7 +26,7 @@ class BackfillScientificVisitorInventoryTransfers extends Command
 
         $batchMap = $this->parseBatchMap((string) $this->option('batch-map'));
         if ($batchMap === null) {
-            $this->error('Invalid --batch-map. Expected comma-separated internal IDs in ledgerId:batchId format, e.g. 12:8,13:9.');
+            $this->error('Invalid --batch-map. Expected comma-separated ledgerId:batchId or ledgerId:batch_number mappings, e.g. 2:111408.');
             return self::FAILURE;
         }
 
@@ -56,13 +56,22 @@ class BackfillScientificVisitorInventoryTransfers extends Command
             $status = 'needs_batch_mapping';
             $batchId = $batchMap[$ledger->id] ?? null;
             $mappedByBatchNumber = is_string($batchId);
-            if ($mappedByBatchNumber) {
+            if ($batchId !== null) {
+                // Prefer an exact batch_number match for this product. This is
+                // important because real batch numbers may contain digits only
+                // and must not be mistaken for internal primary keys.
                 $mappedBatch = DB::table('inventory_batches')
-                    ->where('batch_number', $batchId)
+                    ->where('batch_number', (string) $batchId)
                     ->where('product_id', $ledger->product_id)
                     ->whereNull('deleted_at')
                     ->first();
-                $batchId = $mappedBatch ? (int) $mappedBatch->id : null;
+
+                if ($mappedBatch) {
+                    $batchId = (int) $mappedBatch->id;
+                    $mappedByBatchNumber = true;
+                } elseif (is_string($batchId)) {
+                    $batchId = null;
+                }
             }
             $reason = 'Product has multiple active batches; an explicit verified mapping is required.';
             if ($mappedByBatchNumber && $batchId === null) {
@@ -227,7 +236,7 @@ class BackfillScientificVisitorInventoryTransfers extends Command
             }
             $ledgerId = (int) $matches[1];
             $batchValue = $matches[2];
-            $batchId = ctype_digit($batchValue) ? (int) $batchValue : $batchValue;
+            $batchId = $batchValue;
             if (isset($map[$ledgerId])) {
                 return null;
             }
