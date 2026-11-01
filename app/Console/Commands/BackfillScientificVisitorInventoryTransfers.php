@@ -231,7 +231,7 @@ class BackfillScientificVisitorInventoryTransfers extends Command
 
         $map = [];
         foreach (explode(',', $input) as $pair) {
-            if (!preg_match('/^\s*(\d+)\s*:\s*(\d+)\s*$/', $pair, $matches)) {
+            if (!preg_match('/^\s*(\d+)\s*:\s*([A-Za-z0-9._-]+)\s*$/', $pair, $matches)) {
                 return null;
             }
             $ledgerId = (int) $matches[1];
