@@ -61,16 +61,6 @@ class EmployeeWorkSessionController extends Controller {
                 ]);
             }
 
-            $existing = EmployeeWorkSession::query()
-                ->where('employee_id', $employee->id)
-                ->where('work_date', $today)
-                ->first();
-            if ($existing) {
-                throw ValidationException::withMessages([
-                    'work_session' => ['برای امروز قبلاً یک نوبت کاری ثبت شده است.'],
-                ]);
-            }
-
             return EmployeeWorkSession::query()->create([
                 'employee_id' => $employee->id,
                 'work_date' => $today,
@@ -195,6 +185,9 @@ class EmployeeWorkSessionController extends Controller {
                 'accuracy' => $session->end_accuracy !== null ? (float) $session->end_accuracy : null,
             ] : null,
             'status' => $session->ended_at ? 'completed' : 'in_progress',
+            'duration_seconds' => $session->ended_at
+                ? max(0, $session->started_at->diffInSeconds($session->ended_at, false))
+                : max(0, $session->started_at->diffInSeconds(now(), false)),
         ];
     }
 }
