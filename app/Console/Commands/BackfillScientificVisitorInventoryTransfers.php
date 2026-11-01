@@ -10,7 +10,7 @@ use Throwable;
 class BackfillScientificVisitorInventoryTransfers extends Command
 {
     protected $signature = 'scientific-inventory:backfill-transfers
-        {--batch-map= : Explicit mapping for products with multiple active batches, e.g. 12:8,13:9}
+        {--batch-map= : Explicit mapping for ambiguous ledgers, e.g. ledgerId:batchId or ledgerId:batch_number (12:8,13:111408)}
         {--apply : Persist the generated transfer rows; without this option the command is dry-run only}';
 
     protected $description = 'Backfill legacy scientific visitor inventory into batch-linked transfers; uniquely batched products are inferred safely and the command is dry-run by default.';
@@ -55,7 +55,19 @@ class BackfillScientificVisitorInventoryTransfers extends Command
 
             $status = 'needs_batch_mapping';
             $batchId = $batchMap[$ledger->id] ?? null;
+            $mappedByBatchNumber = is_string($batchId);
+            if ($mappedByBatchNumber) {
+                $mappedBatch = DB::table('inventory_batches')
+                    ->where('batch_number', $batchId)
+                    ->where('product_id', $ledger->product_id)
+                    ->whereNull('deleted_at')
+                    ->first();
+                $batchId = $mappedBatch ? (int) $mappedBatch->id : null;
+            }
             $reason = 'Product has multiple active batches; an explicit verified mapping is required.';
+            if ($mappedByBatchNumber && $batchId === null) {
+                $reason = 'The supplied batch number was not found among active batches for this product.';
+            }
 
             // If the operator did not provide a mapping, infer only when the
             // product has exactly one non-deleted batch. Never guess between batches.
@@ -136,7 +148,7 @@ class BackfillScientificVisitorInventoryTransfers extends Command
         if (!$apply) {
             $this->warn('DRY RUN ONLY: no database rows were changed.');
             $this->line('Products with exactly one active batch are resolved automatically.');
-            $this->line('For products with multiple active batches, supply --batch-map=ledgerId:batchId after verifying the original batch.');
+            $this->line('For products with multiple active batches, supply --batch-map=ledgerId:batchId or ledgerId:batch_number after verifying the original batch.');
             $this->line('Then rerun with --apply to insert only validated rows.');
             return self::SUCCESS;
         }
@@ -199,7 +211,7 @@ class BackfillScientificVisitorInventoryTransfers extends Command
     }
 
     /**
-     * @return array<int, int>|null
+     * @return array<int, int|string>|null
      */
     private function parseBatchMap(string $input): ?array
     {
@@ -214,7 +226,8 @@ class BackfillScientificVisitorInventoryTransfers extends Command
                 return null;
             }
             $ledgerId = (int) $matches[1];
-            $batchId = (int) $matches[2];
+            $batchValue = $matches[2];
+            $batchId = ctype_digit($batchValue) ? (int) $batchValue : $batchValue;
             if (isset($map[$ledgerId])) {
                 return null;
             }
