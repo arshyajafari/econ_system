@@ -140,7 +140,7 @@ class EmployeeWorkSessionController extends Controller {
             'end_longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'end_accuracy' => ['nullable', 'numeric', 'min:0', 'max:200'],
         ]);
-        if (($data['end_latitude'] ?? null) !== null xor ($data['end_longitude'] ?? null) !== null) {
+        if ((($data['end_latitude'] ?? null) !== null) xor (($data['end_longitude'] ?? null) !== null)) {
             throw ValidationException::withMessages([
                 'end_latitude' => ['برای ثبت مختصات پایان، طول و عرض جغرافیایی باید با هم وارد شوند.'],
             ]);
@@ -200,7 +200,7 @@ class EmployeeWorkSessionController extends Controller {
         return $request->validate([
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
-            'accuracy' => ['nullable', 'numeric', 'min:0', 'max:200'],
+            'accuracy' => ['nullable', 'numeric', 'min:0', 'max:5000'],
         ]);
     }
 
