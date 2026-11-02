@@ -9,6 +9,7 @@ Route::prefix('employees/locations')->name('employees.locations.')->group(functi
     Route::get('/work-sessions/me', [EmployeeWorkSessionController::class, 'status'])->name('work-sessions.status');
     Route::post('/work-sessions/start', [EmployeeWorkSessionController::class, 'start'])->name('work-sessions.start');
     Route::post('/work-sessions/end', [EmployeeWorkSessionController::class, 'end'])->name('work-sessions.end');
+    Route::patch('/work-sessions/{sessionId}/correct', [EmployeeWorkSessionController::class, 'correct'])->name('work-sessions.correct');
 
     Route::get('/', [EmployeeLocationController::class, 'index'])->name('index');
     Route::get('/live', [EmployeeLocationController::class, 'live'])->name('live');
