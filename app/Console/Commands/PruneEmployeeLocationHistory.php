@@ -52,8 +52,10 @@ class PruneEmployeeLocationHistory extends Command
             fn ($ids) => DB::table('password_reset_tokens')->whereIn('email', $ids)->delete()
         );
 
-        // Device registrations are metadata, not user accounts. Preserve devices
-        // seen within the retention window and remove inactive registrations.
+        // Device registrations are metadata, not user accounts. Keep recently
+        // seen devices and any device that still has a recently used Sanctum token.
+        // LoginAction names each token with the device_id, so correlate that pair.
+        $deviceTokenableType = (new \App\Models\User())->getMorphClass();
         $devicesDeleted = $this->deleteInBatches(
             fn () => Device::query()
                 ->where(function ($query) use ($cutoff) {
@@ -63,12 +65,25 @@ class PruneEmployeeLocationHistory extends Command
                                 ->where('created_at', '<', $cutoff);
                         });
                 })
+                ->whereNotExists(function ($query) use ($cutoff, $deviceTokenableType) {
+                    $query->selectRaw('1')
+                        ->from('personal_access_tokens')
+                        ->whereColumn('personal_access_tokens.tokenable_id', 'devices.user_id')
+                        ->whereColumn('personal_access_tokens.name', 'devices.device_id')
+                        ->where('personal_access_tokens.tokenable_type', $deviceTokenableType)
+                        ->where(function ($query) use ($cutoff) {
+                            $query->where('personal_access_tokens.last_used_at', '>=', $cutoff)
+                                ->orWhere(function ($query) use ($cutoff) {
+                                    $query->whereNull('personal_access_tokens.last_used_at')
+                                        ->where('personal_access_tokens.created_at', '>=', $cutoff);
+                                });
+                        });
+                })
                 ->orderBy('id')
                 ->limit(self::BATCH_SIZE)
                 ->pluck('id'),
             fn ($ids) => Device::query()->whereIn('id', $ids)->delete()
         );
-
         // Remove expired tokens immediately, plus unused tokens older than 32 days.
         $tokensDeleted = $this->deleteInBatches(
             fn () => DB::table('personal_access_tokens')
