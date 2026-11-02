@@ -11,6 +11,7 @@ class EmployeeWorkSession extends BaseModel {
     protected $fillable = [
         'employee_id',
         'work_date',
+        'description',
         'started_at',
         'start_latitude',
         'start_longitude',
@@ -21,12 +22,16 @@ class EmployeeWorkSession extends BaseModel {
         'end_longitude',
         'end_accuracy',
         'end_operation_id',
+        'admin_correction_reason',
+        'admin_corrected_by',
+        'admin_corrected_at',
     ];
 
     protected $casts = [
         'work_date' => 'date',
         'started_at' => 'datetime',
         'ended_at' => 'datetime',
+        'admin_corrected_at' => 'datetime',
         'start_latitude' => 'decimal:7',
         'start_longitude' => 'decimal:7',
         'start_accuracy' => 'decimal:2',
@@ -34,6 +39,10 @@ class EmployeeWorkSession extends BaseModel {
         'end_longitude' => 'decimal:7',
         'end_accuracy' => 'decimal:2',
     ];
+
+    public function adminCorrectedBy(): BelongsTo {
+        return $this->belongsTo(User::class, 'admin_corrected_by');
+    }
 
     public function employee(): BelongsTo {
         return $this->belongsTo(Employee::class);
