@@ -30,9 +30,10 @@ class EmployeeWorkSessionController extends Controller {
     public function start(Request $request) {
         $employee = $this->employeeFor($request);
         $data = $this->validateCoordinates($request);
+        $description = $request->validate(['description' => ['nullable', 'string', 'max:255']])['description'] ?? null;
         $operationId = $this->operationId($request);
 
-        $session = DB::transaction(function () use ($employee, $data, $operationId) {
+        $session = DB::transaction(function () use ($employee, $data, $description, $operationId) {
             // Lock the employee row so concurrent taps/requests cannot create two sessions.
             Employee::query()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
 
@@ -64,6 +65,7 @@ class EmployeeWorkSessionController extends Controller {
             return EmployeeWorkSession::query()->create([
                 'employee_id' => $employee->id,
                 'work_date' => $today,
+                'description' => $description,
                 'started_at' => now(),
                 'start_latitude' => $data['latitude'],
                 'start_longitude' => $data['longitude'],
@@ -129,6 +131,50 @@ class EmployeeWorkSessionController extends Controller {
         return response()->json(['data' => $this->serialize($session)]);
     }
 
+    public function correct(Request $request, string $sessionId) {
+        abort_unless($request->user()->hasRole('admin'), 403);
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:2000'],
+            'ended_at' => ['nullable', 'date'],
+            'end_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'end_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'end_accuracy' => ['nullable', 'numeric', 'min:0', 'max:200'],
+        ]);
+        if (($data['end_latitude'] ?? null) !== null xor ($data['end_longitude'] ?? null) !== null) {
+            throw ValidationException::withMessages([
+                'end_latitude' => ['برای ثبت مختصات پایان، طول و عرض جغرافیایی باید با هم وارد شوند.'],
+            ]);
+        }
+
+        $session = EmployeeWorkSession::query()->where('public_id', $sessionId)->firstOrFail();
+        if ($session->ended_at) {
+            throw ValidationException::withMessages([
+                'work_session' => ['فقط مأموریت ناقص و پایان‌نیافته قابل اصلاح است.'],
+            ]);
+        }
+
+        $endedAt = isset($data['ended_at'])
+            ? Carbon::parse($data['ended_at'], config('app.timezone', 'Asia/Tehran'))
+            : Carbon::now(config('app.timezone', 'Asia/Tehran'));
+        if ($endedAt->lt($session->started_at)) {
+            throw ValidationException::withMessages([
+                'ended_at' => ['زمان پایان نمی‌تواند قبل از زمان شروع باشد.'],
+            ]);
+        }
+
+        $session->forceFill([
+            'ended_at' => $endedAt,
+            'end_latitude' => $data['end_latitude'] ?? null,
+            'end_longitude' => $data['end_longitude'] ?? null,
+            'end_accuracy' => $data['end_accuracy'] ?? null,
+            'admin_correction_reason' => $data['reason'],
+            'admin_corrected_by' => $request->user()->id,
+            'admin_corrected_at' => now(),
+        ])->save();
+
+        return response()->json(['data' => $this->serialize($session->refresh())]);
+    }
+
     public function index(Request $request) {
         abort_unless($request->user()->hasRole('admin'), 403);
         $date = $request->validate(['date' => ['nullable', 'date_format:Y-m-d']])['date']
@@ -172,6 +218,7 @@ class EmployeeWorkSessionController extends Controller {
             'employee_id' => $session->employee?->public_id,
             'employee_name' => $session->employee?->full_name,
             'work_date' => $session->work_date?->toDateString(),
+            'description' => $session->description,
             'started_at' => $session->started_at?->toISOString(),
             'start' => [
                 'latitude' => (float) $session->start_latitude,
@@ -179,11 +226,13 @@ class EmployeeWorkSessionController extends Controller {
                 'accuracy' => $session->start_accuracy !== null ? (float) $session->start_accuracy : null,
             ],
             'ended_at' => $session->ended_at?->toISOString(),
-            'end' => $session->ended_at ? [
+            'end' => $session->ended_at && $session->end_latitude !== null && $session->end_longitude !== null ? [
                 'latitude' => (float) $session->end_latitude,
                 'longitude' => (float) $session->end_longitude,
                 'accuracy' => $session->end_accuracy !== null ? (float) $session->end_accuracy : null,
             ] : null,
+            'admin_corrected_at' => $session->admin_corrected_at?->toISOString(),
+            'admin_correction_reason' => $session->admin_correction_reason,
             'status' => $session->ended_at ? 'completed' : 'in_progress',
             'duration_seconds' => $session->ended_at
                 ? max(0, $session->started_at->diffInSeconds($session->ended_at, false))
