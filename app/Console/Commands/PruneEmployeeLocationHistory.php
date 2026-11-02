@@ -1,11 +1,11 @@
 <?php
 
-namespace App\\Console\\Commands;
+namespace App\Console\Commands;
 
-use App\\Models\\Device;
-use App\\Models\\EmployeeLocation;
-use Illuminate\\Console\\Command;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\Device;
+use App\Models\EmployeeLocation;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class PruneEmployeeLocationHistory extends Command
 {
