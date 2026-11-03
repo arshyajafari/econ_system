@@ -23,8 +23,8 @@ class DataCleanupController extends Controller
         'employee_locations' => 'تاریخچه خام موقعیت کارکنان',
         'sessions' => 'نشست‌های منقضی‌شده',
         'password_reset_tokens' => 'توکن‌های قدیمی بازنشانی رمز',
-        'personal_access_tokens' => 'توکن‌های دسترسی منقضی‌شده',
-        'devices' => 'دستگاه‌های غیرفعال و بدون توکن معتبر',
+        'personal_access_tokens' => 'توکن‌های منقضی یا بلااستفاده',
+        'devices' => 'دستگاه‌های غیرفعال و توکن‌های مرتبط',
         'cache' => 'Cache منقضی‌شده',
         'cache_locks' => 'قفل‌های Cache منقضی‌شده',
     ];
@@ -115,7 +115,15 @@ class DataCleanupController extends Controller
             $cutoff = $startedAt->copy()->subDays(self::RETENTION_DAYS);
             $deleted = [];
             foreach ($data['categories'] as $category) {
-                $deleted[$category] = $this->deleteCategory($category, $cutoff);
+                $categoryResult = $this->deleteCategory($category, $cutoff);
+
+                if ($category === 'devices') {
+                    $deleted['devices'] = $categoryResult['devices'];
+                    $deleted['device_tokens'] = $categoryResult['device_tokens'];
+                } else {
+                    $deleted[$category] = $categoryResult;
+                }
+
                 DB::table('data_cleanup_runs')->where('id', $runId)->update([
                     'deleted_counts' => json_encode($deleted),
                     'updated_at' => now(),
@@ -171,26 +179,49 @@ class DataCleanupController extends Controller
                     : null;
             case 'personal_access_tokens':
                 return Schema::hasTable('personal_access_tokens')
-                    ? DB::table('personal_access_tokens')->whereNotNull('expires_at')->where('expires_at', '<=', now())
+                    ? DB::table('personal_access_tokens')->where(function ($query) use ($cutoff) {
+                        $query->where(function ($expired) {
+                            $expired->whereNotNull('expires_at')
+                                ->where('expires_at', '<=', now());
+                        })->orWhere(function ($inactive) use ($cutoff) {
+                            $inactive->where('last_used_at', '<', $cutoff)
+                                ->orWhere(function ($neverUsed) use ($cutoff) {
+                                    $neverUsed->whereNull('last_used_at')
+                                        ->where('created_at', '<', $cutoff);
+                                });
+                        });
+                    })
                     : null;
             case 'devices':
-                if (!Schema::hasTable('devices') || !Schema::hasTable('personal_access_tokens')) return null;
+                if (!Schema::hasTable('devices') || !Schema::hasTable('personal_access_tokens')) {
+                    return null;
+                }
+
                 $morphType = (new User())->getMorphClass();
+
                 return DB::table('devices')
                     ->where(function ($query) use ($cutoff) {
                         $query->where('last_seen_at', '<', $cutoff)
                             ->orWhere(function ($query) use ($cutoff) {
-                                $query->whereNull('last_seen_at')->where('created_at', '<', $cutoff);
+                                $query->whereNull('last_seen_at')
+                                    ->where('created_at', '<', $cutoff);
                             });
                     })
-                    ->whereNotExists(function ($query) use ($morphType) {
+                    ->whereNotExists(function ($query) use ($morphType, $cutoff) {
                         $query->selectRaw('1')->from('personal_access_tokens')
                             ->whereColumn('personal_access_tokens.tokenable_id', 'devices.user_id')
                             ->whereColumn('personal_access_tokens.name', 'devices.device_id')
                             ->where('personal_access_tokens.tokenable_type', $morphType)
-                            ->where(function ($active) {
-                                $active->whereNull('personal_access_tokens.expires_at')
+                            ->where(function ($valid) {
+                                $valid->whereNull('personal_access_tokens.expires_at')
                                     ->orWhere('personal_access_tokens.expires_at', '>', now());
+                            })
+                            ->where(function ($recent) use ($cutoff) {
+                                $recent->where('personal_access_tokens.last_used_at', '>=', $cutoff)
+                                    ->orWhere(function ($neverUsed) use ($cutoff) {
+                                        $neverUsed->whereNull('personal_access_tokens.last_used_at')
+                                            ->where('personal_access_tokens.created_at', '>=', $cutoff);
+                                    });
                             });
                     });
             case 'cache':
@@ -206,37 +237,76 @@ class DataCleanupController extends Controller
         }
     }
 
-    private function deleteCategory(string $category, $cutoff): int
+    private function deleteCategory(string $category, $cutoff): int|array
     {
         $total = 0;
+        $hasMore = false;
+        $relatedTokenTotal = 0;
+
         do {
             $query = $this->queryFor($category, $cutoff);
-            if (!$query) return $total;
+            if (!$query) {
+                return $category === 'devices'
+                    ? ['devices' => 0, 'device_tokens' => 0]
+                    : $total;
+            }
+
+            if ($category === 'devices') {
+                $devices = (clone $query)
+                    ->orderBy('id')
+                    ->limit(self::BATCH_SIZE)
+                    ->get(['id', 'user_id', 'device_id']);
+
+                if ($devices->isEmpty()) {
+                    break;
+                }
+
+                $morphType = (new User())->getMorphClass();
+                foreach ($devices->groupBy('user_id') as $userId => $userDevices) {
+                    $relatedTokenTotal += DB::table('personal_access_tokens')
+                        ->where('tokenable_type', $morphType)
+                        ->where('tokenable_id', $userId)
+                        ->whereIn('name', $userDevices->pluck('device_id'))
+                        ->delete();
+                }
+
+                $deletedDevices = DB::table('devices')
+                    ->whereIn('id', $devices->pluck('id'))
+                    ->delete();
+
+                $total += $deletedDevices;
+                $hasMore = $devices->count() === self::BATCH_SIZE;
+                continue;
+            }
 
             $key = match ($category) {
                 'employee_locations' => 'id',
                 'sessions' => 'id',
                 'password_reset_tokens' => 'email',
                 'personal_access_tokens' => 'id',
-                'devices' => 'id',
                 'cache', 'cache_locks' => 'key',
             };
 
-            $ids = (clone $query)->limit(self::BATCH_SIZE)->pluck($key);
-            if ($ids->isEmpty()) break;
+            $ids = (clone $query)->orderBy($key)->limit(self::BATCH_SIZE)->pluck($key);
+            if ($ids->isEmpty()) {
+                break;
+            }
 
             $deleted = match ($category) {
                 'employee_locations' => DB::table('employee_locations')->whereIn('id', $ids)->delete(),
                 'sessions' => DB::table('sessions')->whereIn('id', $ids)->delete(),
                 'password_reset_tokens' => DB::table('password_reset_tokens')->whereIn('email', $ids)->delete(),
                 'personal_access_tokens' => DB::table('personal_access_tokens')->whereIn('id', $ids)->delete(),
-                'devices' => DB::table('devices')->whereIn('id', $ids)->delete(),
                 'cache' => DB::table('cache')->whereIn('key', $ids)->delete(),
                 'cache_locks' => DB::table('cache_locks')->whereIn('key', $ids)->delete(),
             };
-            $total += $deleted;
-        } while ($ids->count() === self::BATCH_SIZE);
 
-        return $total;
+            $total += $deleted;
+            $hasMore = $ids->count() === self::BATCH_SIZE;
+        } while ($hasMore);
+
+        return $category === 'devices'
+            ? ['devices' => $total, 'device_tokens' => $relatedTokenTotal]
+            : $total;
     }
 }
