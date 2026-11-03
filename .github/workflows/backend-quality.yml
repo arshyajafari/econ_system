@@ -53,4 +53,4 @@ jobs:
         run: php artisan migrate --force
 
       - name: Run test suite
-        run: php artisan test --without-tty
+        run: php artisan test --without-tty --display-warnings
