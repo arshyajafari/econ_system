@@ -7,8 +7,11 @@ use App\Http\Requests\Employee\StoreEmployeeLocationRequest;
 use App\Http\Resources\EmployeeLocationResource;
 use App\Models\Employee;
 use App\Models\EmployeeLocation;
+use App\Models\EmployeeWorkSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class EmployeeLocationController extends Controller {
     private const MAX_GAP_MS = 300_000;
@@ -18,32 +21,87 @@ class EmployeeLocationController extends Controller {
     private const MAX_SPEED_KMH = 180;
     private const DAILY_POINT_LIMIT = 5000;
 
-    public function store(StoreEmployeeLocationRequest $request): EmployeeLocationResource {
-        // Continuous browser polling has been replaced by explicit daily work sessions.
-        // Keep historical employee_locations intact, but reject stale clients that still
-        // try to append background tracking points.
-        abort(410, 'ثبت پیوسته موقعیت غیرفعال شده است؛ از دکمه شروع و پایان کار استفاده کنید.');
+    public function store(StoreEmployeeLocationRequest $request): EmployeeLocationResource
+    {
+        $user = $request->user();
+        abort_unless(!$user->hasRole('accountant'), 403, 'حسابدار امکان ثبت موقعیت مأموریت را ندارد.');
+
+        $employee = $user->employee;
+        abort_unless($employee && $employee->status->value === 'active', 422, 'کاربر به کارمند فعال متصل نیست.');
 
         $data = $request->validated();
-        $data['employee_id'] = $employee->id;
-        $data['captured_at'] = $data['captured_at'] ?? now();
-        $data['source'] = $data['source'] ?? 'browser';
+        $operationId = $data['client_operation_id'] ?? null;
 
-        // Make retries safe when the client loses the response after the row was committed.
-        // The unique database index remains the final guard against duplicate operation IDs.
-        if (!empty($data['client_operation_id'])) {
+        if ($operationId) {
             $existing = EmployeeLocation::query()
-                ->where('employee_id', $employee->id)
-                ->where('client_operation_id', $data['client_operation_id'])
+                ->where('client_operation_id', $operationId)
                 ->first();
 
             if ($existing) {
-                return EmployeeLocationResource::make($existing->load('employee'));
+                return EmployeeLocationResource::make(
+                    $this->assertLocationOperationMatches($existing, $employee, $data)->load('employee')
+                );
             }
         }
 
-        $location = EmployeeLocation::create($data)->load('employee');
-        return EmployeeLocationResource::make($location);
+        $location = DB::transaction(function () use ($employee, $data, $operationId) {
+            $session = EmployeeWorkSession::query()
+                ->where('employee_id', $employee->id)
+                ->whereNull('ended_at')
+                ->orderByDesc('started_at')
+                ->lockForUpdate()
+                ->first();
+
+            if (!$session) {
+                throw ValidationException::withMessages([
+                    'work_session' => ['برای ثبت مسیر باید ابتدا مأموریت را شروع کنید.'],
+                ]);
+            }
+
+            // Re-check the idempotency key after acquiring the session lock so
+            // concurrent retries cannot insert duplicate location samples.
+            if ($operationId) {
+                $existing = EmployeeLocation::query()
+                    ->where('client_operation_id', $operationId)
+                    ->first();
+
+                if ($existing) {
+                    return $this->assertLocationOperationMatches($existing, $employee, $data);
+                }
+            }
+
+            return EmployeeLocation::query()->create([
+                'employee_id' => $employee->id,
+                'work_session_id' => $session->id,
+                'latitude' => $data['latitude'],
+                'longitude' => $data['longitude'],
+                'accuracy' => $data['accuracy'] ?? null,
+                'source' => 'work_session',
+                'captured_at' => now(),
+                'client_operation_id' => $operationId,
+                'meta' => $data['meta'] ?? null,
+            ])->load('employee');
+        }, 3);
+
+        return EmployeeLocationResource::make($location->load('employee'));
+    }
+
+    private function assertLocationOperationMatches(
+        EmployeeLocation $existing,
+        Employee $employee,
+        array $data
+    ): EmployeeLocation {
+        if (
+            (int) $existing->employee_id !== (int) $employee->id
+            || abs((float) $existing->latitude - (float) $data['latitude']) > 0.0000001
+            || abs((float) $existing->longitude - (float) $data['longitude']) > 0.0000001
+        ) {
+            throw ValidationException::withMessages([
+                'client_operation_id' => ['شناسه این نقطه قبلاً برای اطلاعات دیگری استفاده شده است.'],
+            ]);
+        }
+
+        return $existing;
     }
 
     public function index(Request $request) {
