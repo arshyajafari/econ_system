@@ -204,14 +204,27 @@ class EmployeeWorkSessionController extends Controller {
     public function locations(Request $request, string $sessionId)
     {
         abort_unless($request->user()->hasRole('admin'), 403);
+        $validated = $request->validate([
+            'after' => ['nullable', 'date'],
+        ]);
 
         $session = EmployeeWorkSession::query()
             ->where('public_id', $sessionId)
             ->firstOrFail();
 
-        $locations = EmployeeLocation::query()
+        $query = EmployeeLocation::query()
             ->where('work_session_id', $session->id)
-            ->with('employee')
+            ->with('employee');
+
+        if (!empty($validated['after'])) {
+            $query->where(
+                'captured_at',
+                '>=',
+                Carbon::parse($validated['after'])->timezone(config('app.timezone', 'Asia/Tehran'))
+            );
+        }
+
+        $locations = $query
             ->orderBy('captured_at')
             ->orderBy('id')
             ->limit(5000)
