@@ -11,7 +11,6 @@ class EmployeeLocation extends BaseModel
 
     public const DEFAULT_RELATIONS = [
         'employee',
-        'workSession',
     ];
 
     protected $fillable = [
