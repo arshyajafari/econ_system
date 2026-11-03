@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class EmployeeWorkSessionTest extends TestCase {
@@ -141,6 +142,12 @@ class EmployeeWorkSessionTest extends TestCase {
         $this->assertTrue(
             \Illuminate\Support\Carbon::parse($storedPoint->captured_at)->greaterThan(now()->subMinute())
         );
+
+        Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $user->assignRole('admin');
+        $this->getJson('/api/v1/employees/locations/work-sessions/' . $start->json('data.id') . '/locations')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
 
         $this->postJson('/api/v1/employees/locations/work-sessions/end', [
             'latitude' => 36.5705,
