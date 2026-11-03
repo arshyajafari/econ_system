@@ -14,7 +14,7 @@
 
         protected $fillable = [
             'client_operation_id',
-            'employee_id',
+            'employee_id',\n            'work_session_id',
             'latitude',
             'longitude',
             'accuracy',
