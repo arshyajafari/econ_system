@@ -109,7 +109,22 @@ class DataCleanupRetentionTest extends TestCase
             'guard_name' => 'web',
         ]);
 
+        $now = now();
+        $employeeId = DB::table('employees')->insertGetId([
+            'public_id' => (string) Str::ulid(),
+            'code' => 'EMP-' . Str::upper(Str::random(8)),
+            'first_name' => 'Cleanup',
+            'last_name' => 'Admin',
+            'national_code' => Str::upper(Str::random(10)),
+            'phone_number' => '09' . random_int(100000000, 999999999),
+            'hire_date' => $now->toDateString(),
+            'status' => 'active',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
         $admin = User::query()->create([
+            'employee_id' => $employeeId,
             'login' => 'cleanup-admin-' . Str::lower(Str::random(12)),
             'password' => 'test-password',
             'status' => 'active',
