@@ -32,5 +32,6 @@ Route::prefix('v1')->group(function () {
         require __DIR__ . '/api/sample.php';
         require __DIR__ . '/api/report.php';
         require __DIR__ . '/api/notification.php';
+        require __DIR__ . '/api/data-cleanup.php';
     });
 });
