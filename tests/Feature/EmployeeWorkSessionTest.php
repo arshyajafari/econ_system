@@ -96,6 +96,69 @@ class EmployeeWorkSessionTest extends TestCase {
         $this->assertDatabaseCount('employee_work_sessions', 0);
     }
 
+    public function test_location_points_are_saved_only_during_an_open_work_session_with_server_time(): void {
+        $user = $this->createEmployeeUser();
+        $this->actingAs($user);
+
+        $outsideSession = $this->postJson('/api/v1/employees/locations/me', [
+            'latitude' => 36.5658,
+            'longitude' => 53.0586,
+            'accuracy' => 10,
+            'client_operation_id' => '8d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0201',
+        ]);
+        $outsideSession->assertUnprocessable();
+        $this->assertDatabaseCount('employee_locations', 0);
+
+        $start = $this->postJson('/api/v1/employees/locations/work-sessions/start', [
+            'latitude' => 36.5658,
+            'longitude' => 53.0586,
+            'accuracy' => 10,
+            'client_operation_id' => '8d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0202',
+        ]);
+        $start->assertCreated();
+
+        $operationId = '8d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0203';
+        $point = $this->postJson('/api/v1/employees/locations/me', [
+            'latitude' => 36.5700,
+            'longitude' => 53.0600,
+            'accuracy' => 14,
+            'client_operation_id' => $operationId,
+            // Client timestamps are deliberately ignored by the server.
+            'captured_at' => '2000-01-01T00:00:00Z',
+        ]);
+        $point->assertOk();
+
+        $sessionDatabaseId = DB::table('employee_work_sessions')
+            ->where('public_id', $start->json('data.id'))
+            ->value('id');
+        $storedPoint = DB::table('employee_locations')
+            ->where('client_operation_id', $operationId)
+            ->first();
+
+        $this->assertNotNull($storedPoint);
+        $this->assertSame((int) $sessionDatabaseId, (int) $storedPoint->work_session_id);
+        $this->assertSame('work_session', $storedPoint->source);
+        $this->assertTrue(
+            \Illuminate\Support\Carbon::parse($storedPoint->captured_at)->greaterThan(now()->subMinute())
+        );
+
+        $this->postJson('/api/v1/employees/locations/work-sessions/end', [
+            'latitude' => 36.5705,
+            'longitude' => 53.0605,
+            'accuracy' => 12,
+            'client_operation_id' => '8d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0204',
+        ])->assertOk();
+
+        $this->postJson('/api/v1/employees/locations/me', [
+            'latitude' => 36.5710,
+            'longitude' => 53.0610,
+            'accuracy' => 12,
+            'client_operation_id' => '8d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0205',
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseCount('employee_locations', 1);
+    }
+
     private function createEmployeeUser(): User {
         $now = now();
         $employeeId = DB::table('employees')->insertGetId([
