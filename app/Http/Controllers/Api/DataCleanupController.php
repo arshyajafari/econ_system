@@ -92,7 +92,7 @@ class DataCleanupController extends Controller
             'confirmation' => ['required', 'in:DELETE'],
         ]);
 
-        $lock = Cache::lock('data-cleanup:global', 900);
+        $lock = Cache::lock('data-cleanup:global', 7200);
         if (!$lock->get()) {
             throw ValidationException::withMessages([
                 'cleanup' => ['یک عملیات پاک‌سازی دیگر در حال اجراست.'],
@@ -116,6 +116,10 @@ class DataCleanupController extends Controller
             $deleted = [];
             foreach ($data['categories'] as $category) {
                 $deleted[$category] = $this->deleteCategory($category, $cutoff);
+                DB::table('data_cleanup_runs')->where('id', $runId)->update([
+                    'deleted_counts' => json_encode($deleted),
+                    'updated_at' => now(),
+                ]);
             }
 
             DB::table('data_cleanup_runs')->where('id', $runId)->update([
@@ -133,6 +137,7 @@ class DataCleanupController extends Controller
             if ($runId) {
                 DB::table('data_cleanup_runs')->where('id', $runId)->update([
                     'status' => 'failed',
+                    'deleted_counts' => isset($deleted) ? json_encode($deleted) : null,
                     'failure_message' => mb_substr($exception->getMessage(), 0, 4000),
                     'finished_at' => now(),
                     'updated_at' => now(),
