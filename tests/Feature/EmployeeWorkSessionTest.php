@@ -127,7 +127,7 @@ class EmployeeWorkSessionTest extends TestCase {
             // Client timestamps are deliberately ignored by the server.
             'captured_at' => '2000-01-01T00:00:00Z',
         ]);
-        $point->assertOk();
+        $point->assertCreated();
 
         $sessionDatabaseId = DB::table('employee_work_sessions')
             ->where('public_id', $start->json('data.id'))
