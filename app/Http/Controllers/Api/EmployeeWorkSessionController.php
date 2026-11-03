@@ -138,7 +138,7 @@ class EmployeeWorkSessionController extends Controller {
             'ended_at' => ['nullable', 'date'],
             'end_latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'end_longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'end_accuracy' => ['nullable', 'numeric', 'min:0', 'max:200'],
+            'end_accuracy' => ['nullable', 'numeric', 'min:0', 'max:5000'],
         ]);
         if ((($data['end_latitude'] ?? null) !== null) xor (($data['end_longitude'] ?? null) !== null)) {
             throw ValidationException::withMessages([
@@ -146,33 +146,43 @@ class EmployeeWorkSessionController extends Controller {
             ]);
         }
 
-        $session = EmployeeWorkSession::query()->where('public_id', $sessionId)->firstOrFail();
-        if ($session->ended_at) {
-            throw ValidationException::withMessages([
-                'work_session' => ['فقط مأموریت ناقص و پایان‌نیافته قابل اصلاح است.'],
-            ]);
-        }
+        $session = DB::transaction(function () use ($sessionId, $data, $request) {
+            $session = EmployeeWorkSession::query()
+                ->where('public_id', $sessionId)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $endedAt = isset($data['ended_at'])
-            ? Carbon::parse($data['ended_at'], config('app.timezone', 'Asia/Tehran'))
-            : Carbon::now(config('app.timezone', 'Asia/Tehran'));
-        if ($endedAt->lt($session->started_at)) {
-            throw ValidationException::withMessages([
-                'ended_at' => ['زمان پایان نمی‌تواند قبل از زمان شروع باشد.'],
-            ]);
-        }
+            if ($session->ended_at) {
+                throw ValidationException::withMessages([
+                    'work_session' => ['فقط مأموریت ناقص و پایان‌نیافته قابل اصلاح است.'],
+                ]);
+            }
 
-        $session->forceFill([
-            'ended_at' => $endedAt,
-            'end_latitude' => $data['end_latitude'] ?? null,
-            'end_longitude' => $data['end_longitude'] ?? null,
-            'end_accuracy' => $data['end_accuracy'] ?? null,
-            'admin_correction_reason' => $data['reason'],
-            'admin_corrected_by' => $request->user()->id,
-            'admin_corrected_at' => now(),
-        ])->save();
+            $timezone = config('app.timezone', 'Asia/Tehran');
+            $endedAt = isset($data['ended_at'])
+                ? Carbon::parse($data['ended_at'], $timezone)
+                : Carbon::now($timezone);
 
-        return response()->json(['data' => $this->serialize($session->refresh())]);
+            if ($endedAt->lt($session->started_at)) {
+                throw ValidationException::withMessages([
+                    'ended_at' => ['زمان پایان نمی‌تواند قبل از زمان شروع باشد.'],
+                ]);
+            }
+
+            $session->forceFill([
+                'ended_at' => $endedAt,
+                'end_latitude' => $data['end_latitude'] ?? null,
+                'end_longitude' => $data['end_longitude'] ?? null,
+                'end_accuracy' => $data['end_accuracy'] ?? null,
+                'admin_correction_reason' => $data['reason'],
+                'admin_corrected_by' => $request->user()->id,
+                'admin_corrected_at' => now($timezone),
+            ])->save();
+
+            return $session->refresh();
+        }, 3);
+
+        return response()->json(['data' => $this->serialize($session)]);
     }
 
     public function index(Request $request) {
