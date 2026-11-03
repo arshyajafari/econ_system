@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\EmployeeLocation;
 use App\Models\EmployeeWorkSession;
+use App\Http\Resources\EmployeeLocationResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -197,6 +199,25 @@ class EmployeeWorkSessionController extends Controller {
             ->get();
 
         return response()->json(['data' => $sessions->map(fn ($session) => $this->serialize($session))]);
+    }
+
+    public function locations(Request $request, string $sessionId)
+    {
+        abort_unless($request->user()->hasRole('admin'), 403);
+
+        $session = EmployeeWorkSession::query()
+            ->where('public_id', $sessionId)
+            ->firstOrFail();
+
+        $locations = EmployeeLocation::query()
+            ->where('work_session_id', $session->id)
+            ->with('employee')
+            ->orderBy('captured_at')
+            ->orderBy('id')
+            ->limit(5000)
+            ->get();
+
+        return EmployeeLocationResource::collection($locations);
     }
 
     private function employeeFor(Request $request): Employee {
