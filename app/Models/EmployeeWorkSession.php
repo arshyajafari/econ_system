@@ -4,8 +4,10 @@ namespace App\Models;
 
 use App\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class EmployeeWorkSession extends BaseModel {
+class EmployeeWorkSession extends BaseModel
+{
     use HasPublicId;
 
     protected $fillable = [
@@ -40,11 +42,18 @@ class EmployeeWorkSession extends BaseModel {
         'end_accuracy' => 'decimal:2',
     ];
 
-    public function adminCorrectedBy(): BelongsTo {
+    public function adminCorrectedBy(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'admin_corrected_by');
     }
 
-    public function employee(): BelongsTo {
+    public function employee(): BelongsTo
+    {
         return $this->belongsTo(Employee::class);
+    }
+
+    public function locations(): HasMany
+    {
+        return $this->hasMany(EmployeeLocation::class, 'work_session_id');
     }
 }
