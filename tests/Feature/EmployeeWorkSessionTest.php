@@ -145,9 +145,10 @@ class EmployeeWorkSessionTest extends TestCase {
 
         Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $user->assignRole('admin');
-        $this->getJson('/api/v1/employees/locations/work-sessions/' . $start->json('data.id') . '/locations')
-            ->assertOk()
-            ->assertJsonCount(1, 'data');
+        $routeResponse = $this->getJson(
+            '/api/v1/employees/locations/work-sessions/' . $start->json('data.id') . '/locations'
+        )->assertOk();
+        $this->assertCount(1, $routeResponse->json());
 
         $this->postJson('/api/v1/employees/locations/work-sessions/end', [
             'latitude' => 36.5705,
