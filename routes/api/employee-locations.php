@@ -16,5 +16,5 @@ Route::prefix('employees/locations')->name('employees.locations.')->group(functi
     Route::get('/live', [EmployeeLocationController::class, 'live'])->name('live');
     Route::get('/history/daily-summary', [EmployeeLocationController::class, 'dailySummary'])->name('history.daily-summary');
     Route::get('/history', [EmployeeLocationController::class, 'history'])->name('history');
-    Route::post('/me', [EmployeeLocationController::class, 'store'])->name('store');
+    Route::post('/me', [EmployeeLocationController::class, 'store'])->middleware('throttle:6,1')->name('store');
 });
