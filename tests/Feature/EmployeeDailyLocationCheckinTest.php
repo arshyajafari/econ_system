@@ -74,8 +74,8 @@ class EmployeeDailyLocationCheckinTest extends TestCase
 
         $this->getJson('/api/v1/employees/locations/check-ins')
             ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.source', 'daily_checkin');
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.source', 'daily_checkin');
     }
 
     private function createEmployeeUser(): User
