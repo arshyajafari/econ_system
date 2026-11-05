@@ -1,13 +1,13 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Str;
-use Spatie\\Permission\\Models\\Role;
-use Tests\\TestCase;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
+use Tests\TestCase;
 
 class EmployeeDailyLocationCheckinTest extends TestCase
 {
@@ -51,7 +51,7 @@ class EmployeeDailyLocationCheckinTest extends TestCase
         $this->assertSame('daily_checkin', $stored->source);
         $this->assertNull($stored->work_session_id);
         $this->assertTrue(
-            \\Illuminate\\Support\\Carbon::parse($stored->captured_at)->greaterThan(now()->subMinute())
+            \Illuminate\Support\Carbon::parse($stored->captured_at)->greaterThan(now()->subMinute())
         );
         $this->assertNotSame('2000-01-01 00:00:00', $stored->captured_at);
     }
