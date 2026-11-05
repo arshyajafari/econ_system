@@ -167,6 +167,30 @@ class EmployeeWorkSessionTest extends TestCase {
         $this->assertDatabaseCount('employee_locations', 1);
     }
 
+    public function test_employee_can_read_their_daily_saved_route_point_count(): void {
+        $user = $this->createEmployeeUser();
+        $this->actingAs($user);
+
+        $this->postJson('/api/v1/employees/locations/work-sessions/start', [
+            'latitude' => 36.5658,
+            'longitude' => 53.0586,
+            'accuracy' => 10,
+            'client_operation_id' => '9d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0301',
+        ])->assertCreated();
+
+        $this->postJson('/api/v1/employees/locations/me', [
+            'latitude' => 36.5660,
+            'longitude' => 53.0588,
+            'accuracy' => 10,
+            'client_operation_id' => '9d3d3f3e-77d9-4f4b-a0d5-9b2a2a3f0302',
+        ])->assertCreated();
+
+        $this->getJson('/api/v1/employees/locations/me/daily-point-count')
+            ->assertOk()
+            ->assertJsonPath('data.points_count', 1)
+            ->assertJsonPath('data.date', now(config('app.timezone', 'Asia/Tehran'))->toDateString());
+    }
+
     private function createEmployeeUser(): User {
         $now = now();
         $employeeId = DB::table('employees')->insertGetId([
