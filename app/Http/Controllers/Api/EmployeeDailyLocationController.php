@@ -1,15 +1,15 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api;
+namespace App\Http\Controllers\Api;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Http\\Resources\\EmployeeLocationResource;
-use App\\Models\\Employee;
-use App\\Models\\EmployeeLocation;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Carbon;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Validation\\ValidationException;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\EmployeeLocationResource;
+use App\Models\Employee;
+use App\Models\EmployeeLocation;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class EmployeeDailyLocationController extends Controller
 {
