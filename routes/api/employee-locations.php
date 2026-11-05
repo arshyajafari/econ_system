@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\EmployeeWorkSessionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('employees/locations')->name('employees.locations.')->group(function () {
-    Route::get('/check-ins/me', [EmployeeDailyLocationController::class, 'today'])->name('check-ins.today');
+    Route::get('/me/daily-point-count', [EmployeeLocationController::class, 'myDailyPointCount'])->name('me.daily-point-count');\n    Route::get('/check-ins/me', [EmployeeDailyLocationController::class, 'today'])->name('check-ins.today');
     Route::post('/check-ins/me', [EmployeeDailyLocationController::class, 'store'])->middleware('throttle:6,1')->name('check-ins.store');
     Route::get('/check-ins', [EmployeeDailyLocationController::class, 'index'])->name('check-ins.index');
     Route::get('/work-sessions', [EmployeeWorkSessionController::class, 'index'])->name('work-sessions.index');
