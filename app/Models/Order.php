@@ -23,6 +23,7 @@ class Order extends BaseModel {
     ];
 
     public const SEARCHABLE = [
+        'code',
         'description',
         'offer_title',
         'offer_description',
