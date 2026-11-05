@@ -104,6 +104,31 @@ class EmployeeLocationController extends Controller {
         return $existing;
     }
 
+    public function myDailyPointCount(Request $request) {
+        $user = $request->user();
+        abort_unless(!$user->hasRole('accountant'), 403, 'حسابدار امکان مشاهده آمار موقعیت مأموریت را ندارد.');
+
+        $employee = $user->employee;
+        abort_unless($employee && $employee->status->value === 'active', 422, 'کاربر به کارمند فعال متصل نیست.');
+
+        $timezone = config('app.timezone', 'Asia/Tehran');
+        $start = Carbon::now($timezone)->startOfDay();
+        $end = $start->copy()->endOfDay();
+
+        $count = EmployeeLocation::query()
+            ->where('employee_id', $employee->id)
+            ->where('source', 'work_session')
+            ->whereBetween('captured_at', [$start, $end])
+            ->count();
+
+        return response()->json([
+            'data' => [
+                'date' => $start->toDateString(),
+                'points_count' => $count,
+            ],
+        ]);
+    }
+
     public function index(Request $request) {
         abort_unless($request->user()->hasRole('admin'), 403);
 
