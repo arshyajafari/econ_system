@@ -88,7 +88,6 @@ class DataCleanupController extends Controller
         $data = $request->validate([
             'categories' => ['required', 'array', 'min:1'],
             'categories.*' => ['required', 'string', 'distinct', 'in:'.implode(',', array_keys(self::CATEGORIES))],
-            'reason' => ['required', 'string', 'min:5', 'max:500'],
             'confirmation' => ['required', 'in:DELETE'],
         ]);
 
@@ -105,7 +104,7 @@ class DataCleanupController extends Controller
             $runId = DB::table('data_cleanup_runs')->insertGetId([
                 'user_id' => $request->user()->id,
                 'categories' => json_encode(array_values($data['categories'])),
-                'reason' => $data['reason'],
+                'reason' => 'پاک‌سازی دوره‌ای برای کاهش حجم دیتابیس',
                 'status' => 'running',
                 'started_at' => $startedAt,
                 'created_at' => $startedAt,
