@@ -14,6 +14,8 @@ enum Permission: string
     case DAILY_ACTIVITY_REPORT_EXPORT_OWN = 'daily_activity_reports.export_own';
     case DAILY_ACTIVITY_REPORT_EXPORT_ALL = 'daily_activity_reports.export_all';
     case DAILY_ACTIVITY_REPORT_CLEANUP = 'daily_activity_reports.cleanup';
+    case DAILY_ACTIVITY_REPORT_DELETE_OWN = 'daily_activity_reports.delete_own';
+    case DAILY_ACTIVITY_REPORT_DELETE_ALL = 'daily_activity_reports.delete_all';
 
     case CUSTOMER_VIEW = 'customers.view';
     case CUSTOMER_CREATE = 'customers.create';

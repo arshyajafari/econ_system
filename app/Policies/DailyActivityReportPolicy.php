@@ -41,6 +41,12 @@ class DailyActivityReportPolicy
             || $user->can('daily_activity_reports.export_own');
     }
 
+    public function delete(User $user, DailyActivityReport $report): bool
+    {
+        return $user->can('daily_activity_reports.delete_all')
+            || ($user->can('daily_activity_reports.delete_own') && $this->owns($user, $report));
+    }
+
     public function cleanup(User $user): bool
     {
         return $user->can('daily_activity_reports.cleanup');
