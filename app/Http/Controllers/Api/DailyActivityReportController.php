@@ -35,7 +35,7 @@ class DailyActivityReportController extends Controller
 
         $data = $request->safe()->except(['edit_reason']);
         $data['employee_id'] = $employee->id;
-        $data['employee_name_snapshot'] = $employee->full_name;
+        $data['employee_name_snapshot'] = trim($employee->first_name . ' ' . $employee->last_name);
         $data['created_by_user_id'] = $request->user()->id;
         $data['retention_until'] = JalaliDate::retentionDate($data['visit_date']);
 
