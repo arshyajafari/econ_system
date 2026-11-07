@@ -41,11 +41,14 @@ class RoleRegistry
                 ...array_values(array_filter(
                     PermissionRegistry::names(),
                     static fn (string $permission): bool =>
-                        str_ends_with($permission, '.view')
-                        || str_ends_with($permission, '.create')
-                        || str_ends_with($permission, '.update')
-                        || str_ends_with($permission, '.cancel')
-                        || str_ends_with($permission, '.export'),
+                        !str_starts_with($permission, 'daily_activity_reports.')
+                        && (
+                            str_ends_with($permission, '.view')
+                            || str_ends_with($permission, '.create')
+                            || str_ends_with($permission, '.update')
+                            || str_ends_with($permission, '.cancel')
+                            || str_ends_with($permission, '.export')
+                        ),
                 )),
                 Permission::CUSTOMER_VIEW->value,
                 Permission::ORDER_VIEW->value, Permission::ORDER_CREATE->value,
