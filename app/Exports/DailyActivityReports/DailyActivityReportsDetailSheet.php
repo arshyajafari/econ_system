@@ -17,7 +17,7 @@ class DailyActivityReportsDetailSheet implements FromCollection, WithHeadings, W
     {
         return $this->query->orderBy('visit_date')->get()->map(fn ($row) => [
             $row->employee_name_snapshot,
-            $row->visit_date ? implode('/', array_map(static fn (int $part) => str_pad((string) $part, 2, '0', STR_PAD_LEFT), JalaliDate::fromGregorian(CarbonImmutable::parse($row->visit_date))) ) : null,
+            $row->visit_date ? (function () use ($row) { [$year, $month, $day] = JalaliDate::fromGregorian(CarbonImmutable::parse($row->visit_date)); return sprintf('%04d/%02d/%02d', $year, $month, $day); })() : null,
             $row->visit_time,
             $row->organization_name,
             $row->contact_name,
