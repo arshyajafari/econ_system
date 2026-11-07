@@ -182,6 +182,17 @@ class DailyActivityReportController extends Controller
 
     private function filteredQuery(Request $request): Builder
     {
+        $request->validate([
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
+            'contact_type' => ['nullable', 'in:in_person,phone'],
+            'result' => ['nullable', 'in:positive,neutral,negative,follow_up'],
+            'search' => ['nullable', 'string', 'max:200'],
+            'employee_id' => ['nullable', 'string', 'max:64'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
         $user = $request->user();
         $query = DailyActivityReport::query()->with('employee');
 
@@ -193,10 +204,10 @@ class DailyActivityReportController extends Controller
         }
 
         if ($request->filled('from')) {
-            $query->whereDate('visit_date', '>=', $request->date('from'));
+            $query->whereDate('visit_date', '>=', $request->input('from'));
         }
         if ($request->filled('to')) {
-            $query->whereDate('visit_date', '<=', $request->date('to'));
+            $query->whereDate('visit_date', '<=', $request->input('to'));
         }
         if ($request->filled('contact_type')) {
             $query->where('contact_type', $request->string('contact_type')->toString());
