@@ -92,14 +92,18 @@ class DailyActivityReportController extends Controller
 
     public function export(Request $request)
     {
-        $this->authorize('export', DailyActivityReport::class);
         $archive = $request->boolean('archive');
         if ($archive) {
+            // Archive export is part of the explicit cleanup workflow.
             $this->authorize('cleanup', DailyActivityReport::class);
-            abort_unless($request->user()->can('daily_activity_reports.export_all'), 403);
+        } else {
+            $this->authorize('export', DailyActivityReport::class);
         }
 
-        $query = $this->filteredQuery($request, 'daily_activity_reports.export_all');
+        $query = $this->filteredQuery(
+            $request,
+            $archive ? 'daily_activity_reports.cleanup' : 'daily_activity_reports.export_all',
+        );
         $query->whereDate(
             'retention_until',
             $archive ? '<=' : '>',
