@@ -141,7 +141,7 @@ class DailyActivityReportTest extends TestCase
         $this->withToken($adminToken)
             ->postJson('/api/v1/daily-activity-reports/archive/cleanup', [
                 'report_ids' => $reportIds,
-                'reason' => 'پاک‌سازی گزارش منقضی‌شده',
+                'reason' => 'پاک‌سازی گزارش‌ها برای کاهش حجم دیتابیس',
                 'confirmation' => 'DELETE',
             ])
             ->assertOk()
@@ -191,7 +191,7 @@ class DailyActivityReportTest extends TestCase
         $this->assertDatabaseHas('daily_activity_report_cleanup_runs', [
             'user_id' => $owner->id,
             'deleted_count' => 1,
-            'reason' => 'حذف تکی گزارش توسط کاربر',
+            'reason' => 'حذف گزارش از بخش مدیریت برای کاهش حجم گزارش‌ها',
         ]);
     }
 
