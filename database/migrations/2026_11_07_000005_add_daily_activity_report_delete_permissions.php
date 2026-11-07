@@ -1,9 +1,9 @@
 <?php
 
-use App\\Enums\\Role;
-use App\\Security\\PermissionSyncService;
-use Illuminate\\Database\\Migrations\\Migration;
-use Spatie\\Permission\\Models\\Role as SpatieRole;
+use App\Enums\Role;
+use App\Security\PermissionSyncService;
+use Illuminate\Database\Migrations\Migration;
+use Spatie\Permission\Models\Role as SpatieRole;
 
 return new class extends Migration {
     public function up(): void
