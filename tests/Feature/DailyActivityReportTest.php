@@ -93,6 +93,47 @@ class DailyActivityReportTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_admin_can_review_and_explicitly_clean_up_expired_reports(): void
+    {
+        [, , $adminToken] = $this->createEmployeeUser('admin', 'Cleanup');
+
+        $created = $this->withToken($adminToken)
+            ->postJson('/api/v1/daily-activity-reports', [
+                'visit_date' => '2026-09-10',
+                'organization_name' => 'گزارش قدیمی',
+                'contact_type' => 'phone',
+                'purpose' => 'پیگیری',
+                'discussion' => 'گفت‌وگوی قدیمی',
+                'outcome' => 'پایان مذاکره',
+                'result' => 'neutral',
+            ])
+            ->assertCreated();
+
+        $reportId = DB::table('daily_activity_reports')->value('id');
+        $this->assertDatabaseHas('daily_activity_reports', ['id' => $reportId]);
+
+        $this->withToken($adminToken)
+            ->getJson('/api/v1/daily-activity-reports/archive')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $reportId]);
+
+        Auth::forgetGuards();
+        $this->withToken($adminToken)
+            ->postJson('/api/v1/daily-activity-reports/archive/cleanup', [
+                'report_ids' => [$reportId],
+                'reason' => 'پاک‌سازی گزارش منقضی‌شده',
+                'confirmation' => 'DELETE',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.deleted_count', 1);
+
+        $this->assertDatabaseMissing('daily_activity_reports', ['id' => $reportId]);
+        $this->assertDatabaseHas('daily_activity_report_cleanup_runs', [
+            'deleted_count' => 1,
+            'reason' => 'پاک‌سازی گزارش منقضی‌شده',
+        ]);
+    }
+
     private function createEmployeeUser(string $role, string $suffix = ''): array
     {
         Role::findOrCreate($role, 'web');
