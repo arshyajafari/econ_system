@@ -6,6 +6,14 @@ enum Permission: string
 {
     case DASHBOARD_VIEW = 'dashboard.view';
     case REPORT_VIEW = 'reports.view';
+    case DAILY_ACTIVITY_REPORT_VIEW_OWN = 'daily_activity_reports.view_own';
+    case DAILY_ACTIVITY_REPORT_VIEW_ALL = 'daily_activity_reports.view_all';
+    case DAILY_ACTIVITY_REPORT_CREATE = 'daily_activity_reports.create';
+    case DAILY_ACTIVITY_REPORT_UPDATE_OWN = 'daily_activity_reports.update_own';
+    case DAILY_ACTIVITY_REPORT_UPDATE_ALL = 'daily_activity_reports.update_all';
+    case DAILY_ACTIVITY_REPORT_EXPORT_OWN = 'daily_activity_reports.export_own';
+    case DAILY_ACTIVITY_REPORT_EXPORT_ALL = 'daily_activity_reports.export_all';
+    case DAILY_ACTIVITY_REPORT_CLEANUP = 'daily_activity_reports.cleanup';
 
     case CUSTOMER_VIEW = 'customers.view';
     case CUSTOMER_CREATE = 'customers.create';
