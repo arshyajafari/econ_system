@@ -103,7 +103,7 @@ class DailyActivityReportController extends Controller
                 'user_id' => $request->user()->id,
                 'report_ids' => json_encode([$id]),
                 'deleted_count' => 1,
-                'reason' => 'حذف تکی گزارش توسط کاربر',
+                'reason' => 'حذف گزارش از بخش مدیریت برای کاهش حجم گزارش‌ها',
                 'created_at' => now(),
             ]);
 
@@ -167,7 +167,6 @@ class DailyActivityReportController extends Controller
         $data = $request->validate([
             'report_ids' => ['required', 'array', 'min:1'],
             'report_ids.*' => ['required', 'integer', 'distinct', 'exists:daily_activity_reports,id'],
-            'reason' => ['required', 'string', 'min:5', 'max:500'],
             'confirmation' => ['required', 'in:DELETE'],
         ]);
 
@@ -191,7 +190,7 @@ class DailyActivityReportController extends Controller
                 'user_id' => $request->user()->id,
                 'report_ids' => json_encode($ids),
                 'deleted_count' => $count,
-                'reason' => $data['reason'],
+                'reason' => 'پاک‌سازی گزارش‌ها برای کاهش حجم دیتابیس',
                 'created_at' => now(),
             ]);
 
