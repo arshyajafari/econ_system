@@ -3,6 +3,7 @@
 namespace App\Exports\DailyActivityReports;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Enumerable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -13,7 +14,7 @@ class DailyActivityReportsSummarySheet implements FromCollection, WithHeadings, 
     {
     }
 
-    public function collection()
+    public function collection(): Enumerable
     {
         return $this->query->get()->groupBy('employee_name_snapshot')->map(function ($rows, $employee) {
             return [
