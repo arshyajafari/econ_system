@@ -12,4 +12,5 @@ Route::prefix('daily-activity-reports')->name('daily-activity-reports.')->group(
     Route::post('/archive/cleanup', [DailyActivityReportController::class, 'cleanup'])->name('archive.cleanup');
     Route::get('/{dailyActivityReport}', [DailyActivityReportController::class, 'show'])->name('show');
     Route::put('/{dailyActivityReport}', [DailyActivityReportController::class, 'update'])->name('update');
+    Route::delete('/{dailyActivityReport}', [DailyActivityReportController::class, 'destroy'])->name('destroy');
 });
