@@ -104,11 +104,9 @@ class DailyActivityReportController extends Controller
             $request,
             $archive ? 'daily_activity_reports.cleanup' : 'daily_activity_reports.export_all',
         );
-        $query->whereDate(
-            'retention_until',
-            $archive ? '<=' : '>',
-            now('Asia/Tehran')->toDateString()
-        );
+        if (!$archive) {
+            $query->whereDate('retention_until', '>', now('Asia/Tehran')->toDateString());
+        }
 
         $filename = 'daily-activity-reports-' . now('Asia/Tehran')->format('Ymd-His') . '.xlsx';
 
@@ -118,8 +116,7 @@ class DailyActivityReportController extends Controller
     public function archive(Request $request)
     {
         $this->authorize('cleanup', DailyActivityReport::class);
-        $query = $this->filteredQuery($request, 'daily_activity_reports.cleanup')
-            ->whereDate('retention_until', '<=', now('Asia/Tehran')->toDateString());
+        $query = $this->filteredQuery($request, 'daily_activity_reports.cleanup');
 
         return DailyActivityReportResource::collection(
             $query->orderBy('retention_until')->orderBy('visit_date')->paginate(min((int) $request->input('per_page', 20), 100))
@@ -156,13 +153,12 @@ class DailyActivityReportController extends Controller
         return DB::transaction(function () use ($request, $data) {
             $reports = DailyActivityReport::query()
                 ->whereIn('id', $data['report_ids'])
-                ->whereDate('retention_until', '<=', now('Asia/Tehran')->toDateString())
                 ->lockForUpdate()
                 ->get();
 
             if ($reports->count() !== count($data['report_ids'])) {
                 throw ValidationException::withMessages([
-                    'report_ids' => ['فقط گزارش‌های منتقل‌شده به بخش پاک‌سازی قابل حذف هستند. صفحه را تازه‌سازی کنید.'],
+                    'report_ids' => ['برخی گزارش‌ها دیگر در دسترس نیستند. صفحه را تازه‌سازی کنید.'],
                 ]);
             }
 
