@@ -26,7 +26,7 @@ class DailyActivityReportRequest extends FormRequest
             'audience_feedback' => ['nullable', 'string', 'max:5000'],
             'outcome' => ['required', 'string', 'max:5000'],
             'result' => ['required', Rule::in(['positive', 'neutral', 'negative', 'follow_up'])],
-            'edit_reason' => [$this->isMethod('put') || $this->isMethod('patch') ? 'required' : 'nullable', 'string', 'min:5', 'max:500'],
+            'edit_reason' => ['nullable', 'string', 'max:500'],
         ];
     }
 }
