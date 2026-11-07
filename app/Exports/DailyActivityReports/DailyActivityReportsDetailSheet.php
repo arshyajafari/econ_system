@@ -19,7 +19,7 @@ class DailyActivityReportsDetailSheet implements FromCollection, WithHeadings, W
     {
         return $this->query->orderBy('visit_date')->get()->map(fn ($row) => [
             $row->employee_name_snapshot,
-            $row->visit_date ? (function () use ($row) { [$year, $month, $day] = JalaliDate::fromGregorian(CarbonImmutable::parse($row->visit_date)); return sprintf('%04d/%02d/%02d', $year, $month, $day); })() : null,
+            $this->formatJalaliDate($row->visit_date),
             $row->visit_time,
             $row->organization_name,
             $row->contact_name,
@@ -37,6 +37,17 @@ class DailyActivityReportsDetailSheet implements FromCollection, WithHeadings, W
                 default => $row->result,
             },
         ]);
+    }
+
+    private function formatJalaliDate(mixed $date): ?string
+    {
+        if ($date === null) {
+            return null;
+        }
+
+        [$year, $month, $day] = JalaliDate::fromGregorian(CarbonImmutable::parse($date));
+
+        return sprintf('%04d/%02d/%02d', $year, $month, $day);
     }
 
     public function headings(): array
