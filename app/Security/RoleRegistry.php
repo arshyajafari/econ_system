@@ -18,6 +18,10 @@ class RoleRegistry
                 Permission::ORDER_UPDATE->value, Permission::ORDER_SUBMIT->value,
                 Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value,
                 Permission::ORDER_RETURN_UPDATE->value,
+                Permission::DAILY_ACTIVITY_REPORT_VIEW_OWN->value,
+                Permission::DAILY_ACTIVITY_REPORT_CREATE->value,
+                Permission::DAILY_ACTIVITY_REPORT_UPDATE_OWN->value,
+                Permission::DAILY_ACTIVITY_REPORT_EXPORT_OWN->value,
             ],
 
             Role::SCIENTIFIC_VISITOR->value => [
