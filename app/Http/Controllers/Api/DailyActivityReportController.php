@@ -98,7 +98,7 @@ class DailyActivityReportController extends Controller
             $this->authorize('cleanup', DailyActivityReport::class);
         }
 
-        $query = $this->filteredQuery($request);
+        $query = $this->filteredQuery($request, 'daily_activity_reports.export_all');
         $query->whereDate(
             'retention_until',
             $archive ? '<=' : '>',
@@ -113,7 +113,7 @@ class DailyActivityReportController extends Controller
     public function archive(Request $request)
     {
         $this->authorize('cleanup', DailyActivityReport::class);
-        $query = $this->filteredQuery($request)
+        $query = $this->filteredQuery($request, 'daily_activity_reports.cleanup')
             ->whereDate('retention_until', '<=', now('Asia/Tehran')->toDateString());
 
         return DailyActivityReportResource::collection(
@@ -190,7 +190,7 @@ class DailyActivityReportController extends Controller
         abort_unless($canManageAll || ($isOwner && $user->can($ownPermission)), 403);
     }
 
-    private function filteredQuery(Request $request): Builder
+    private function filteredQuery(Request $request, string $allPermission = 'daily_activity_reports.view_all'): Builder
     {
         $request->validate([
             'from' => ['nullable', 'date_format:Y-m-d'],
@@ -206,7 +206,7 @@ class DailyActivityReportController extends Controller
         $user = $request->user();
         $query = DailyActivityReport::query()->with('employee');
 
-        if (!$user->can('daily_activity_reports.view_all') && !$user->can('daily_activity_reports.export_all')) {
+        if (!$user->can($allPermission)) {
             abort_unless($user->employee_id, 403);
             $query->where('employee_id', $user->employee_id);
         } elseif ($request->filled('employee_id')) {
