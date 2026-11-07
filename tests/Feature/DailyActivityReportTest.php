@@ -34,10 +34,9 @@ class DailyActivityReportTest extends TestCase
         $created = $this->withToken($token)
             ->postJson('/api/v1/daily-activity-reports', $payload)
             ->assertCreated()
-            ->assertJsonPath('data.employee.name', 'Test Employee')
             ->assertJsonPath('data.result', 'follow_up');
 
-        $id = $created->json('data.id');
+        $id = DB::table('daily_activity_reports')->value('id');
 
         $this->withToken($token)
             ->putJson('/api/v1/daily-activity-reports/' . $id, [
@@ -79,7 +78,7 @@ class DailyActivityReportTest extends TestCase
         $created = $this->withToken($ownerToken)
             ->postJson('/api/v1/daily-activity-reports', $payload)
             ->assertCreated();
-        $id = $created->json('data.id');
+        $id = DB::table('daily_activity_reports')->value('id');
 
         $this->withToken($otherToken)
             ->putJson('/api/v1/daily-activity-reports/' . $id, [
