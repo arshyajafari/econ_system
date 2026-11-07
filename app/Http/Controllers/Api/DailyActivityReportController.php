@@ -90,6 +90,27 @@ class DailyActivityReportController extends Controller
         return new DailyActivityReportResource($dailyActivityReport->fresh()->load(['employee', 'revisions']));
     }
 
+    public function destroy(Request $request, DailyActivityReport $dailyActivityReport)
+    {
+        $this->authorizeReportAccess($request, $dailyActivityReport, 'daily_activity_reports.delete_own', 'daily_activity_reports.delete_all');
+
+        return DB::transaction(function () use ($request, $dailyActivityReport) {
+            $report = DailyActivityReport::query()->whereKey($dailyActivityReport->getKey())->lockForUpdate()->firstOrFail();
+            $id = (int) $report->getKey();
+            $report->delete();
+
+            DB::table('daily_activity_report_cleanup_runs')->insert([
+                'user_id' => $request->user()->id,
+                'report_ids' => json_encode([$id]),
+                'deleted_count' => 1,
+                'reason' => 'حذف تکی گزارش توسط کاربر',
+                'created_at' => now(),
+            ]);
+
+            return response()->json(['message' => 'گزارش فعالیت با موفقیت حذف شد.']);
+        });
+    }
+
     public function export(Request $request)
     {
         $archive = $request->boolean('archive');
