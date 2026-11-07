@@ -14,6 +14,16 @@ return new class extends Migration {
         // Add only this feature's grants; do not resync every role and overwrite
         // permissions that administrators may have customized in production.
         $grants = [
+            Role::ADMIN->value => [
+                Permission::DAILY_ACTIVITY_REPORT_VIEW_OWN->value,
+                Permission::DAILY_ACTIVITY_REPORT_VIEW_ALL->value,
+                Permission::DAILY_ACTIVITY_REPORT_CREATE->value,
+                Permission::DAILY_ACTIVITY_REPORT_UPDATE_OWN->value,
+                Permission::DAILY_ACTIVITY_REPORT_UPDATE_ALL->value,
+                Permission::DAILY_ACTIVITY_REPORT_EXPORT_OWN->value,
+                Permission::DAILY_ACTIVITY_REPORT_EXPORT_ALL->value,
+                Permission::DAILY_ACTIVITY_REPORT_CLEANUP->value,
+            ],
             Role::SALES_VISITOR->value => [
                 Permission::DAILY_ACTIVITY_REPORT_VIEW_OWN->value,
                 Permission::DAILY_ACTIVITY_REPORT_CREATE->value,
