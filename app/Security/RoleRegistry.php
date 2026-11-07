@@ -27,6 +27,10 @@ class RoleRegistry
                 Permission::VISIT_CANCEL->value,
                 Permission::SAMPLE_VIEW->value, Permission::SAMPLE_CREATE->value,
                 Permission::SAMPLE_UPDATE->value,
+                Permission::DAILY_ACTIVITY_REPORT_VIEW_OWN->value,
+                Permission::DAILY_ACTIVITY_REPORT_CREATE->value,
+                Permission::DAILY_ACTIVITY_REPORT_UPDATE_OWN->value,
+                Permission::DAILY_ACTIVITY_REPORT_EXPORT_OWN->value,
             ],
 
             Role::ACCOUNTANT->value => array_values(array_unique([
