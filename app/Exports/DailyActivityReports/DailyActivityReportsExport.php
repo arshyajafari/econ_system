@@ -5,7 +5,7 @@ namespace App\Exports\DailyActivityReports;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class DailyActivityReportsExport implements WithMultipleSheets
+class DailyActivityReportsExport implements Export, WithMultipleSheets
 {
     public function __construct(private readonly Builder $query)
     {
