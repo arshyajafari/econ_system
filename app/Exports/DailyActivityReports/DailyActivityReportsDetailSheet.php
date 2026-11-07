@@ -5,6 +5,7 @@ namespace App\Exports\DailyActivityReports;
 use App\Support\JalaliDate;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Enumerable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -15,7 +16,7 @@ class DailyActivityReportsDetailSheet implements FromCollection, WithHeadings, W
     {
     }
 
-    public function collection()
+    public function collection(): Enumerable
     {
         return $this->query->orderBy('visit_date')->get()->map(fn ($row) => [
             $row->employee_name_snapshot,
