@@ -207,7 +207,8 @@ class DailyActivityReportController extends Controller
         if ($request->filled('search')) {
             $search = trim($request->string('search')->toString());
             $query->where(function (Builder $builder) use ($search) {
-                $builder->where('organization_name', 'like', "%{$search}%")
+                $builder->where('employee_name_snapshot', 'like', "%{$search}%")
+                    ->orWhere('organization_name', 'like', "%{$search}%")
                     ->orWhere('contact_name', 'like', "%{$search}%")
                     ->orWhere('purpose', 'like', "%{$search}%")
                     ->orWhere('discussion', 'like', "%{$search}%");
