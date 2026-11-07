@@ -96,6 +96,7 @@ class DailyActivityReportController extends Controller
         $archive = $request->boolean('archive');
         if ($archive) {
             $this->authorize('cleanup', DailyActivityReport::class);
+            abort_unless($request->user()->can('daily_activity_reports.export_all'), 403);
         }
 
         $query = $this->filteredQuery($request, 'daily_activity_reports.export_all');
