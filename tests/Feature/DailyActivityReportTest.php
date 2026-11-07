@@ -34,7 +34,7 @@ class DailyActivityReportTest extends TestCase
         $created = $this->withToken($token)
             ->postJson('/api/v1/daily-activity-reports', $payload)
             ->assertCreated()
-            ->assertJsonPath('data.result', 'follow_up');
+            ->assertJsonPath('result', 'follow_up');
 
         $id = DB::table('daily_activity_reports')->value('id');
 
@@ -45,7 +45,7 @@ class DailyActivityReportTest extends TestCase
                 'edit_reason' => 'اصلاح متن مذاکره',
             ])
             ->assertOk()
-            ->assertJsonPath('data.discussion', 'شرح مذاکره اصلاح‌شده');
+            ->assertJsonPath('discussion', 'شرح مذاکره اصلاح‌شده');
 
         $this->assertDatabaseHas('daily_activity_report_revisions', [
             'report_id' => $id,
