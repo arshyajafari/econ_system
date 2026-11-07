@@ -46,7 +46,7 @@ class DailyActivityReportController extends Controller
 
     public function show(Request $request, DailyActivityReport $dailyActivityReport)
     {
-        $this->authorize('view', $dailyActivityReport);
+        $this->authorizeReportAccess($request, $dailyActivityReport, 'daily_activity_reports.view_own', 'daily_activity_reports.view_all');
         abort_if($dailyActivityReport->retention_until?->toDateString() <= now('Asia/Tehran')->toDateString(), 410, 'این گزارش به بخش پاک‌سازی منتقل شده است.');
 
         return new DailyActivityReportResource($dailyActivityReport->load(['employee', 'revisions']));
@@ -54,7 +54,7 @@ class DailyActivityReportController extends Controller
 
     public function update(DailyActivityReportRequest $request, DailyActivityReport $dailyActivityReport)
     {
-        $this->authorize('update', $dailyActivityReport);
+        $this->authorizeReportAccess($request, $dailyActivityReport, 'daily_activity_reports.update_own', 'daily_activity_reports.update_all');
         abort_if($dailyActivityReport->retention_until?->toDateString() <= now('Asia/Tehran')->toDateString(), 409, 'گزارش منقضی‌شده از بخش پاک‌سازی مدیریت می‌شود.');
 
         $data = $request->safe()->except(['edit_reason']);
@@ -178,6 +178,16 @@ class DailyActivityReportController extends Controller
                 'data' => ['deleted_count' => $count],
             ]);
         });
+    }
+
+    private function authorizeReportAccess(Request $request, DailyActivityReport $report, string $ownPermission, string $allPermission): void
+    {
+        $user = $request->user();
+        $canManageAll = $user->hasRole('admin') || $user->can($allPermission);
+        $isOwner = $user->employee_id !== null
+            && (int) $user->employee_id === (int) $report->employee_id;
+
+        abort_unless($canManageAll || ($isOwner && $user->can($ownPermission)), 403);
     }
 
     private function filteredQuery(Request $request): Builder
