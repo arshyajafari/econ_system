@@ -9,7 +9,7 @@ class DailyActivityReportPolicy
 {
     private function owns(User $user, DailyActivityReport $report): bool
     {
-        return $user->employee !== null && (int) $user->employee->id === (int) $report->employee_id;
+        return $user->employee_id !== null && (int) $user->employee_id === (int) $report->employee_id;
     }
 
     public function viewAny(User $user): bool
