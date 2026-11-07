@@ -2,6 +2,8 @@
 
 namespace App\Exports\DailyActivityReports;
 
+use App\Support\JalaliDate;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
