@@ -119,6 +119,11 @@ class DailyActivityReportTest extends TestCase
 
         Auth::forgetGuards();
         $this->withToken($adminToken)
+            ->get('/api/v1/daily-activity-reports/export?archive=1')
+            ->assertOk();
+
+        Auth::forgetGuards();
+        $this->withToken($adminToken)
             ->postJson('/api/v1/daily-activity-reports/archive/cleanup', [
                 'report_ids' => [$reportId],
                 'reason' => 'پاک‌سازی گزارش منقضی‌شده',
