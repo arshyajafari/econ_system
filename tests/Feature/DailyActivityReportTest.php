@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
@@ -81,6 +82,8 @@ class DailyActivityReportTest extends TestCase
             ->postJson('/api/v1/daily-activity-reports', $payload)
             ->assertCreated();
         $id = DB::table('daily_activity_reports')->value('id');
+
+        Auth::forgetGuards();
 
         $this->withToken($otherToken)
             ->putJson('/api/v1/daily-activity-reports/' . $id, [
