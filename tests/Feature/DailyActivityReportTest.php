@@ -155,6 +155,46 @@ class DailyActivityReportTest extends TestCase
         ]);
     }
 
+    public function test_employee_can_delete_only_own_report_and_deletion_is_audited(): void
+    {
+        [, $owner, $ownerToken] = $this->createEmployeeUser('sales visitor', 'Owner');
+        [, , $otherToken] = $this->createEmployeeUser('sales visitor', 'Other');
+
+        $payload = [
+            'visit_date' => '2026-11-07',
+            'organization_name' => 'گزارش قابل حذف',
+            'contact_type' => 'phone',
+            'purpose' => 'پیگیری',
+            'discussion' => 'شرح مذاکره',
+            'outcome' => 'نتیجه مذاکره',
+            'result' => 'neutral',
+        ];
+
+        $this->withToken($ownerToken)
+            ->postJson('/api/v1/daily-activity-reports', $payload)
+            ->assertCreated();
+        $reportId = (int) DB::table('daily_activity_reports')->value('id');
+
+        Auth::forgetGuards();
+        $this->withToken($otherToken)
+            ->deleteJson('/api/v1/daily-activity-reports/' . $reportId)
+            ->assertForbidden();
+        $this->assertDatabaseHas('daily_activity_reports', ['id' => $reportId]);
+
+        Auth::forgetGuards();
+        $this->withToken($ownerToken)
+            ->deleteJson('/api/v1/daily-activity-reports/' . $reportId)
+            ->assertOk()
+            ->assertJsonPath('message', 'گزارش فعالیت با موفقیت حذف شد.');
+
+        $this->assertDatabaseMissing('daily_activity_reports', ['id' => $reportId]);
+        $this->assertDatabaseHas('daily_activity_report_cleanup_runs', [
+            'user_id' => $owner->id,
+            'deleted_count' => 1,
+            'reason' => 'حذف تکی گزارش توسط کاربر',
+        ]);
+    }
+
     private function createEmployeeUser(string $role, string $suffix = ''): array
     {
         Role::findOrCreate($role, 'web');
