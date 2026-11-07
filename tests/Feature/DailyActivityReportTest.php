@@ -93,7 +93,7 @@ class DailyActivityReportTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_admin_can_review_and_explicitly_clean_up_expired_reports(): void
+    public function test_admin_can_review_and_delete_active_and_expired_reports_from_central_cleanup(): void
     {
         [, , $adminToken] = $this->createEmployeeUser('admin', 'Cleanup');
 
