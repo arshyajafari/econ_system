@@ -43,7 +43,7 @@ class DailyActivityReportTest extends TestCase
             ->putJson('/api/v1/daily-activity-reports/' . $id, [
                 ...$payload,
                 'discussion' => 'شرح مذاکره اصلاح‌شده',
-                'edit_reason' => 'اصلاح متن مذاکره',
+                // Edit reasons are optional; the revision itself remains auditable.
             ])
             ->assertOk()
             ->assertJsonPath('discussion', 'شرح مذاکره اصلاح‌شده');
@@ -51,7 +51,7 @@ class DailyActivityReportTest extends TestCase
         $this->assertDatabaseHas('daily_activity_report_revisions', [
             'report_id' => $id,
             'user_id' => $user->id,
-            'reason' => 'اصلاح متن مذاکره',
+            'reason' => null,
         ]);
         $this->assertDatabaseHas('daily_activity_reports', [
             'id' => $id,
@@ -109,13 +109,28 @@ class DailyActivityReportTest extends TestCase
             ])
             ->assertCreated();
 
-        $reportId = DB::table('daily_activity_reports')->value('id');
+        $this->withToken($adminToken)
+            ->postJson('/api/v1/daily-activity-reports', [
+                'visit_date' => '2026-11-07',
+                'organization_name' => 'گزارش فعال',
+                'contact_type' => 'in_person',
+                'purpose' => 'معرفی',
+                'discussion' => 'گفت‌وگوی جدید',
+                'outcome' => 'پیگیری',
+                'result' => 'positive',
+            ])
+            ->assertCreated();
+
+        $reportIds = DB::table('daily_activity_reports')->orderBy('id')->pluck('id')->all();
+        $reportId = $reportIds[0];
+        $activeReportId = $reportIds[1];
         $this->assertDatabaseHas('daily_activity_reports', ['id' => $reportId]);
 
         $this->withToken($adminToken)
             ->getJson('/api/v1/daily-activity-reports/archive')
             ->assertOk()
-            ->assertJsonFragment(['id' => $reportId]);
+            ->assertJsonFragment(['id' => $reportId])
+            ->assertJsonFragment(['id' => $activeReportId]);
 
         Auth::forgetGuards();
         $this->withToken($adminToken)
@@ -125,16 +140,17 @@ class DailyActivityReportTest extends TestCase
         Auth::forgetGuards();
         $this->withToken($adminToken)
             ->postJson('/api/v1/daily-activity-reports/archive/cleanup', [
-                'report_ids' => [$reportId],
+                'report_ids' => $reportIds,
                 'reason' => 'پاک‌سازی گزارش منقضی‌شده',
                 'confirmation' => 'DELETE',
             ])
             ->assertOk()
-            ->assertJsonPath('data.deleted_count', 1);
+            ->assertJsonPath('data.deleted_count', 2);
 
         $this->assertDatabaseMissing('daily_activity_reports', ['id' => $reportId]);
+        $this->assertDatabaseMissing('daily_activity_reports', ['id' => $activeReportId]);
         $this->assertDatabaseHas('daily_activity_report_cleanup_runs', [
-            'deleted_count' => 1,
+            'deleted_count' => 2,
             'reason' => 'پاک‌سازی گزارش منقضی‌شده',
         ]);
     }
