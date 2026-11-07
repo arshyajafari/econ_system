@@ -9,6 +9,7 @@ class PermissionRegistry
         return [
             'dashboard' => ['view'],
             'reports' => ['view'],
+            'daily_activity_reports' => ['view_own','view_all','create','update_own','update_all','export_own','export_all','cleanup'],
             'customers' => ['view','create','update','delete','restore','change_status','export'],
             'employees' => ['view','create','update','delete','export'],
             'doctors' => ['view','create','update','delete','restore','change_status','export'],

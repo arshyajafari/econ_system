@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Contracts\CodeGeneratorInterface;
+use App\Models\DailyActivityReport;
 use App\Models\Expense;
 use App\Models\ScientificVisitorInventory;
+use App\Policies\DailyActivityReportPolicy;
 use App\Policies\ExpensePolicy;
 use App\Policies\ScientificVisitorInventoryPolicy;
 use App\Services\CodeGeneratorService;
@@ -21,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Gate::policy(DailyActivityReport::class, DailyActivityReportPolicy::class);
         Gate::policy(Expense::class, ExpensePolicy::class);
         Gate::policy(ScientificVisitorInventory::class, ScientificVisitorInventoryPolicy::class);
 

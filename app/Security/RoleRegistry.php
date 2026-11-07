@@ -18,6 +18,10 @@ class RoleRegistry
                 Permission::ORDER_UPDATE->value, Permission::ORDER_SUBMIT->value,
                 Permission::ORDER_RETURN_VIEW->value, Permission::ORDER_RETURN_CREATE->value,
                 Permission::ORDER_RETURN_UPDATE->value,
+                Permission::DAILY_ACTIVITY_REPORT_VIEW_OWN->value,
+                Permission::DAILY_ACTIVITY_REPORT_CREATE->value,
+                Permission::DAILY_ACTIVITY_REPORT_UPDATE_OWN->value,
+                Permission::DAILY_ACTIVITY_REPORT_EXPORT_OWN->value,
             ],
 
             Role::SCIENTIFIC_VISITOR->value => [
@@ -27,17 +31,24 @@ class RoleRegistry
                 Permission::VISIT_CANCEL->value,
                 Permission::SAMPLE_VIEW->value, Permission::SAMPLE_CREATE->value,
                 Permission::SAMPLE_UPDATE->value,
+                Permission::DAILY_ACTIVITY_REPORT_VIEW_OWN->value,
+                Permission::DAILY_ACTIVITY_REPORT_CREATE->value,
+                Permission::DAILY_ACTIVITY_REPORT_UPDATE_OWN->value,
+                Permission::DAILY_ACTIVITY_REPORT_EXPORT_OWN->value,
             ],
 
             Role::ACCOUNTANT->value => array_values(array_unique([
                 ...array_values(array_filter(
                     PermissionRegistry::names(),
                     static fn (string $permission): bool =>
-                        str_ends_with($permission, '.view')
-                        || str_ends_with($permission, '.create')
-                        || str_ends_with($permission, '.update')
-                        || str_ends_with($permission, '.cancel')
-                        || str_ends_with($permission, '.export'),
+                        !str_starts_with($permission, 'daily_activity_reports.')
+                        && (
+                            str_ends_with($permission, '.view')
+                            || str_ends_with($permission, '.create')
+                            || str_ends_with($permission, '.update')
+                            || str_ends_with($permission, '.cancel')
+                            || str_ends_with($permission, '.export')
+                        ),
                 )),
                 Permission::CUSTOMER_VIEW->value,
                 Permission::ORDER_VIEW->value, Permission::ORDER_CREATE->value,
