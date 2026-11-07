@@ -63,7 +63,7 @@ class DailyActivityReportTest extends TestCase
     public function test_employee_cannot_edit_another_employees_report(): void
     {
         [, , $ownerToken] = $this->createEmployeeUser('sales visitor', 'Owner');
-        [, , $otherToken] = $this->createEmployeeUser('sales visitor', 'Other');
+        [$otherEmployeeId, $otherUser, $otherToken] = $this->createEmployeeUser('sales visitor', 'Other');
 
         $payload = [
             'visit_date' => '2026-11-07',
@@ -75,6 +75,8 @@ class DailyActivityReportTest extends TestCase
             'result' => 'neutral',
         ];
 
+        $this->assertFalse($otherUser->can('daily_activity_reports.update_all'));
+        $this->assertTrue($otherUser->can('daily_activity_reports.update_own'));
         $created = $this->withToken($ownerToken)
             ->postJson('/api/v1/daily-activity-reports', $payload)
             ->assertCreated();
