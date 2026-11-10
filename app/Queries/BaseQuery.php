@@ -37,7 +37,7 @@
         }
 
         protected function applySort(?string $sort, array $allowedSorts, string $default = 'created_at'): void {
-            $direction = 'asc';
+            $direction = 'desc';
 
             if (!$sort) {
                 $sort = $default;
