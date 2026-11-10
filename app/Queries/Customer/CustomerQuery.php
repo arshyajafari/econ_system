@@ -14,7 +14,7 @@
             $this->applySearch($filters['search'] ?? null, Customer::SEARCHABLE);
             $this->applyType($filters['type'] ?? null);
             $this->applyStatus($filters['status'] ?? null);
-            $this->applySort($filters['sort'] ?? null, Customer::SORTABLE, 'customer_name');
+            $this->applySort($filters['sort'] ?? null, Customer::SORTABLE, 'created_at');
 
             return $this;
         }
