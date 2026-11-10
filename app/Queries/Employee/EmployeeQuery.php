@@ -16,7 +16,7 @@ class EmployeeQuery extends BaseQuery {
         $this->applyEmploymentType($filters['employment_type'] ?? null);
         $this->applyActivityType($filters['activity_type'] ?? null);
         $this->applyGender($filters['gender'] ?? null);
-        $this->applySort($filters['sort'] ?? null, Employee::SORTABLE, 'last_name');
+        $this->applySort($filters['sort'] ?? null, Employee::SORTABLE, 'created_at');
         return $this;
     }
 
