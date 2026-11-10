@@ -14,7 +14,7 @@
             $this->applySearch($filters['search'] ?? null, Doctor::SEARCHABLE);
             $this->applySpecialty($filters['specialty'] ?? null);
             $this->applyStatus($filters['status'] ?? null);
-            $this->applySort($filters['sort'] ?? null, Doctor::SORTABLE, 'last_name');
+            $this->applySort($filters['sort'] ?? null, Doctor::SORTABLE, 'created_at');
 
             return $this;
         }
