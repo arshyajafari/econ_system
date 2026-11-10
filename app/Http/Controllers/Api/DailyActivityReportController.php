@@ -140,7 +140,7 @@ class DailyActivityReportController extends Controller
         $query = $this->filteredQuery($request, 'daily_activity_reports.cleanup');
 
         return DailyActivityReportResource::collection(
-            $query->orderBy('retention_until')->orderBy('visit_date')->paginate(min((int) $request->input('per_page', 20), 100))
+            $query->orderByDesc('visit_date')->orderByDesc('id')->paginate(min((int) $request->input('per_page', 20), 100))
         );
     }
 

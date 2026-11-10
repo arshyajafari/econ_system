@@ -33,10 +33,9 @@ class OrderQuery extends BaseQuery
         $this->applyInvoiceable($filters['invoiceable'] ?? null);
         $this->applyDeliverable($filters['deliverable'] ?? null);
         $this->applyDateRange($filters['ordered_from'] ?? null, $filters['ordered_to'] ?? null);
-        // Keep actionable orders above terminal orders on every page. Within each group,
-        // the newest order is shown first. Explicit sort filters still apply within groups.
-        $this->query->orderByRaw("CASE WHEN status IN ('draft', 'pending', 'confirmed') THEN 0 ELSE 1 END ASC");
+        // Keep the order register strictly chronological across all statuses.
         $this->applySort($filters['sort'] ?? null, Order::SORTABLE, 'ordered_at');
+        $this->query->orderByDesc('id');
 
         return $this;
     }
