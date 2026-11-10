@@ -2,6 +2,7 @@
 
 namespace App\Queries\Order;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\User;
 use App\Queries\BaseQuery;
@@ -33,7 +34,9 @@ class OrderQuery extends BaseQuery
         $this->applyInvoiceable($filters['invoiceable'] ?? null);
         $this->applyDeliverable($filters['deliverable'] ?? null);
         $this->applyDateRange($filters['ordered_from'] ?? null, $filters['ordered_to'] ?? null);
-        // Keep the order register strictly chronological across all statuses.
+        // Keep every non-completed order ahead of completed orders.
+        // Apply the selected/default date sort within each status group.
+        $this->query->orderByRaw("CASE WHEN status = ? THEN 1 ELSE 0 END ASC", [OrderStatus::COMPLETED->value]);
         $this->applySort($filters['sort'] ?? null, Order::SORTABLE, 'ordered_at');
         $this->query->orderByDesc('id');
 
