@@ -13,7 +13,7 @@ class BrandQuery extends BaseQuery {
     public function apply(array $filters): static {
         $this->applySearch($filters['search'] ?? null, Brand::SEARCHABLE);
         $this->applyActive($filters['is_active'] ?? null);
-        $this->applySort($filters['sort'] ?? null, Brand::SORTABLE, 'sort_order');
+        $this->applySort($filters['sort'] ?? null, Brand::SORTABLE, 'created_at');
 
         return $this;
     }
