@@ -195,7 +195,8 @@ class EmployeeWorkSessionController extends Controller {
         $sessions = EmployeeWorkSession::query()
             ->with('employee')
             ->where('work_date', $date)
-            ->orderBy('started_at')
+            ->orderByDesc('started_at')
+            ->orderByDesc('id')
             ->get();
 
         return response()->json(['data' => $sessions->map(fn ($session) => $this->serialize($session))]);
