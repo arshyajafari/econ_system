@@ -17,7 +17,7 @@ class InventoryBatchQuery extends BaseQuery
         $this->applyInventorySearch($filters['search'] ?? null);
         $this->applyProduct($filters['product_id'] ?? null);
         $this->applyExpired($filters['expired'] ?? null);
-        $this->applySort($filters['sort'] ?? null, InventoryBatch::SORTABLE, 'expire_date');
+        $this->applySort($filters['sort'] ?? null, InventoryBatch::SORTABLE, 'created_at');
 
         return $this;
     }
