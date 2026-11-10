@@ -15,7 +15,7 @@
             $this->applySearch($filters['search'] ?? null, ProductCategory::SEARCHABLE);
             $this->applyStatus($filters['status'] ?? null);
             $this->applyParent($filters['parent_id'] ?? null);
-            $this->applySort($filters['sort'] ?? null, ProductCategory::SORTABLE, 'sort_order');
+            $this->applySort($filters['sort'] ?? null, ProductCategory::SORTABLE, 'created_at');
 
             return $this;
         }
