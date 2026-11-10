@@ -26,7 +26,7 @@
             $this->applyBrand($filters['brand_id'] ?? null);
             $this->applyCategory($filters['product_category_id'] ?? null);
             $this->applyStatus($filters['status'] ?? null);
-            $this->applySort($filters['sort'] ?? null, Product::SORTABLE, 'sort_order');
+            $this->applySort($filters['sort'] ?? null, Product::SORTABLE, 'created_at');
 
             return $this;
         }
