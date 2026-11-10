@@ -36,7 +36,7 @@ class ExpenseQuery extends BaseQuery
             $this->query->whereDate('expense_date', '<=', $filters['date_to']);
         }
 
-        $sort = $filters['sort'] ?? 'expense_date';
+        $sort = $filters['sort'] ?? '-expense_date';
         if (($filters['direction'] ?? 'desc') === 'desc' && !str_starts_with($sort, '-')) {
             $sort = "-{$sort}";
         }
