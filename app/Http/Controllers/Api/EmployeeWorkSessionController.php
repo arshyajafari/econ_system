@@ -191,12 +191,17 @@ class EmployeeWorkSessionController extends Controller {
         abort_unless($request->user()->hasRole('admin'), 403);
         $validated = $request->validate([
             'employee_id' => ['nullable', 'string', 'exists:employees,public_id'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:10', 'max:100'],
         ]);
 
         $query = EmployeeWorkSession::query()
             ->with('employee')
+            ->when(
+                $validated['date'] ?? null,
+                fn ($sessions, $date) => $sessions->whereDate('work_date', $date)
+            )
             ->when(
                 $validated['employee_id'] ?? null,
                 fn ($sessions, $employeeId) => $sessions->whereHas(
