@@ -191,6 +191,55 @@ class EmployeeWorkSessionTest extends TestCase {
             ->assertJsonPath('data.date', now(config('app.timezone', 'Asia/Tehran'))->toDateString());
     }
 
+    public function test_admin_can_browse_all_work_sessions_and_filter_by_employee(): void {
+        $firstEmployeeUser = $this->createEmployeeUser();
+        $secondEmployeeUser = $this->createEmployeeUser();
+
+        Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $firstEmployeeUser->assignRole('admin');
+
+        $now = now();
+        DB::table('employee_work_sessions')->insert([
+            [
+                'public_id' => (string) Str::ulid(),
+                'employee_id' => $firstEmployeeUser->employee_id,
+                'work_date' => '2026-10-20',
+                'description' => 'مأموریت قدیمی',
+                'started_at' => '2026-10-20 08:00:00',
+                'start_latitude' => 36.5658,
+                'start_longitude' => 53.0586,
+                'start_operation_id' => (string) Str::uuid(),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'public_id' => (string) Str::ulid(),
+                'employee_id' => $secondEmployeeUser->employee_id,
+                'work_date' => '2026-11-05',
+                'description' => 'مأموریت جدید',
+                'started_at' => '2026-11-05 09:00:00',
+                'start_latitude' => 36.5700,
+                'start_longitude' => 53.0600,
+                'start_operation_id' => (string) Str::uuid(),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        ]);
+
+        $this->actingAs($firstEmployeeUser)
+            ->getJson('/api/v1/employees/locations/work-sessions?per_page=10')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 2)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.employee_id', $secondEmployeeUser->employee->public_id);
+
+        $this->getJson('/api/v1/employees/locations/work-sessions?employee_id=' . $firstEmployeeUser->employee->public_id)
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.employee_id', $firstEmployeeUser->employee->public_id);
+    }
+
     private function createEmployeeUser(): User {
         $now = now();
         $employeeId = DB::table('employees')->insertGetId([
