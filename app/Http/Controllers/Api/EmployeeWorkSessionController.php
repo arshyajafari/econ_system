@@ -189,17 +189,35 @@ class EmployeeWorkSessionController extends Controller {
 
     public function index(Request $request) {
         abort_unless($request->user()->hasRole('admin'), 403);
-        $date = $request->validate(['date' => ['nullable', 'date_format:Y-m-d']])['date']
-            ?? Carbon::now(config('app.timezone', 'Asia/Tehran'))->toDateString();
+        $validated = $request->validate([
+            'employee_id' => ['nullable', 'string', 'exists:employees,public_id'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:10', 'max:100'],
+        ]);
 
-        $sessions = EmployeeWorkSession::query()
+        $query = EmployeeWorkSession::query()
             ->with('employee')
-            ->where('work_date', $date)
+            ->when(
+                $validated['employee_id'] ?? null,
+                fn ($sessions, $employeeId) => $sessions->whereHas(
+                    'employee',
+                    fn ($employees) => $employees->where('public_id', $employeeId)
+                )
+            )
             ->orderByDesc('started_at')
-            ->orderByDesc('id')
-            ->get();
+            ->orderByDesc('id');
 
-        return response()->json(['data' => $sessions->map(fn ($session) => $this->serialize($session))]);
+        $sessions = $query->paginate($validated['per_page'] ?? 25);
+
+        return response()->json([
+            'data' => $sessions->getCollection()->map(fn ($session) => $this->serialize($session))->values(),
+            'meta' => [
+                'current_page' => $sessions->currentPage(),
+                'last_page' => $sessions->lastPage(),
+                'per_page' => $sessions->perPage(),
+                'total' => $sessions->total(),
+            ],
+        ]);
     }
 
     public function locations(Request $request, string $sessionId)
