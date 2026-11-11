@@ -238,6 +238,25 @@ class EmployeeWorkSessionTest extends TestCase {
             ->assertJsonPath('meta.total', 1)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.employee_id', $firstEmployeeUser->employee->public_id);
+
+        $this->getJson('/api/v1/employees/locations/work-sessions?date=2026-10-20')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.work_date', '2026-10-20');
+
+        $this->getJson('/api/v1/employees/locations/work-sessions?date=2026-10-20&employee_id=' . $firstEmployeeUser->employee->public_id)
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonCount(1, 'data');
+
+        $this->getJson('/api/v1/employees/locations/work-sessions?date=2026-10-21')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 0)
+            ->assertJsonCount(0, 'data');
+
+        $this->getJson('/api/v1/employees/locations/work-sessions?date=1405/08/01')
+            ->assertUnprocessable();
     }
 
     private function createEmployeeUser(): User {
